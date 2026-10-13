@@ -148,7 +148,7 @@ def run(config, snapshot, client, analyzer):
         status = ['Work Archive — Publisher Status','Owner: '+owner,
             'Outputs verified against correction revision: '+input_doc['revision'],
             f"Published work messages: {len(visible_messages)}; work Looms: {len(visible_looms)}",
-            'Last imported change in scoped sources: '+str(max((s.get('imported_at',s.get('captured_at','')) for s in sources),default='unknown')), 
+            'Last imported change in scoped sources: '+str(max((s.get('imported_at',s.get('captured_at','')) for s in sources),default='unknown')),
             'Import freshness is not proof of complete phone capture.',
             'New/changed sources are analyzed once; cached classifications and notes are reused.',
             'Deferred source analyses: '+str(sum(len(r.get('deferred',[])) for r in (message_run,loom_run))),
