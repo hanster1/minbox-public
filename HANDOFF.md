@@ -15,13 +15,19 @@ A separate fresh local clone passed all 382 tests (five optional skips) and the
 with a GitHub noreply author address; private history was not copied.
 
 Minbox's original code is MIT-licensed; the collector patch retains upstream AGPL
-and complete-source distribution instructions. CI is prepared with pinned Actions
-and Python 3.11/3.13; GitHub execution has not occurred.
+and complete-source distribution instructions. CI uses pinned Actions and Python 3.11/3.13. Its first GitHub run will be
+checked during publication.
 Live Mac/iPhone acceptance, independent Linux client setup, natural next-day
 Android renewal, host reboot and phone-offline catch-up remain unverified.
 Historical media capture is bounded and incomplete; external host heartbeat and
 independent encrypted backup remain separate work.
 
-GitHub publication is pending. Next: run the release checks, review the public
-contents and license notices, then publish the reviewed new repository when
-explicitly authorized. Client-specific checkpoints stay private outside Git.
+The owner authorized public GitHub publication and selected this repository as
+the default for all future Minbox work. Canonical development now happens here;
+legacy private source/history stays retained until remaining tools, operational
+context and deployment dependencies are accounted for. It must not overwrite
+new public fixes or contribute its private history.
+
+Publication destination: https://github.com/hanster1/minbox-public, branch main.
+Next: verify the first push and CI, then address live client acceptance gaps.
+Client-specific checkpoints stay private outside Git.

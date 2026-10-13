@@ -24,3 +24,12 @@ review; recovery executes fixed bounded actions and preserves explicit pauses.
 Keep credentials, messages, images, databases, provider logs and machine-specific
 notes outside Git. This repository has fresh sanitized history. Do not import a
 private development repository's history or operator checkpoints.
+
+## Authoritative development source
+
+All new Minbox work belongs in this repository. Retained private development
+history is a reference only; do not refresh this project from an older private
+copy or maintain two competing implementations. Preserve release checks and
+update SOURCE_MANIFEST.json hashes for reviewed source changes. Any required
+legacy-only tool or operational context must be accounted for before retiring
+its historical repository; private records never migrate into public Git.

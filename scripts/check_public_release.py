@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Content-free checks for public source inventory, private markers and guide links."""
+import argparse
 import hashlib
 import json
 from pathlib import Path
@@ -9,7 +10,7 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def check():
+def check(verify_hashes=True):
     failures = []
     names = subprocess.check_output(['git', '-C', str(ROOT), 'ls-files', '-z',
                                      '--cached', '--others', '--exclude-standard']).decode().split('\0')
@@ -17,7 +18,7 @@ def check():
     manifest = json.loads((ROOT / 'SOURCE_MANIFEST.json').read_text())
     for name, record in manifest['files'].items():
         path = ROOT / name
-        if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != record['sha256']:
+        if not path.is_file() or (verify_hashes and hashlib.sha256(path.read_bytes()).hexdigest() != record['sha256']):
             failures.append('source manifest mismatch: ' + name)
     public_files = {
         '.gitignore', '.gitattributes', 'README.md', 'AGENTS.md', 'CLAUDE.md', 'WORKFLOW.md', 'HANDOFF.md',
@@ -61,7 +62,24 @@ def check():
             'manifest_files': len(manifest['files']), 'failures': sorted(set(failures))}
 
 
+def refresh_manifest():
+    result = check(verify_hashes=False)
+    if not result['ok']:
+        return result
+    path = ROOT / 'SOURCE_MANIFEST.json'
+    manifest = json.loads(path.read_text())
+    for name, record in manifest['files'].items():
+        record['sha256'] = hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
+    manifest['description'] = 'Reviewed canonical Minbox application and synthetic-test inventory.'
+    path.write_text(json.dumps(manifest, indent=2) + '\n')
+    return check()
+
+
 if __name__ == '__main__':
-    result = check()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--refresh-manifest', action='store_true',
+                        help='Refresh reviewed existing source hashes after all other checks pass')
+    args = parser.parse_args()
+    result = refresh_manifest() if args.refresh_manifest else check()
     print(json.dumps(result, sort_keys=True))
     raise SystemExit(0 if result['ok'] else 1)

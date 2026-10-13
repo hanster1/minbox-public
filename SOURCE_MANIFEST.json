@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "description": "Allowlisted source; fixture names are synthetic and normalized.",
+  "description": "Reviewed canonical Minbox application and synthetic-test inventory.",
   "files": {
     "activate_owner.py": {
       "sha256": "6d689dd10002dc12fd2a7585e4b14ce6a49e45184dfca9516481673e1ae79364"

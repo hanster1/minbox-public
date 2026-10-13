@@ -18,8 +18,8 @@ The agent clones the project, checks your platform, prepares private runtime
 storage, guides account consent and verifies scheduled collection/publication.
 You choose the archive folder's name and may rename it later.
 
-This repository is prepared locally for public release; its GitHub URL becomes
-usable after publication. No ZIP or pre-created source directory is required.
+This is the primary Minbox project. No ZIP or pre-created source directory is
+required.
 A chat subscription alone does not provide local CLI access. Grok or another
 agent can perform setup if its actual environment supports local files/commands;
 Minbox does not assume any provider has a particular CLI.

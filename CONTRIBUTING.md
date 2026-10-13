@@ -16,10 +16,22 @@ data, inspect dependency licenses and run checks from a fresh clone. CI is a
 synthetic source check; it does not prove phone, OAuth, macOS or provider behavior.
 Record live acceptance separately with content-free results.
 
-SOURCE_MANIFEST.json tracks the synchronized application files. Public guide files
-are maintained here. A source-sync operation must preserve public edits and report
-drift; never blindly overwrite them or import private Git history. Integrate shared
-fixes deliberately and update the manifest with the verified source transfer.
+This repository is the authoritative development source. SOURCE_MANIFEST.json
+records the reviewed application and synthetic-test inventory and file hashes;
+public guides are separately allowlisted in the release checker. After reviewing
+source edits, refresh the hashes with:
+
+```bash
+python3 scripts/check_public_release.py --refresh-manifest
+python3 scripts/check_public_release.py
+```
+
+The refresh refuses missing, unexpected or suspicious files and broken guide
+links; it does not add new files to the inventory automatically. A reviewed new
+module/test must be added explicitly to the manifest before refreshing. Run the
+relevant regression checks before committing. Do not copy from an older private
+source tree or import its Git history. Account for retained legacy-only tools and
+operational guidance privately before retiring that repository.
 
 Full owner_all publication is model-free. Optional work analysis currently uses
 Codex's specific JSON transport, schema and flags; adding another runtime provider
