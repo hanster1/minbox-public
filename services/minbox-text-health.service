@@ -1,0 +1,8 @@
+[Unit]
+Description=Recover Minbox archive jobs and escalate human-action emergencies
+
+[Service]
+Type=oneshot
+UMask=0077
+ExecStart=/usr/bin/python3 %h/.local/lib/minbox-text-archive/health_monitor.py --config %h/.config/minbox-text-archive/health.json
+NoNewPrivileges=true

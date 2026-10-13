@@ -1,0 +1,10 @@
+[Unit]
+Description=Bounded best-effort message history collection for %i
+ConditionPathExists=%h/.local/state/minbox-text-archive-collectors/%i/gmcli.db
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/.local/lib/minbox-text-archive/history_backfill.py --owner %i --store %h/.local/state/minbox-text-archive-collectors/%i --state-file %h/.local/state/minbox-text-archive-backfill/%i.json --max-chats 10 --requests 2 --count 50 --max-seconds 120
+UMask=0077
+NoNewPrivileges=true
+TimeoutStartSec=180

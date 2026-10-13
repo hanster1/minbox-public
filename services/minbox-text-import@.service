@@ -1,0 +1,10 @@
+[Unit]
+Description=Import captured Google Messages rows for %i
+ConditionPathExists=%h/.local/state/minbox-text-archive-collectors/%i/gmcli.db
+
+[Service]
+Type=oneshot
+TimeoutStartSec=240
+ExecStart=/usr/bin/python3 %h/.local/lib/minbox-text-archive/archive_cli.py import-gmkit %i %h/.local/state/minbox-text-archive-collectors/%i/gmcli.db
+UMask=0077
+NoNewPrivileges=true

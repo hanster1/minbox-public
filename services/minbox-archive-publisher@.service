@@ -1,0 +1,9 @@
+[Unit]
+Description=Publish private %i text archive to Google Drive
+
+[Service]
+Type=oneshot
+UMask=0077
+ExecStart=%h/.local/lib/minbox-text-archive/.venv/bin/python %h/.local/lib/minbox-text-archive/archive_publish_cli.py --config %h/.config/minbox-text-archive/publishers/%i.json
+TimeoutStartSec=360
+NoNewPrivileges=true

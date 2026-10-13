@@ -1,0 +1,1084 @@
+diff --git c/cmd/minbox-refresh-session/main.go i/cmd/minbox-refresh-session/main.go
+new file mode 100644
+index 0000000..b9a6c51
+--- /dev/null
++++ i/cmd/minbox-refresh-session/main.go
+@@ -0,0 +1,236 @@
++// minbox-refresh-session creates a private refresh candidate for an existing
++// pairing. It never promotes credentials, pairs a device, or sends a message.
++package main
++
++import (
++	"bytes"
++	"encoding/json"
++	"errors"
++	"flag"
++	"fmt"
++	"io"
++	"os"
++	"path/filepath"
++	"syscall"
++	"time"
++
++	"github.com/rs/zerolog"
++	"go.mau.fi/mautrix-gmessages/pkg/libgm"
++	"go.mau.fi/mautrix-gmessages/pkg/libgm/events"
++)
++
++var mutable = map[string]bool{"tachyon_token": true, "tachyon_expiry": true, "tachyon_ttl": true, "cookies": true}
++
++func mergeCandidate(original, baseline, refreshed []byte) ([]byte, error) {
++	var raw, before, after map[string]json.RawMessage
++	for _, p := range []struct {
++		data   []byte
++		target *map[string]json.RawMessage
++	}{{original, &raw}, {baseline, &before}, {refreshed, &after}} {
++		if err := json.Unmarshal(p.data, p.target); err != nil || *p.target == nil {
++			return nil, errors.New("invalid_session")
++		}
++	}
++	stable := func(m map[string]json.RawMessage) ([]byte, error) {
++		copy := map[string]json.RawMessage{}
++		for k, v := range m {
++			if !mutable[k] {
++				copy[k] = v
++			}
++		}
++		return json.Marshal(copy)
++	}
++	b, err := stable(before)
++	if err != nil {
++		return nil, err
++	}
++	a, err := stable(after)
++	if err != nil {
++		return nil, err
++	}
++	if !bytes.Equal(a, b) {
++		return nil, errors.New("binding_changed")
++	}
++	for key := range mutable {
++		if value, ok := after[key]; ok {
++			raw[key] = value
++		} else {
++			delete(raw, key)
++		}
++	}
++	return json.MarshalIndent(raw, "", "  ")
++}
++
++func safePath(path string) error {
++	absolute, err := filepath.Abs(path)
++	if err != nil {
++		return errors.New("invalid_path")
++	}
++	for p := absolute; ; p = filepath.Dir(p) {
++		if info, e := os.Lstat(p); e == nil && info.Mode()&os.ModeSymlink != 0 {
++			return errors.New("symlink_path")
++		}
++		if info, e := os.Stat(filepath.Join(p, ".git")); e == nil && !info.IsDir() {
++			return errors.New("git_path")
++		}
++		if _, e := os.Stat(filepath.Join(p, ".git", "HEAD")); e == nil {
++			return errors.New("git_path")
++		}
++		next := filepath.Dir(p)
++		if next == p {
++			break
++		}
++	}
++	return nil
++}
++
++func owned(info os.FileInfo) bool {
++	stat, ok := info.Sys().(*syscall.Stat_t)
++	return ok && stat.Uid == uint32(os.Getuid())
++}
++
++func candidatePath(path string) error {
++	if err := safePath(path); err != nil {
++		return err
++	}
++	if _, err := os.Lstat(path); !os.IsNotExist(err) {
++		return errors.New("candidate_exists")
++	}
++	parent := filepath.Dir(path)
++	if info, err := os.Stat(parent); err != nil || !info.IsDir() || info.Mode().Perm()&0077 != 0 || !owned(info) {
++		return errors.New("candidate_directory_not_private")
++	}
++	return nil
++}
++
++func writeCandidate(path string, data []byte) error {
++	if err := candidatePath(path); err != nil {
++		return err
++	}
++	parent := filepath.Dir(path)
++	f, err := os.CreateTemp(parent, ".refresh-candidate-")
++	if err != nil {
++		return errors.New("candidate_write_failed")
++	}
++	name := f.Name()
++	defer os.Remove(name)
++	defer f.Close()
++	if err := f.Chmod(0600); err != nil {
++		return errors.New("candidate_write_failed")
++	}
++	if _, err := f.Write(append(data, '\n')); err != nil {
++		return errors.New("candidate_write_failed")
++	}
++	if err := f.Sync(); err != nil {
++		return errors.New("candidate_write_failed")
++	}
++	if err := f.Close(); err != nil {
++		return errors.New("candidate_write_failed")
++	}
++	// Link publishes atomically without replacing any existing candidate.
++	if err := os.Link(name, path); err != nil {
++		return errors.New("candidate_write_failed")
++	}
++	return nil
++}
++
++func refresh(input, candidate string, timeout time.Duration) string {
++	if input == "" || candidate == "" || timeout <= 0 || timeout > 45*time.Second {
++		return "invalid_arguments"
++	}
++	if err := safePath(input); err != nil {
++		return "invalid_input_path"
++	}
++	if err := candidatePath(candidate); err != nil {
++		return "invalid_candidate_path"
++	}
++	info, err := os.Stat(input)
++	if err != nil || !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 || !owned(info) {
++		return "input_not_private"
++	}
++	f, err := os.Open(input)
++	if err != nil {
++		return "input_unavailable"
++	}
++	original, err := io.ReadAll(io.LimitReader(f, 1024*1024+1))
++	f.Close()
++	if err != nil || len(original) > 1024*1024 {
++		return "invalid_session"
++	}
++	var auth libgm.AuthData
++	if err := json.Unmarshal(original, &auth); err != nil || auth.Browser == nil || auth.Mobile == nil || auth.RequestCrypto == nil || auth.RefreshKey == nil {
++		return "invalid_session"
++	}
++	baseline, err := json.Marshal(&auth)
++	if err != nil {
++		return "invalid_session"
++	}
++	auth.TachyonExpiry = time.Time{} // in memory only; failure never writes this.
++	client := libgm.NewClient(&auth, nil, zerolog.New(io.Discard))
++	defer client.Disconnect()
++	outcome := make(chan string, 1)
++	client.SetEventHandler(func(event any) {
++		if _, ok := event.(*events.AuthTokenRefreshed); !ok {
++			return
++		}
++		if len(auth.TachyonAuthToken) == 0 || !auth.TachyonExpiry.After(time.Now()) {
++			outcome <- "invalid_refresh"
++			return
++		}
++		auth.CookiesLock.RLock()
++		updated, e := json.Marshal(&auth)
++		auth.CookiesLock.RUnlock()
++		if e != nil {
++			outcome <- "invalid_refresh"
++			return
++		}
++		data, e := mergeCandidate(original, baseline, updated)
++		if e != nil {
++			outcome <- "binding_changed"
++			return
++		}
++		if e := writeCandidate(candidate, data); e != nil {
++			outcome <- "candidate_write_failed"
++			return
++		}
++		outcome <- "candidate_written"
++	})
++	connected := make(chan error, 1)
++	go func() { connected <- client.Connect() }()
++	timer := time.NewTimer(timeout)
++	defer timer.Stop()
++	select {
++	case status := <-outcome:
++		return status
++	case err := <-connected:
++		select {
++		case status := <-outcome:
++			return status
++		default:
++		}
++		if err != nil {
++			return "refresh_failed"
++		}
++		return "refresh_event_missing"
++	case <-timer.C:
++		return "refresh_timeout"
++	}
++}
++
++func main() {
++	flags := flag.NewFlagSet("minbox-refresh-session", flag.ContinueOnError)
++	flags.SetOutput(io.Discard)
++	input := flags.String("input", "", "existing private session file")
++	candidate := flags.String("candidate", "", "new candidate path in an existing private directory")
++	timeout := flags.Duration("timeout", 45*time.Second, "maximum runtime, at most 45 seconds")
++	if flags.Parse(os.Args[1:]) != nil {
++		fmt.Println(`{"status":"invalid_arguments"}`)
++		os.Exit(1)
++	}
++	status := refresh(*input, *candidate, *timeout)
++	encoded, _ := json.Marshal(map[string]string{"status": status})
++	fmt.Println(string(encoded))
++	if status != "candidate_written" {
++		os.Exit(1)
++	}
++}
+diff --git c/cmd/minbox-refresh-session/main_test.go i/cmd/minbox-refresh-session/main_test.go
+new file mode 100644
+index 0000000..025a392
+--- /dev/null
++++ i/cmd/minbox-refresh-session/main_test.go
+@@ -0,0 +1,47 @@
++package main
++
++import (
++	"encoding/json"
++	"os"
++	"path/filepath"
++	"testing"
++)
++
++func TestCandidatePreservesBindingsUnknownFieldsAndAllowsOnlyRefreshFields(t *testing.T) {
++	original := []byte(`{"browser":{"id":"paired"},"session_id":"stable","unknown_future":{"keep":true},"tachyon_token":"old","cookies":{"c":"old"}}`)
++	baseline := []byte(`{"browser":{"id":"paired"},"session_id":"stable","tachyon_token":"old","cookies":{"c":"old"}}`)
++	after := []byte(`{"browser":{"id":"paired"},"session_id":"stable","tachyon_token":"new","tachyon_ttl":123,"cookies":{"c":"new"}}`)
++	candidate, err := mergeCandidate(original, baseline, after)
++	if err != nil {
++		t.Fatal(err)
++	}
++	var value map[string]any
++	json.Unmarshal(candidate, &value)
++	if value["unknown_future"] == nil || value["tachyon_token"] != "new" || value["session_id"] != "stable" {
++		t.Fatal("lost original data or refresh")
++	}
++	for _, changed := range []string{`{"browser":{"id":"other"},"session_id":"stable"}`, `{"browser":{"id":"paired"},"session_id":"other"}`} {
++		if _, err := mergeCandidate(original, baseline, []byte(changed)); err == nil {
++			t.Fatal("changed pairing accepted")
++		}
++	}
++}
++func TestCandidateWritePrivateAtomicNeverReplaces(t *testing.T) {
++	parent := t.TempDir()
++	os.Chmod(parent, 0700)
++	path := filepath.Join(parent, "candidate.json")
++	if err := writeCandidate(path, []byte(`{"private":"fixture"}`)); err != nil {
++		t.Fatal(err)
++	}
++	if info, _ := os.Stat(path); info.Mode().Perm() != 0600 {
++		t.Fatal("candidate mode not private")
++	}
++	if err := writeCandidate(path, []byte("replacement")); err == nil {
++		t.Fatal("overwrote existing candidate")
++	}
++	link := filepath.Join(parent, "link.json")
++	os.Symlink(path, link)
++	if err := writeCandidate(link, []byte("replacement")); err == nil {
++		t.Fatal("followed symlink")
++	}
++}
+diff --git c/internal/cmd/media.go i/internal/cmd/media.go
+index f18d541..29fb1e2 100644
+--- c/internal/cmd/media.go
++++ i/internal/cmd/media.go
+@@ -2,7 +2,6 @@ package cmd
+ 
+ import (
+ 	"context"
+-	"errors"
+ 	"fmt"
+ 	"mime"
+ 	"os"
+@@ -10,9 +9,11 @@ import (
+ 
+ 	"github.com/spf13/cobra"
+ 
+-	"github.com/johnlindquist/gmkit/internal/gm"
++	"github.com/johnlindquist/gmkit/internal/media"
+ 	"github.com/johnlindquist/gmkit/internal/output"
++	"github.com/johnlindquist/gmkit/internal/rpc"
+ 	"github.com/johnlindquist/gmkit/internal/store"
++	"time"
+ )
+ 
+ func mediaCmd() *cobra.Command {
+@@ -37,44 +38,66 @@ func mediaDownloadCmd() *cobra.Command {
+ 			if msgID == "" {
+ 				return fmt.Errorf("--message is required")
+ 			}
+-			return runWithConnectedClient(func(ctx context.Context, c *gm.Client, st *store.Store) error {
+-				m, err := st.GetMessage(ctx, msgID)
+-				if err != nil {
+-					if errors.Is(err, store.ErrNotFound) {
+-						return fmt.Errorf("no message with id %s in local store; sync first", msgID)
++			// Media capture must use the managed collector only. Never auto-start
++			// a daemon with a separate lifecycle or different send-mode defaults.
++			layout, err := resolveLayout()
++			if err != nil {
++				return err
++			}
++			client, err := rpc.Dial(layout.Socket)
++			if err != nil {
++				return err
++			}
++			defer client.Close()
++			ctx, cancel := context.WithTimeout(context.Background(), 18*time.Second)
++			defer cancel()
++			var result media.Result
++			if err := client.Call(ctx, "media.download", map[string]any{"message_id": msgID}, &result); err != nil {
++				return err
++			}
++			for i := range result.Attachments {
++				a := &result.Attachments[i]
++				if a.Path == "" {
++					continue
++				}
++				if outPath != "" {
++					path := outPath
++					if info, err := os.Stat(path); err == nil && info.IsDir() {
++						path = filepath.Join(path, fmt.Sprintf("media-part-%d", i))
++					} else if i > 0 {
++						path = fmt.Sprintf("%s.part-%d", outPath, i)
+ 					}
+-					return err
++					if info, err := os.Lstat(path); err == nil && !info.Mode().IsRegular() {
++						return fmt.Errorf("invalid output path")
++					}
++					data, err := os.ReadFile(a.Path)
++					if err != nil {
++						return err
++					}
++					if err := os.WriteFile(path, data, 0600); err != nil {
++						return err
++					}
++					if err := os.Chmod(path, 0600); err != nil {
++						return err
++					}
++					a.Path = path
+ 				}
+-				if m.MediaID == nil || *m.MediaID == "" {
+-					return fmt.Errorf("message %s has no attached media", msgID)
++			}
++			result.Path = ""
++			for _, a := range result.Attachments {
++				if a.Path != "" {
++					result.Path, result.Bytes, result.MimeType = a.Path, a.Bytes, a.MimeType
++					break
+ 				}
+-				if len(m.DecryptionKey) == 0 {
+-					return fmt.Errorf("message %s has a media id but no decryption key (was the media stripped during sync?)", msgID)
+-				}
+-
+-				bytes, err := c.DownloadMedia(*m.MediaID, m.DecryptionKey)
+-				if err != nil {
+-					return fmt.Errorf("download: %w", err)
+-				}
+-
+-				path, err := resolveMediaOut(outPath, m, bytes)
+-				if err != nil {
+-					return err
+-				}
+-				if err := os.WriteFile(path, bytes, 0o600); err != nil {
+-					return fmt.Errorf("write %s: %w", path, err)
+-				}
+-				if flags.jsonOut {
+-					return output.JSON(os.Stdout, map[string]any{
+-						"message_id": m.ID,
+-						"path":       path,
+-						"bytes":      len(bytes),
+-						"mime_type":  derefOrEmpty(m.MimeType),
+-					})
+-				}
+-				fmt.Fprintf(os.Stderr, "Downloaded %d bytes to %s\n", len(bytes), path)
+-				return nil
+-			})
++			}
++			if flags.jsonOut {
++				return output.JSON(os.Stdout, result)
++			}
++			if result.Path == "" {
++				return fmt.Errorf("full media metadata pending; retry later")
++			}
++			fmt.Fprintf(os.Stderr, "Downloaded media to %s\n", result.Path)
++			return nil
+ 		},
+ 	}
+ 	c.Flags().StringVar(&msgID, "message", "", "message_id whose media should be downloaded")
+diff --git c/internal/cmd/media_daemon_test.go i/internal/cmd/media_daemon_test.go
+new file mode 100644
+index 0000000..696bc11
+--- /dev/null
++++ i/internal/cmd/media_daemon_test.go
+@@ -0,0 +1,31 @@
++package cmd_test
++
++import (
++	"github.com/johnlindquist/gmkit/internal/cmd"
++	"os"
++	"path/filepath"
++	"strings"
++	"testing"
++	"time"
++)
++
++func TestMediaDownloadRequiresExistingDaemonWithoutAutoStart(t *testing.T) {
++	directory, err := os.MkdirTemp("", "gmmedia-")
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer os.RemoveAll(directory)
++	root := cmd.Root()
++	root.SetArgs([]string{"--store", directory, "--read-only=true", "--json", "media", "download", "--message", "fixture"})
++	started := time.Now()
++	err = root.Execute()
++	if err == nil || !strings.Contains(err.Error(), "connect to gmcli daemon") {
++		t.Fatalf("must fail directly at existing daemon socket: %v", err)
++	}
++	if time.Since(started) > 3*time.Second {
++		t.Fatal("missing collector failure exceeded connection timeout")
++	}
++	if _, err := os.Stat(filepath.Join(directory, "gmcli.db")); !os.IsNotExist(err) {
++		t.Fatal("missing-daemon media call opened a collector store")
++	}
++}
+diff --git c/internal/gm/gm.go i/internal/gm/gm.go
+index d3f396e..15be658 100644
+--- c/internal/gm/gm.go
++++ i/internal/gm/gm.go
+@@ -14,6 +14,7 @@ package gm
+ 
+ import (
+ 	"context"
++	"crypto/sha256"
+ 	"encoding/json"
+ 	"errors"
+ 	"fmt"
+@@ -53,9 +54,11 @@ type Client struct {
+ 	layout paths.Layout
+ 	logger zerolog.Logger
+ 
+-	mu          sync.RWMutex
+-	subscribers []EventHandler
+-	settings    *gmproto.Settings
++	mu             sync.RWMutex
++	subscribers    []EventHandler
++	settings       *gmproto.Settings
++	mediaRequests  map[string]*mediaRequest
++	mediaDownloads map[[32]byte]*mediaDownload
+ }
+ 
+ // Open loads session.json and returns a connected-but-not-yet-Connect()'d
+@@ -381,6 +384,95 @@ func (c *Client) SendReaction(messageID, emoji string, action ReactionAction) er
+ 	return nil
+ }
+ 
++// mediaRequest remains registered until libgm actually returns: the upstream
++// request has no cancellation API. This bounds timed-out calls to eight per client.
++type mediaRequest struct {
++	done chan struct{}
++	err  error
++}
++
++func (c *Client) RequestFullMedia(ctx context.Context, messageID, actionID string) error {
++	return c.requestFullMedia(ctx, messageID, actionID, func() error { _, err := c.libgm.GetFullSizeImage(messageID, actionID); return err })
++}
++
++func (c *Client) requestFullMedia(ctx context.Context, messageID, actionID string, call func() error) error {
++	if messageID == "" || actionID == "" {
++		return fmt.Errorf("media action identity required")
++	}
++	key := messageID + "\x00" + actionID
++	c.mu.Lock()
++	if c.mediaRequests == nil {
++		c.mediaRequests = make(map[string]*mediaRequest)
++	}
++	request := c.mediaRequests[key]
++	if request == nil {
++		if len(c.mediaRequests) >= 8 {
++			c.mu.Unlock()
++			return fmt.Errorf("media request capacity reached")
++		}
++		request = &mediaRequest{done: make(chan struct{})}
++		c.mediaRequests[key] = request
++		go func() {
++			err := call()
++			c.mu.Lock()
++			request.err = err
++			delete(c.mediaRequests, key)
++			close(request.done)
++			c.mu.Unlock()
++		}()
++	}
++	c.mu.Unlock()
++	select {
++	case <-ctx.Done():
++		return ctx.Err()
++	case <-request.done:
++		return request.err
++	}
++}
++
++type mediaDownload struct {
++	done chan struct{}
++	data []byte
++	err  error
++}
++
++// DownloadMediaContext bounds the caller even though libgm HTTP has no context.
++// Inflight dedup/capacity prevents retries from accumulating hung downloads.
++func (c *Client) DownloadMediaContext(ctx context.Context, id string, key []byte) ([]byte, error) {
++	if err := ctx.Err(); err != nil {
++		return nil, err
++	}
++	identity := sha256.Sum256(append(append([]byte(id), 0), key...))
++	c.mu.Lock()
++	if c.mediaDownloads == nil {
++		c.mediaDownloads = make(map[[32]byte]*mediaDownload)
++	}
++	request := c.mediaDownloads[identity]
++	if request == nil {
++		if len(c.mediaDownloads) >= 8 {
++			c.mu.Unlock()
++			return nil, fmt.Errorf("media download capacity reached")
++		}
++		request = &mediaDownload{done: make(chan struct{})}
++		c.mediaDownloads[identity] = request
++		go func() {
++			data, err := c.DownloadMedia(id, key)
++			c.mu.Lock()
++			request.data, request.err = data, err
++			delete(c.mediaDownloads, identity)
++			close(request.done)
++			c.mu.Unlock()
++		}()
++	}
++	c.mu.Unlock()
++	select {
++	case <-ctx.Done():
++		return nil, ctx.Err()
++	case <-request.done:
++		return request.data, request.err
++	}
++}
++
+ // DownloadMedia retrieves and decrypts the bytes for an attachment.
+ // The connection does not need to be in long-poll mode — DownloadMedia
+ // uses authenticated HTTP — but the AuthData's TachyonAuthToken must be
+diff --git c/internal/gm/media_request_test.go i/internal/gm/media_request_test.go
+new file mode 100644
+index 0000000..289728f
+--- /dev/null
++++ i/internal/gm/media_request_test.go
+@@ -0,0 +1,45 @@
++package gm
++
++import (
++	"context"
++	"fmt"
++	"sync/atomic"
++	"testing"
++	"time"
++)
++
++func TestMediaRequestTimeoutDedupCapacityAndRelease(t *testing.T) {
++	c := &Client{}
++	block := make(chan struct{})
++	var calls atomic.Int32
++	call := func() error { calls.Add(1); <-block; return nil }
++	for i := 0; i < 8; i++ {
++		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
++		err := c.requestFullMedia(ctx, "message", fmt.Sprint(i), call)
++		cancel()
++		if err == nil {
++			t.Fatal("unbounded request returned before timeout")
++		}
++	}
++	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
++	_ = c.requestFullMedia(ctx, "message", "0", call)
++	cancel()
++	if calls.Load() != 8 {
++		t.Fatal("timed out request was duplicated")
++	}
++	if err := c.requestFullMedia(context.Background(), "message", "overflow", call); err == nil {
++		t.Fatal("inflight capacity unbounded")
++	}
++	close(block)
++	deadline := time.Now().Add(time.Second)
++	for time.Now().Before(deadline) {
++		c.mu.RLock()
++		n := len(c.mediaRequests)
++		c.mu.RUnlock()
++		if n == 0 {
++			return
++		}
++		time.Sleep(time.Millisecond)
++	}
++	t.Fatal("completed request did not release capacity")
++}
+diff --git c/internal/media/media.go i/internal/media/media.go
+new file mode 100644
+index 0000000..ea29fd8
+--- /dev/null
++++ i/internal/media/media.go
+@@ -0,0 +1,182 @@
++// Package media retrieves full attachment bytes without exposing protocol keys.
++package media
++
++import (
++	"context"
++	"crypto/sha256"
++	"encoding/hex"
++	"fmt"
++	"os"
++	"path/filepath"
++	"strings"
++	"time"
++
++	"github.com/johnlindquist/gmkit/internal/gm"
++	"github.com/johnlindquist/gmkit/internal/store"
++	"go.mau.fi/mautrix-gmessages/pkg/libgm/gmproto"
++	"google.golang.org/protobuf/proto"
++)
++
++type Attachment struct {
++	AttachmentID string `json:"attachment_id"`
++	MediaID      string `json:"media_id,omitempty"`
++	MimeType     string `json:"mime_type"`
++	Path         string `json:"path,omitempty"`
++	Bytes        int    `json:"bytes,omitempty"`
++	CaptureKind  string `json:"capture_kind,omitempty"`
++	Status       string `json:"capture_status"`
++	key          []byte
++	action       string
++	declaredSize int64
++}
++
++type Result struct {
++	MessageID   string       `json:"message_id"`
++	Path        string       `json:"path,omitempty"`
++	Bytes       int          `json:"bytes,omitempty"`
++	MimeType    string       `json:"mime_type,omitempty"`
++	Attachments []Attachment `json:"attachments"`
++}
++
++// Parts decodes ONLY the exact message and never substitutes a thumbnail key.
++func Parts(raw []byte, messageID string) ([]Attachment, error) {
++	var evt gmproto.UpdateEvents
++	if err := proto.Unmarshal(raw, &evt); err != nil {
++		return nil, fmt.Errorf("invalid stored media protocol")
++	}
++	var out []Attachment
++	for _, m := range evt.GetMessageEvent().GetData() {
++		if m.GetMessageID() != messageID {
++			continue
++		}
++		for i, info := range m.GetMessageInfo() {
++			mc := info.GetMediaContent()
++			if mc == nil {
++				continue
++			}
++			id := info.GetActionMessageID()
++			if id == "" {
++				id = fmt.Sprintf("part-%d", i)
++			}
++			out = append(out, Attachment{AttachmentID: id, MediaID: mc.GetMediaID(), MimeType: mc.GetMimeType(), key: mc.GetDecryptionKey(), action: info.GetActionMessageID(), declaredSize: mc.GetSize(), Status: "unavailable"})
++		}
++	}
++	return out, nil
++}
++
++func readParts(ctx context.Context, st *store.Store, id string) ([]Attachment, error) {
++	var raw []byte
++	if err := st.DB().QueryRowContext(ctx, "SELECT raw_proto FROM messages WHERE message_id=?", id).Scan(&raw); err != nil {
++		return nil, err
++	}
++	if len(raw) == 0 {
++		m, err := st.GetMessage(ctx, id)
++		if err != nil {
++			return nil, err
++		}
++		if m.MediaID == nil {
++			return nil, nil
++		}
++		mt := ""
++		if m.MimeType != nil {
++			mt = *m.MimeType
++		}
++		return []Attachment{{AttachmentID: "part-0", MediaID: *m.MediaID, MimeType: mt, key: m.DecryptionKey, Status: "unavailable"}}, nil
++	}
++	return Parts(raw, id)
++}
++
++const maxMediaBytes = 20 * 1024 * 1024
++
++func eligible(a Attachment) bool {
++	return strings.HasPrefix(a.MimeType, "image/") && a.declaredSize >= 0 && a.declaredSize <= maxMediaBytes
++}
++func full(a Attachment) bool { return eligible(a) && a.MediaID != "" && len(a.key) > 0 }
++
++// Download asks the existing daemon connection for missing full-image metadata.
++// The refresh window is shared across every part and never holds a DB transaction.
++func Download(ctx context.Context, c *gm.Client, st *store.Store, id, directory string) (Result, error) {
++	result := Result{MessageID: id}
++	parts, err := readParts(ctx, st, id)
++	if err != nil {
++		return result, err
++	}
++	if len(parts) == 0 {
++		return result, fmt.Errorf("message has no attached media")
++	}
++	if len(parts) > 32 {
++		return result, fmt.Errorf("message exceeds media part limit")
++	}
++	refreshCtx, cancel := context.WithTimeout(ctx, 12*time.Second)
++	defer cancel()
++	pending := false
++	for _, a := range parts {
++		if eligible(a) && !full(a) && strings.HasPrefix(a.MimeType, "image/") && a.action != "" {
++			pending = true
++			go func(a Attachment) { _ = c.RequestFullMedia(refreshCtx, id, a.action) }(a)
++		}
++	}
++	ticker := time.NewTicker(200 * time.Millisecond)
++	defer ticker.Stop()
++wait:
++	for pending {
++		select {
++		case <-refreshCtx.Done():
++			break wait
++		case <-ticker.C:
++			fresh, e := readParts(ctx, st, id)
++			if e != nil {
++				return result, e
++			}
++			pending = false
++			for i := range parts {
++				if !full(parts[i]) {
++					for _, a := range fresh {
++						if a.AttachmentID == parts[i].AttachmentID && full(a) {
++							parts[i] = a
++							break
++						}
++					}
++				}
++				if eligible(parts[i]) && !full(parts[i]) && strings.HasPrefix(parts[i].MimeType, "image/") && parts[i].action != "" {
++					pending = true
++				}
++			}
++		}
++	}
++	if err := ctx.Err(); err != nil {
++		return result, err
++	}
++	totalBytes := 0
++	for i := range parts {
++		if ctx.Err() != nil {
++			break
++		}
++		a := &parts[i]
++		if !full(*a) {
++			continue
++		}
++		data, e := c.DownloadMediaContext(ctx, a.MediaID, a.key)
++		if e != nil || len(data) == 0 || len(data) > maxMediaBytes || totalBytes+len(data) > 80*1024*1024 {
++			continue
++		}
++		totalBytes += len(data)
++		sum := sha256.Sum256([]byte(id + "\x00" + a.AttachmentID))
++		path := filepath.Join(directory, hex.EncodeToString(sum[:])+".media")
++		if info, e := os.Lstat(path); e == nil && (!info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0) {
++			return result, fmt.Errorf("invalid media output path")
++		}
++		if e := os.WriteFile(path, data, 0600); e != nil {
++			return result, e
++		}
++		if e := os.Chmod(path, 0600); e != nil {
++			return result, e
++		}
++		a.Path, a.Bytes, a.Status, a.CaptureKind = path, len(data), "captured", "full"
++		if result.Path == "" {
++			result.Path, result.Bytes, result.MimeType = path, len(data), a.MimeType
++		}
++	}
++	result.Attachments = parts
++	return result, nil
++}
+diff --git c/internal/media/media_test.go i/internal/media/media_test.go
+new file mode 100644
+index 0000000..b47e778
+--- /dev/null
++++ i/internal/media/media_test.go
+@@ -0,0 +1,49 @@
++package media
++
++import (
++	"encoding/json"
++	"go.mau.fi/mautrix-gmessages/pkg/libgm/gmproto"
++	"google.golang.org/protobuf/proto"
++	"strings"
++	"testing"
++)
++
++func part(action, id string, key []byte) *gmproto.MessageInfo {
++	return &gmproto.MessageInfo{ActionMessageID: &action, Data: &gmproto.MessageInfo_MediaContent{MediaContent: &gmproto.MediaContent{MediaID: id, DecryptionKey: key, MimeType: "image/png", ThumbnailMediaID: "preview", ThumbnailDecryptionKey: []byte("secret-preview")}}}
++}
++func TestPartsExactMessageAllAttachmentsNoPreviewOrKeysInJSON(t *testing.T) {
++	raw, err := proto.Marshal(&gmproto.UpdateEvents{Event: &gmproto.UpdateEvents_MessageEvent{MessageEvent: &gmproto.MessageEvent{Data: []*gmproto.Message{
++		{MessageID: "other", MessageInfo: []*gmproto.MessageInfo{part("wrong", "wrong", []byte("wrong"))}},
++		{MessageID: "wanted", MessageInfo: []*gmproto.MessageInfo{part("a", "", nil), part("b", "full", []byte("secret-full"))}},
++	}}}})
++	if err != nil {
++		t.Fatal(err)
++	}
++	parts, err := Parts(raw, "wanted")
++	if err != nil || len(parts) != 2 {
++		t.Fatalf("parts=%d err=%v", len(parts), err)
++	}
++	if parts[0].AttachmentID != "a" || full(parts[0]) || !full(parts[1]) {
++		t.Fatal("wrong identity or thumbnail substituted")
++	}
++	data, _ := json.Marshal(parts)
++	if strings.Contains(string(data), "secret") || strings.Contains(string(data), "preview") {
++		t.Fatal("private protocol fields exposed")
++	}
++	absent, err := Parts(raw, "missing")
++	if err != nil || len(absent) != 0 {
++		t.Fatal("selected another message")
++	}
++}
++
++func TestDeclaredSizeAndNonImageBoundaries(t *testing.T) {
++	if eligible(Attachment{MimeType: "video/mp4"}) {
++		t.Fatal("video download allowed")
++	}
++	if eligible(Attachment{MimeType: "image/png", declaredSize: maxMediaBytes + 1}) {
++		t.Fatal("oversized declared image allowed")
++	}
++	if !eligible(Attachment{MimeType: "image/png", declaredSize: maxMediaBytes}) {
++		t.Fatal("bounded image rejected")
++	}
++}
+diff --git c/internal/rpc/handlers.go i/internal/rpc/handlers.go
+index 9e6f8a1..64270d1 100644
+--- c/internal/rpc/handlers.go
++++ i/internal/rpc/handlers.go
+@@ -4,9 +4,6 @@ import (
+ 	"context"
+ 	"encoding/json"
+ 	"errors"
+-	"mime"
+-	"os"
+-	"path/filepath"
+ 	"time"
+ 
+ 	"github.com/google/uuid"
+@@ -14,6 +11,7 @@ import (
+ 
+ 	"github.com/johnlindquist/gmkit/internal/gm"
+ 	"github.com/johnlindquist/gmkit/internal/history"
++	"github.com/johnlindquist/gmkit/internal/media"
+ 	"github.com/johnlindquist/gmkit/internal/store"
+ )
+ 
+@@ -493,40 +491,13 @@ func (s *Server) handleMediaDownload(ctx context.Context, params json.RawMessage
+ 	if s.deps.Client == nil {
+ 		return nil, &Error{Code: CodeUnavailable, Message: "phone connection unavailable"}
+ 	}
+-	m, err := s.deps.Store.GetMessage(ctx, p.MessageID)
+-	if errors.Is(err, store.ErrNotFound) {
+-		return nil, &Error{Code: CodeNotFound, Message: "message not found: " + p.MessageID}
+-	}
++	downloadCtx, cancel := context.WithTimeout(ctx, 18*time.Second)
++	defer cancel()
++	result, err := media.Download(downloadCtx, s.deps.Client, s.deps.Store, p.MessageID, s.deps.Layout.MediaDir)
+ 	if err != nil {
+-		return nil, internalErr(err)
++		return nil, &Error{Code: CodeUnavailable, Message: "media unavailable"}
+ 	}
+-	if m.MediaID == nil || *m.MediaID == "" {
+-		return nil, &Error{Code: CodeNotFound, Message: "message has no attached media"}
+-	}
+-	if len(m.DecryptionKey) == 0 {
+-		return nil, &Error{Code: CodeUnavailable, Message: "media has no decryption key (stripped during sync?)"}
+-	}
+-	s.liveMu.Lock()
+-	bytes, err := s.deps.Client.DownloadMedia(*m.MediaID, m.DecryptionKey)
+-	s.liveMu.Unlock()
+-	if err != nil {
+-		return nil, &Error{Code: CodeUnavailable, Message: "download: " + err.Error()}
+-	}
+-	ext := ""
+-	if m.MimeType != nil {
+-		if exts, err := mime.ExtensionsByType(*m.MimeType); err == nil && len(exts) > 0 {
+-			ext = exts[0]
+-		}
+-	}
+-	path := filepath.Join(s.deps.Layout.MediaDir, m.ID+ext)
+-	if err := os.WriteFile(path, bytes, 0o600); err != nil {
+-		return nil, internalErr(err)
+-	}
+-	mimeType := ""
+-	if m.MimeType != nil {
+-		mimeType = *m.MimeType
+-	}
+-	return map[string]any{"path": path, "bytes": len(bytes), "mime_type": mimeType}, nil
++	return result, nil
+ }
+ 
+ type aliasParams struct {
+diff --git c/internal/store/messages.go i/internal/store/messages.go
+index 2e51139..d74a29e 100644
+--- c/internal/store/messages.go
++++ i/internal/store/messages.go
+@@ -69,12 +69,12 @@ func (s *Store) UpsertMessage(ctx context.Context, m Message) error {
+ 			timestamp_ms    = excluded.timestamp_ms,
+ 			status          = excluded.status,
+ 			is_from_me      = excluded.is_from_me,
+-			media_id        = excluded.media_id,
+-			mime_type       = excluded.mime_type,
+-			decryption_key  = excluded.decryption_key,
++			media_id        = CASE WHEN excluded.raw_proto IS NULL AND excluded.media_id IS NULL AND excluded.decryption_key IS NULL THEN messages.media_id ELSE excluded.media_id END,
++			mime_type       = CASE WHEN excluded.raw_proto IS NULL AND excluded.media_id IS NULL AND excluded.decryption_key IS NULL THEN messages.mime_type ELSE excluded.mime_type END,
++			decryption_key  = CASE WHEN excluded.raw_proto IS NULL AND excluded.media_id IS NULL AND excluded.decryption_key IS NULL THEN messages.decryption_key ELSE excluded.decryption_key END,
+ 			reactions_json  = excluded.reactions_json,
+ 			reply_to_id     = excluded.reply_to_id,
+-			raw_proto       = excluded.raw_proto,
++			raw_proto       = CASE WHEN excluded.raw_proto IS NULL AND excluded.media_id IS NULL AND excluded.decryption_key IS NULL THEN messages.raw_proto ELSE excluded.raw_proto END,
+ 			updated_at      = excluded.updated_at
+ 	`,
+ 		m.ID, m.ConversationID, platform, m.SenderID,
+diff --git c/internal/store/store_test.go i/internal/store/store_test.go
+index 44c8fb2..da8e528 100644
+--- c/internal/store/store_test.go
++++ i/internal/store/store_test.go
+@@ -215,3 +215,35 @@ func TestTouchSyncUpdatesActivityOnly(t *testing.T) {
+ 		t.Fatalf("last_connect_ts changed: %v", after.LastConnectTime)
+ 	}
+ }
++
++func TestStrippedHistoryPreservesFullMediaWithoutMixingChangedKeys(t *testing.T) {
++	st := openTempStore(t)
++	ctx := context.Background()
++	id, mt := "full", "image/png"
++	original := store.Message{ID: "m", ConversationID: "c", MediaID: &id, MimeType: &mt, DecryptionKey: []byte("secret"), RawProto: []byte("protocol")}
++	if err := st.UpsertMessage(ctx, original); err != nil {
++		t.Fatal(err)
++	}
++	if err := st.UpsertMessage(ctx, store.Message{ID: "m", ConversationID: "c"}); err != nil {
++		t.Fatal(err)
++	}
++	m, err := st.GetMessage(ctx, "m")
++	if err != nil || m.MediaID == nil || *m.MediaID != "full" || string(m.DecryptionKey) != "secret" {
++		t.Fatal("stripped history lost media")
++	}
++	var raw []byte
++	if err := st.DB().QueryRowContext(ctx, "SELECT raw_proto FROM messages WHERE message_id='m'").Scan(&raw); err != nil || string(raw) != "protocol" {
++		t.Fatal("lost raw protocol")
++	}
++	changed := "new-media"
++	if err := st.UpsertMessage(ctx, store.Message{ID: "m", ConversationID: "c", MediaID: &changed}); err != nil {
++		t.Fatal(err)
++	}
++	m, _ = st.GetMessage(ctx, "m")
++	if *m.MediaID != "new-media" || len(m.DecryptionKey) != 0 {
++		t.Fatal("mixed changed media identity with old key")
++	}
++	if err := st.DB().QueryRowContext(ctx, "SELECT raw_proto FROM messages WHERE message_id='m'").Scan(&raw); err != nil || len(raw) != 0 {
++		t.Fatal("retained old protocol for changed media identity")
++	}
++}
+diff --git c/internal/sync/media_test.go i/internal/sync/media_test.go
+new file mode 100644
+index 0000000..2d8d040
+--- /dev/null
++++ i/internal/sync/media_test.go
+@@ -0,0 +1,44 @@
++package sync
++
++import (
++	"context"
++	"github.com/johnlindquist/gmkit/internal/store"
++	"github.com/rs/zerolog"
++	"go.mau.fi/mautrix-gmessages/pkg/libgm/gmproto"
++	"google.golang.org/protobuf/proto"
++	"path/filepath"
++	"testing"
++)
++
++func TestHistoryRetainsActionAndPreservesRicherExistingProtocol(t *testing.T) {
++	ctx := context.Background()
++	st, err := store.Open(ctx, filepath.Join(t.TempDir(), "gmcli.db"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer st.Close()
++	p := New(st, zerolog.Nop())
++	action := "part-a"
++	message := &gmproto.Message{MessageID: "m", ConversationID: "c", MessageInfo: []*gmproto.MessageInfo{{ActionMessageID: &action, Data: &gmproto.MessageInfo_MediaContent{MediaContent: &gmproto.MediaContent{MimeType: "image/png"}}}}}
++	p.ImportMessages(ctx, []*gmproto.Message{message})
++	var raw []byte
++	if err := st.DB().QueryRowContext(ctx, "SELECT raw_proto FROM messages WHERE message_id='m'").Scan(&raw); err != nil {
++		t.Fatal(err)
++	}
++	var evt gmproto.UpdateEvents
++	if err := proto.Unmarshal(raw, &evt); err != nil {
++		t.Fatal(err)
++	}
++	if evt.GetMessageEvent().GetData()[0].GetMessageInfo()[0].GetActionMessageID() != action {
++		t.Fatal("lost historical part action")
++	}
++	id, mt := "full", "image/png"
++	if err := st.UpsertMessage(ctx, store.Message{ID: "m", ConversationID: "c", MediaID: &id, MimeType: &mt, DecryptionKey: []byte("private-key"), RawProto: raw}); err != nil {
++		t.Fatal(err)
++	}
++	p.ImportMessages(ctx, []*gmproto.Message{message})
++	got, err := st.GetMessage(ctx, "m")
++	if err != nil || got.MediaID == nil || *got.MediaID != id || string(got.DecryptionKey) != "private-key" {
++		t.Fatal("history erased richer media")
++	}
++}
+diff --git c/internal/sync/sync.go i/internal/sync/sync.go
+index 48a510d..a4677e0 100644
+--- c/internal/sync/sync.go
++++ i/internal/sync/sync.go
+@@ -15,6 +15,7 @@ import (
+ 	"time"
+ 
+ 	"github.com/rs/zerolog"
++	"google.golang.org/protobuf/proto"
+ 
+ 	"go.mau.fi/mautrix-gmessages/pkg/libgm"
+ 	"go.mau.fi/mautrix-gmessages/pkg/libgm/events"
+@@ -125,7 +126,15 @@ func (p *Pump) ImportMessages(ctx context.Context, messages []*gmproto.Message)
+ 		if m == nil || m.GetMessageID() == "" {
+ 			continue
+ 		}
+-		p.onMessage(ctx, &libgm.WrappedMessage{Message: m, IsOld: true})
++		// Keep the action IDs for future full-media refreshes. Preserve a richer
++		// live protocol snapshot when a historical read strips media keys.
++		var existing []byte
++		_ = p.store.DB().QueryRowContext(ctx, "SELECT raw_proto FROM messages WHERE message_id=?", m.GetMessageID()).Scan(&existing)
++		var raw []byte
++		if len(existing) == 0 {
++			raw, _ = proto.Marshal(&gmproto.UpdateEvents{Event: &gmproto.UpdateEvents_MessageEvent{MessageEvent: &gmproto.MessageEvent{Data: []*gmproto.Message{m}}}})
++		}
++		p.onMessage(ctx, &libgm.WrappedMessage{Message: m, Data: raw, IsOld: true})
+ 		imported++
+ 	}
+ 	return imported

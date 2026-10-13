@@ -1,0 +1,12 @@
+[Unit]
+Description=Check text archive health every minute
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+AccuracySec=5s
+Persistent=true
+Unit=minbox-text-health.service
+
+[Install]
+WantedBy=timers.target

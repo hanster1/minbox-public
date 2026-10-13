@@ -1,0 +1,3 @@
+# Optional format-aware decoder for modern Messages attributed bodies.
+# Pure Python; install into the Mac's private application virtual environment.
+pytypedstream==0.1.0

@@ -1,0 +1,9 @@
+[Unit]
+Description=Capture authorized Loom transcripts from archived messages
+
+[Service]
+Type=oneshot
+UMask=0077
+ExecStart=/usr/bin/python3 %h/.local/lib/minbox-text-archive/archive_cli.py loom-capture
+TimeoutStartSec=7min
+NoNewPrivileges=true

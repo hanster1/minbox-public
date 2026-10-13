@@ -1,0 +1,12 @@
+[Unit]
+Description=Discover and capture Loom transcripts every five minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=10s
+Persistent=true
+Unit=minbox-text-loom.service
+
+[Install]
+WantedBy=timers.target

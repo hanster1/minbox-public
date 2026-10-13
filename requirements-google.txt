@@ -1,0 +1,4 @@
+# Optional Google integration dependencies; archive collection remains stdlib.
+google-auth>=2.40,<3
+google-auth-oauthlib>=1.2,<2
+requests>=2.32,<3

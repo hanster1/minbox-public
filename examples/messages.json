@@ -1,0 +1,6 @@
+[
+  {"id":"demo-1","conversation_id":"demo-friend","timestamp":"2026-10-10T09:00:00-05:00","sender":"demo-client","text":"Can you send the office website draft by Friday?","direction":"incoming"},
+  {"id":"demo-2","conversation_id":"demo-friend","timestamp":"2026-10-10T09:01:00-05:00","sender":"demo-self","text":"Yes, I can send it Thursday afternoon.","direction":"outgoing"},
+  {"id":"demo-3","conversation_id":"demo-friend","timestamp":"2026-10-10T09:02:00-05:00","sender":"demo-client","text":"Also, dinner on Saturday?","direction":"incoming"},
+  {"id":"demo-4","conversation_id":"demo-other-office","timestamp":"2026-10-10T09:03:00-05:00","sender":"demo-other-client","text":"We need a separate staffing plan.","direction":"incoming"}
+]

@@ -1,0 +1,11 @@
+[Unit]
+Description=Collect bounded available message history for %i every five minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+Persistent=true
+Unit=minbox-text-backfill@%i.service
+
+[Install]
+WantedBy=timers.target

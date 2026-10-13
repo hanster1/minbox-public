@@ -1,0 +1,25 @@
+{
+  "owner": "Casey",
+  "google_account_email": "owner@example.invalid",
+  "credentials_file": "/private/path/google-authorized-user.json",
+  "google_scopes": ["https://www.googleapis.com/auth/drive.file"],
+  "folder_access": "selected_folder",
+  "archive_root_folder_id": "replace-with-private-owner-folder-id",
+  "archive_root": "/private/path/archive",
+  "conversations": ["replace-with-authorized-thread-id"],
+  "start_date": "2026-10-01",
+  "folder_id": "replace-with-private-owner-folder-id",
+  "documents": {
+    "guide": "replace-guide-doc-id",
+    "messages": "replace-messages-doc-id",
+    "looms": "replace-looms-doc-id",
+    "knowledge": "replace-knowledge-doc-id",
+    "corrections": "replace-corrections-doc-id",
+    "status": "replace-status-doc-id"
+  },
+  "analysis_path": "/private/path/publisher/analysis.sqlite3",
+  "correction_path": "/private/path/publisher/corrections.sqlite3",
+  "model": "gpt-6.1-sol",
+  "model_executable": "codex",
+  "owner_context": ""
+}

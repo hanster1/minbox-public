@@ -1,0 +1,14 @@
+[Unit]
+Description=Read-only Google Messages collector for %i
+ConditionPathExists=%h/.local/state/minbox-text-archive-collectors/%i/session.json
+
+[Service]
+Type=simple
+ExecStart=%h/.local/lib/minbox-text-archive/bin/gmcli --store %h/.local/state/minbox-text-archive-collectors/%i --read-only=true serve --idle-exit 0
+Restart=on-failure
+RestartSec=15
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

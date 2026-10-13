@@ -1,0 +1,258 @@
+{
+  "format": 1,
+  "description": "Allowlisted source; fixture names are synthetic and normalized.",
+  "files": {
+    "activate_owner.py": {
+      "sha256": "6d689dd10002dc12fd2a7585e4b14ce6a49e45184dfca9516481673e1ae79364"
+    },
+    "archive_analysis.py": {
+      "sha256": "76bd66baf8073609728c85b86578ef7f8d2db06790a48489d903f26030d45993"
+    },
+    "archive_cli.py": {
+      "sha256": "24e2dbd4bb885e27c921c5eda9aaa1eaaa3afa8480a856be0a7ddd2fd905b495"
+    },
+    "archive_corrections.py": {
+      "sha256": "45bd54a092550bbd0970532c9942aa213ac18c15dad7adbea4a4f5c5b6a7cb68"
+    },
+    "archive_drive.py": {
+      "sha256": "56dd3795649a083f0039e11d48ead16b729a1166e326a069bde1f5c1bf728306"
+    },
+    "archive_incremental.py": {
+      "sha256": "669a3102e291e57056aa2b975495ec160734e1c77c3fd570d73a9389c47976a0"
+    },
+    "archive_io.py": {
+      "sha256": "618c017bc7142c62627b0349f41164fb006103705c31a44bb9a484cf6521b759"
+    },
+    "archive_publish_cli.py": {
+      "sha256": "fa184a72adf104833970051b5ede64aee074d538e91c9c55561ee8e04d840e67"
+    },
+    "archive_publisher.py": {
+      "sha256": "9d8a62897b67929a073778e009a435bc68a47b1f25017c0674a0fe67ae21424c"
+    },
+    "archive_snapshot.py": {
+      "sha256": "f5eaf900a72703c84c3f002239c4b6ffd069c3d57ca432ca9ddcb04506915e54"
+    },
+    "attachment_capture.py": {
+      "sha256": "18d7180722458d936e5b4e0af009515bbbc1541dda3cd2e8b6a03dca89ac77b7"
+    },
+    "attachment_drive.py": {
+      "sha256": "d3692b4ba064b15cf0d5a7e9afa3bde8541d53716dbbb06d7a3ee01d614128a4"
+    },
+    "configure_gmail.py": {
+      "sha256": "189c2fa40acec1214cf8717150217085e6fd30b98af8ffc0682f57df489ead9b"
+    },
+    "configure_google.py": {
+      "sha256": "ec8f8284c325f52cf312788d0d41f3067cd6c81221c0ba642961fe9782a6e1f3"
+    },
+    "connect_owner.py": {
+      "sha256": "5230306f75c955f4d6e90ddce6386e27632eb98e5438a202e5b9fd8cf9e20942"
+    },
+    "drive_migration.py": {
+      "sha256": "bf6fe1d787969712c6c20882d80c4afd5c839d3f13ffc095081a8716cc175ba4"
+    },
+    "examples/messages.json": {
+      "sha256": "21cd103f7d4acd1096130db504d41ffea13d467fcf2536f43bc9671e60806131"
+    },
+    "examples/owner-publisher.json": {
+      "sha256": "c54c549a7f5ee5a710c0be3de57e6710d398fa0a497501ed1dd7c828883ac6f4"
+    },
+    "examples/publisher.json": {
+      "sha256": "c0684809456b3c9269dbf443bf2073f406ed6fdfa54a87aa9edc9fd1c11f8d4c"
+    },
+    "folder_authorization.py": {
+      "sha256": "75341c3bd57256e2d39999787e78a382d4a99b1ac18be62029fe64b74eed867d"
+    },
+    "folder_policy.py": {
+      "sha256": "c54c2f54557738d67de61307064e94440fb5928995719d4d6ef6f4decf4e61d8"
+    },
+    "health_monitor.py": {
+      "sha256": "636cb6148b28381f27af3199c74e2bd9b6a336da18d4dfecfe65862c2cb6bea8"
+    },
+    "health_recovery.py": {
+      "sha256": "ef6cbfe8200d1ce9fa08c654f9cf995d2aed3849c9848e9635852e4cf0b4ab21"
+    },
+    "history_backfill.py": {
+      "sha256": "355578d7205c82e148abfa7fb82661156631e45342d2ed374fdc9ec3d3151b45"
+    },
+    "loom_capture.py": {
+      "sha256": "2f3fa3a90f805281c17a284800c4c204a6254ae0312d44898c8340167cd2887d"
+    },
+    "mac-repair.sh": {
+      "sha256": "498ae4f90d074f8cb22bb7b27232e7f50e5639458aaa9bcdad868c6528e89235"
+    },
+    "mac_health.py": {
+      "sha256": "60c365157babe59b3c1c468ff4459fb240a9a39ccc15778bdc5c80a9b4209bda"
+    },
+    "mac_messages.py": {
+      "sha256": "ed32392173a5bc60a5227a38a62b5d438e6558f7b3c64e3eef2d117a78d086f5"
+    },
+    "mac_setup.py": {
+      "sha256": "5749a870aa9d7eb0a141fb4b74a1a96413fa6594feef7fee78086cd716c385d5"
+    },
+    "mac_support.py": {
+      "sha256": "9ff9cb76a111932fc8f9a4f28da61b952c89b0c8d0a6f8e109a60de212c7f636"
+    },
+    "owner_archive_publisher.py": {
+      "sha256": "93d05b5944dba955e10deef1ee95a543421c6d3afd8bab4de35fe4eb06d56d83"
+    },
+    "owner_onboarding.py": {
+      "sha256": "ac712284d7eabb07b2691f9ed5c06f6aa50d7630d2d9882c04afacb2e9d96b15"
+    },
+    "owner_publish_cli.py": {
+      "sha256": "5eb29504aa33ed94ac577b5be225fd58f8122a9e96d67cb81c70ed42062d7f03"
+    },
+    "publisher_status.py": {
+      "sha256": "eb8e904443fce7282a68916bab90fac5073f5c0eb316a92c5521b9805e1b998b"
+    },
+    "requirements-google.txt": {
+      "sha256": "4983962a6aa6cf7fc2764bb9bac89f05adc128c9eb3505bffc3f2c16590cd3ab"
+    },
+    "requirements-mac.txt": {
+      "sha256": "9c4a96b70b7c5fd57d0641792d2d89284eff39e33662cce9c6338503bcb194c2"
+    },
+    "scripts/build_gmkit_media.py": {
+      "sha256": "c2e84c588c942e2c7511581f54a531a88257044ed9812724bf50b65ba815810e"
+    },
+    "scripts/gmkit-media.patch": {
+      "sha256": "de4b7232303e079330ed3dd0ef531a20c5f55995bfe6d4fd7539fed73627a36d"
+    },
+    "services/minbox-archive-publisher@.service": {
+      "sha256": "4e6de97a9eef7dceadb9ad969fea2d1b97a4eae927de49d13db2337556c7c951"
+    },
+    "services/minbox-archive-publisher@.timer": {
+      "sha256": "2e453a02aa77ca01a1e640b5dcabaffa40b0320da16aea7ed201f148c97abfa2"
+    },
+    "services/minbox-owner-archive@.service": {
+      "sha256": "be7dfa901b3df21d37abe7cbd67273c95aae5843e3fb085cb7ae3db31d83fa31"
+    },
+    "services/minbox-owner-archive@.timer": {
+      "sha256": "2e453a02aa77ca01a1e640b5dcabaffa40b0320da16aea7ed201f148c97abfa2"
+    },
+    "services/minbox-text-backfill@.service": {
+      "sha256": "c307bfd614fbb3578963767a2af0dc31bc2b3c019787c420ce34119ffaa0c7ab"
+    },
+    "services/minbox-text-backfill@.timer": {
+      "sha256": "d74ee175445e8eba52c36a41df62ef57dd5cf004d207a10331fa2b63675755f8"
+    },
+    "services/minbox-text-collector@.service": {
+      "sha256": "07392c4538870ba7409f462f2d6558c12c4a7b3ec3c09c2758732cfdfb4a7fd4"
+    },
+    "services/minbox-text-health.service": {
+      "sha256": "8fa093a794bd0697c4327021d68d7d436d601c3b966fc72a74bb9104c0b81de1"
+    },
+    "services/minbox-text-health.timer": {
+      "sha256": "805cab242893863c5feaa077d52fcfb4a900ec80a447605e4bb55cc051740564"
+    },
+    "services/minbox-text-import@.service": {
+      "sha256": "831486e06e3708327d60ed32b5624dd6cc53389f5792e8a8f2b836086f635888"
+    },
+    "services/minbox-text-import@.timer": {
+      "sha256": "de09d68f38a515583608850f4756e690f4043ead1782cd59657123f143fdc05f"
+    },
+    "services/minbox-text-loom.service": {
+      "sha256": "a5dedc9415cb72fcf3d6b2d72289aa53209bdebb144dc73c412b96ec2f194ce3"
+    },
+    "services/minbox-text-loom.timer": {
+      "sha256": "f29ba4b857376a68adf8318552dfbfb83b7ad41773ce2a6700577e5f63975f5e"
+    },
+    "storage.py": {
+      "sha256": "3c3d8168282a97ce6984f3a517c50198bd2137b8aa44e36f6956f789a1f39c2a"
+    },
+    "tests/test_activate_owner.py": {
+      "sha256": "37188f18af1c653dab0cf47b8ed1f78a81dad104e92eae66d3486760fa642f21"
+    },
+    "tests/test_archive_corrections.py": {
+      "sha256": "d11f5a3446957a2b408e1c239d08043af0c482ced803819bdec1bfdebec1dfc1"
+    },
+    "tests/test_archive_drive.py": {
+      "sha256": "718550010ba1e6b1ee50603343d69161b391a5ee1c1fe87cc61d0ac985bd5664"
+    },
+    "tests/test_archive_incremental.py": {
+      "sha256": "ce2e722fe0a158b7aa404d2d88d128f20a1688a5ed59b16816b5093869f58031"
+    },
+    "tests/test_archive_io.py": {
+      "sha256": "974fbf3db6ec290c8c7538238b1b65fdadfddc38b7ceabecb4fe7db21ed4dce5"
+    },
+    "tests/test_archive_publisher.py": {
+      "sha256": "a718a6e10dd26c0cea4cab8e10f76ac12e897e11c84b571d9821d70b7a86ab41"
+    },
+    "tests/test_archive_snapshot.py": {
+      "sha256": "692b11d8762fa9e00f6aba6155a447b8410a6a57dd0961abee94810d85c2344a"
+    },
+    "tests/test_attachment_capture.py": {
+      "sha256": "79df03fbd08b772e2502d57265d4adba0a148b8c5d4cf9524f51e1aa9f3ae9c6"
+    },
+    "tests/test_attachment_drive.py": {
+      "sha256": "b2f1cdb3fcebf5c63b2a29fd49d12e95871f8a0ecc19508bba6f2782e3d66e73"
+    },
+    "tests/test_configure_email.py": {
+      "sha256": "001898a4a4ff129962cf51feb34514a57ad25c188a7b062c63c68250dc300324"
+    },
+    "tests/test_configure_google.py": {
+      "sha256": "3284f295ee00f5ce2177988c619307fac3713ac317a88b0c44b637758136003b"
+    },
+    "tests/test_connect_owner.py": {
+      "sha256": "b15da89eea7ebcf8cfb25ed4a492ffaf4c57ef2005feead192aed4f2e820779c"
+    },
+    "tests/test_drive_migration.py": {
+      "sha256": "f30956dd0fb403d5698dc931ef88794b2c410f403342c5c6aacde2d0a6f3c2a5"
+    },
+    "tests/test_folder_authorization.py": {
+      "sha256": "9d7271acc2abc8a36254246997482ac29f0c20e39ce200634baf81021fbdb71e"
+    },
+    "tests/test_folder_policy.py": {
+      "sha256": "9f5d1e669ec13bc1e2a6bcf354d1b9f099885b81b4992eeaa2ae86b247954953"
+    },
+    "tests/test_gmkit.py": {
+      "sha256": "a0a657aad61508b8ec1a4afa5cab092c18479a9ef2b2801676ede459b2a8c49b"
+    },
+    "tests/test_gmkit_media_patch.py": {
+      "sha256": "0280b472f813e2f01b26211f62d7771a802eb071662cccc41d30cb354b74557a"
+    },
+    "tests/test_health.py": {
+      "sha256": "31f2132b0e21dcf636c9cbfd9049d833cce65f391de270950c4cdaae751977c9"
+    },
+    "tests/test_health_recovery.py": {
+      "sha256": "2c25106edf0ba4e59836e87a4d7e4135d040751e277499bf0456ed8879781031"
+    },
+    "tests/test_history_backfill.py": {
+      "sha256": "2ffd7fb76dadca0a311fc8637d30866aceb458edf97d637f0265af7a05d0b2fb"
+    },
+    "tests/test_loom.py": {
+      "sha256": "09618a381b86325a79bf944058dfd126cbee1e3d5c5197cb7fdc3d681302ddd5"
+    },
+    "tests/test_mac_health.py": {
+      "sha256": "da2ea65ba845bd03819111e6e57bf817b30ab24a080c56c9848d83eb8023b9cf"
+    },
+    "tests/test_mac_messages.py": {
+      "sha256": "0c7cd5ce6047b7069194ca6ba54175cde4dcde04d475f0b716e98008375a306c"
+    },
+    "tests/test_mac_setup.py": {
+      "sha256": "4c0ae32c47a08315ed40667279be3d4a31db9988854cd8bbcb01bbaa6ee6e711"
+    },
+    "tests/test_mac_support.py": {
+      "sha256": "40a2247cf129ce34d1ae824a2b71b32007374438e15441778f786ca93527f5c6"
+    },
+    "tests/test_owner_archive_publisher.py": {
+      "sha256": "b29fd4bbd46e49e27cfd5312a4778913023c6fc9f278b8e2347eb7d715783717"
+    },
+    "tests/test_owner_onboarding.py": {
+      "sha256": "1f0a5f89c1c9175936ac23cd5e10fc69c53b25e90498c3cfd3b1a0d64d3d1fbe"
+    },
+    "tests/test_owner_publish_cli.py": {
+      "sha256": "7f62bb06badb629d20400cd89a41a3eae2d4ad954c39bb22ddd6e37c3cea4182"
+    },
+    "tests/test_publisher_health.py": {
+      "sha256": "03cb9106b13797cb68aecc9952c1c7c1f87a7d3bc53d17f485eecf059854c5ab"
+    },
+    "tests/test_publisher_status.py": {
+      "sha256": "fcc17f539ee4293018f359b087cfe035cd3481761ab2dcd0b46fb2c642cc943b"
+    },
+    "tests/test_storage.py": {
+      "sha256": "01ae2536fd0c6bad904a937f8cc5b52f71511d9f9b17107f613583cd0a28dec8"
+    },
+    "tests/test_work_destination_bindings.py": {
+      "sha256": "10a294ba94d60ae246f62abe0951a7834acddefbe2639b3fb631e2ae1b7e6294"
+    }
+  }
+}
