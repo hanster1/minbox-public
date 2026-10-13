@@ -8,9 +8,11 @@ The source manifest tracks exported file hashes; it is not proof of authenticity
 Validation: 382 synthetic Python tests pass, with five optional skips. The release
 checker verifies 84 shared source hashes, the explicit public-file inventory,
 credential-shaped content, private Drive links and relative guide links. It passed
-for 108 files and correctly rejected unexpected-source and modified-source probes.
+for 109 files and correctly rejected unexpected-source and modified-source probes.
 An independent review checked known private identifiers with zero matches.
-Fresh-clone acceptance is recorded after the initial local checkpoint.
+A separate fresh local clone passed all 382 tests (five optional skips) and the
+109-file release check. Its only history is the new public preparation commits,
+with a GitHub noreply author address; private history was not copied.
 
 Minbox's original code is MIT-licensed; the collector patch retains upstream AGPL
 and complete-source distribution instructions. CI is prepared with pinned Actions
