@@ -1,0 +1,7 @@
+*
+!dist
+!dist/index.html
+!dist/privacy.html
+!dist/terms.html
+!dist/style.css
+!vercel.json
