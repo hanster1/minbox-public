@@ -27,7 +27,11 @@ def check(verify_hashes=True):
         'HEALTH_ALERTS.md', 'GMKIT_MEDIA.md', 'LOOM_CAPTURE.md', 'CONTRIBUTING.md',
         'LICENSE', 'THIRD_PARTY_NOTICES.md', 'licenses/AGPL-3.0.txt',
         'SOURCE_MANIFEST.json', 'scripts/check_public_release.py',
-        '.github/workflows/source-checks.yml',
+        '.github/workflows/source-checks.yml', 'MAINTENANCE.md',
+        'information-site/.gitignore', 'information-site/.vercelignore',
+        'information-site/README.md', 'information-site/vercel.json',
+        'information-site/dist/index.html', 'information-site/dist/privacy.html',
+        'information-site/dist/terms.html', 'information-site/dist/style.css',
     }
     for name in set(names) - set(manifest['files']) - public_files:
         failures.append('unexpected release file: ' + name)

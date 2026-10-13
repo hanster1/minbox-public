@@ -34,3 +34,20 @@ default branch main, and remote main matched local checkpoint `92dac0c`.
 The retained private repository's checkpoint was also pushed and verified;
 its visibility remains private. Next: address live client acceptance gaps.
 Client-specific checkpoints stay private outside Git.
+
+## Useful-material relocation
+
+Canonical website source now lives in information-site/ with updated current
+platform, image, permission and optional-AI wording. Existing OAuth branding and
+URLs were preserved. MAINTENANCE.md maps each kind of future change to one home.
+Hosted tools/operating procedures moved to the private infrastructure notebook;
+exact pilot notes, original operating notes and an inactive Vercel session receipt
+were preserved outside Git. Ignored local site linkage was moved byte-for-byte.
+No live runtime, consent, pairing, site deployment or old-project deletion occurred.
+The historical repository and unique validation branch/worktree remain retained.
+
+Relocation validation passed: 382 Python tests (five optional skips), the
+118-file release check, static HTML/navigation/upload-boundary checks and byte-
+exact local linkage verification. Private original notes were hash-verified.
+Hosted helper tests used synthetic clipboard/SSH commands only. Source changes
+are checkpointed locally; website publication is a separate future operation.

@@ -3,7 +3,8 @@
 This is the authoritative Minbox project. Default all new Minbox development,
 onboarding improvements and repairs to this repository.
 
-Read WORKFLOW.md and HANDOFF.md, then ONBOARDING.md. This repository contains the
+Read WORKFLOW.md and HANDOFF.md, then ONBOARDING.md. Use MAINTENANCE.md to
+choose the authoritative home for application, site or hosted-operation changes. This repository contains the
 portable setup instructions; do not require the maintainer's home paths, installed
 skills, accounts, SSH aliases or model preferences.
 

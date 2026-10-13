@@ -19,3 +19,10 @@ session.json
 *.tar.gz
 build/
 dist/
+
+# Authored static information pages are source, not generated distribution files.
+!information-site/dist/
+!information-site/dist/index.html
+!information-site/dist/privacy.html
+!information-site/dist/terms.html
+!information-site/dist/style.css

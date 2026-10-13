@@ -33,3 +33,13 @@ copy or maintain two competing implementations. Preserve release checks and
 update SOURCE_MANIFEST.json hashes for reviewed source changes. Any required
 legacy-only tool or operational context must be accounted for before retiring
 its historical repository; private records never migrate into public Git.
+
+## Material ownership
+
+MAINTENANCE.md is the change-location map. Application/client guides and public
+website assets live here. Hosted tools and generic deployment operations live in
+the operator's private infrastructure notebook. Exact pilot context, receipt paths,
+local hosting linkage and inactive session artifacts stay outside Git. The old
+private project retains only historical source/branches and pointers; do not use
+it to maintain active assets. Source relocation changes no runtime path, service,
+Google grant, hosting URL or deployment target.

@@ -12,9 +12,11 @@ The existing public URLs and OAuth application branding remain unchanged:
 
 `vercel.json` serves `dist/`. The `.vercelignore` upload allowlist includes only
 `vercel.json` and the four authored files in `dist/`; new assets must be reviewed
-and explicitly allowed. Keep credentials, `.env` files, `.vercel` project linkage,
-archives, account identifiers and private hosting runbooks outside this folder
-and public Git. `.gitignore` excludes local environment and Vercel linkage files.
+and explicitly allowed. Keep credentials, environment files, archives, account identifiers and private
+hosting runbooks outside public source. Local project linkage may reside in the
+ignored `.vercel/` directory for the CLI; it never belongs in public Git. The
+static site needs no environment file. `.gitignore` excludes local environment
+and Vercel linkage files.
 
 Before publishing, check the HTML navigation and stylesheet links, privacy claims
 against current source, and the repository's public release checks. Source edits
