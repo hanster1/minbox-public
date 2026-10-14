@@ -103,6 +103,9 @@ class OwnerDocs:
         self.client = self.adapter()
         return doc
 
+    def withdraw_phone_spam(self, source_ids, images=()):
+        return self.attachments.withdraw_phone_spam(source_ids, images)
+
     def publish_attachments(self, messages):
         return self.attachments.publish(messages)
 
@@ -137,23 +140,27 @@ def main(argv=None):
         except BlockingIOError:
             print(json.dumps({'status': 'already_running'}, sort_keys=True))
             return 0
+        from phone_spam import owner_operation
         with PublisherStatus(state) as status:
-            _owner(config['owner'])
-            if config.get('scope') != 'owner_all':
-                raise ValueError('all-owner publication must be explicitly configured')
-            client = OwnerDocs(config)
-            config['previous_chunk_keys'] = list(client.manifest['chunks'])
-            status.phase('snapshot')
-            current = snapshot(config['archive_root'], config['owner'], None, '1970-01-01')
-            status.phase('publishing', current['latest_import'])
-            from owner_archive_publisher import run
-            result = run(config, current, client)
-            safe = {k: result[k] for k in ('writes', 'published_messages', 'excluded_messages', 'model_calls',
-                                            'verified_images', 'published_images', 'pending_images', 'unavailable_images', 'attachment_writes')}
-            status.success(current['latest_import'], {'analysis_failed_or_paused': False,
-                                                    'deferred_sources': 0, **safe})
-            print(json.dumps(safe, sort_keys=True))
-            return 0
+            with owner_operation(config['archive_root'], config['owner']):
+                _owner(config['owner'])
+                if config.get('scope') != 'owner_all':
+                    raise ValueError('all-owner publication must be explicitly configured')
+                client = OwnerDocs(config)
+                config['previous_chunk_keys'] = list(client.manifest['chunks'])
+                status.phase('snapshot')
+                current = snapshot(config['archive_root'], config['owner'], None, '1970-01-01',
+                                   phone_spam_policy=config.get('phone_spam_policy'))
+                status.phase('publishing', current['latest_import'])
+                from owner_archive_publisher import run
+                result = run(config, current, client)
+                safe = {k: result[k] for k in ('writes', 'published_messages', 'excluded_messages', 'model_calls',
+                                                'verified_images', 'published_images', 'pending_images', 'unavailable_images', 'attachment_writes',
+                                                'withdrawn_images', 'phone_spam_conversations')}
+                status.success(current['latest_import'], {'analysis_failed_or_paused': False,
+                                                        'deferred_sources': 0, **safe})
+                print(json.dumps(safe, sort_keys=True))
+                return 0
 
 
 if __name__ == '__main__':

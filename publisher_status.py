@@ -144,7 +144,7 @@ _FIELDS = {'checked_at', 'last_success_at', 'last_publication_at', 'source_impor
 _FIELDS.update({'analysis_state', 'analysis_error_code', 'analysis_retryable', 'pending_sources',
                 'deferred_reasons', 'model_attempts', 'analysis_retry_after', 'recovery_probes'})
 _FIELDS.update({'published_images', 'verified_images', 'pending_images', 'unavailable_images',
-                'attachment_writes'})
+                'attachment_writes', 'withdrawn_images', 'phone_spam_conversations'})
 
 
 class PublisherStatus:

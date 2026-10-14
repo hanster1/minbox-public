@@ -58,6 +58,34 @@ def config(root):
 
 
 class OwnerPublisherTests(unittest.TestCase):
+    def test_phone_spam_withdraws_all_years_before_image_deletion_and_stays_absent(self):
+        with tempfile.TemporaryDirectory() as root:
+            cfg, client = config(root), Client()
+            junk = message(1, conversation_id='junk', text='Synthetic discarded conversation',
+                           timestamp='2025-01-01T10:00:00Z')
+            reply = message(2, conversation_id='junk', text='Synthetic discarded reply')
+            keep = message(3, conversation_id='ordinary', text='Synthetic retained message')
+            run(cfg, {'sources': [junk, reply, keep]}, client)
+            cfg['previous_chunk_keys'] = list(client.keys)
+            withdrawals = []
+            def withdraw(ids, images):
+                self.assertTrue(all('Synthetic discarded' not in body for body in client.bodies.values()))
+                withdrawals.append(set(ids))
+                return {'withdrawn_images': 0, 'pending_image_deletions': 0}
+            client.withdraw_phone_spam = withdraw
+            cfg['phone_spam_policy'] = 'spam_and_blocked'
+            current = {'sources': [keep], 'phone_spam_source_ids': [junk['source_id'],reply['source_id']],
+                       'phone_spam_conversations': 1, 'phone_spam_images': []}
+            result = run(cfg,current,client)
+            self.assertEqual(result['published_messages'],1)
+            self.assertIn('Whole conversations observed in Google Messages Spam & blocked',client.bodies['guide'])
+            self.assertEqual(result['filtered_counts']['phone_spam'],2)
+            self.assertEqual(withdrawals,[{junk['source_id'],reply['source_id']}])
+            self.assertTrue(any('Synthetic retained message' in body for body in client.bodies.values()))
+            self.assertFalse(client.bodies[client.keys['messages:2025:part001']].strip())
+            cfg['previous_chunk_keys'] = list(client.keys)
+            self.assertEqual(run(cfg,current,client)['writes'],0)
+
     def test_image_only_and_ocr_render_and_filter_before_upload(self):
         with tempfile.TemporaryDirectory() as root:
             cfg, client = config(root), Client()

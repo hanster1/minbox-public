@@ -4,7 +4,9 @@
   "archive_name": "Casey Text Archive",
   "google_account_email": "owner@example.invalid",
   "credentials_file": "/private/path/google-authorized-user.json",
-  "google_scopes": ["https://www.googleapis.com/auth/drive.file"],
+  "google_scopes": [
+    "https://www.googleapis.com/auth/drive.file"
+  ],
   "folder_access": "selected_folder",
   "archive_root_folder_id": "replace-with-private-owner-folder-id",
   "archive_root": "/private/path/archive",
@@ -17,5 +19,6 @@
   },
   "correction_path": "/private/path/publisher/corrections.sqlite3",
   "manifest_file": "/private/path/publisher/documents.json",
-  "status_file": "/private/path/publisher/publisher.last-run.json"
+  "status_file": "/private/path/publisher/publisher.last-run.json",
+  "phone_spam_policy": "off"
 }

@@ -17,6 +17,17 @@ DEFAULT_ROOT = Path.home() / '.local/share/minbox-text-archive'
 
 
 def import_gmkit(archive, owner, database, *, capture_options=None):
+    from phone_spam import owner_operation, sync_observations
+    database = database.resolve(strict=True)
+    archive.init(owners=(owner,))
+    with owner_operation(archive.root, owner):
+        phone = sync_observations(archive, owner, database)
+        result = _import_gmkit(archive, owner, database, capture_options=capture_options)
+        result['phone_spam'] = phone
+        return result
+
+
+def _import_gmkit(archive, owner, database, *, capture_options=None):
     """Read-only snapshot of gmkit's captured rows; no phone access or auth copy."""
     database = database.resolve(strict=True)
     capture = AttachmentCapture(archive.root, owner, database.parent, **(capture_options or {}))

@@ -9,7 +9,7 @@
       "sha256": "76bd66baf8073609728c85b86578ef7f8d2db06790a48489d903f26030d45993"
     },
     "archive_cli.py": {
-      "sha256": "24e2dbd4bb885e27c921c5eda9aaa1eaaa3afa8480a856be0a7ddd2fd905b495"
+      "sha256": "d127664f34064687bbedad90af6908475f7739df70bd2f525a47e70e7c2839b5"
     },
     "archive_corrections.py": {
       "sha256": "45bd54a092550bbd0970532c9942aa213ac18c15dad7adbea4a4f5c5b6a7cb68"
@@ -21,22 +21,22 @@
       "sha256": "669a3102e291e57056aa2b975495ec160734e1c77c3fd570d73a9389c47976a0"
     },
     "archive_io.py": {
-      "sha256": "618c017bc7142c62627b0349f41164fb006103705c31a44bb9a484cf6521b759"
+      "sha256": "70edbc992ffcc684e255598368ff467ecfb1cd43b564957aafffd09907a0463d"
     },
     "archive_publish_cli.py": {
-      "sha256": "fa184a72adf104833970051b5ede64aee074d538e91c9c55561ee8e04d840e67"
+      "sha256": "1b7e8047cb85ff7f7b1b854173bc745ffb2a7f63bafd6a995af6c2cdebd5e1e7"
     },
     "archive_publisher.py": {
       "sha256": "db46cbd3804d444671dad21c087661b47f76ab3b7fc2838e688c34729ca8118e"
     },
     "archive_snapshot.py": {
-      "sha256": "f5eaf900a72703c84c3f002239c4b6ffd069c3d57ca432ca9ddcb04506915e54"
+      "sha256": "3e86f0019adba6997ecd5c9690f4c7e88cf2cff765f54562d2e910732c237dc5"
     },
     "attachment_capture.py": {
       "sha256": "18d7180722458d936e5b4e0af009515bbbc1541dda3cd2e8b6a03dca89ac77b7"
     },
     "attachment_drive.py": {
-      "sha256": "d3692b4ba064b15cf0d5a7e9afa3bde8541d53716dbbb06d7a3ee01d614128a4"
+      "sha256": "2639cf6ec4538ee532448d85af8c9d4aa9761cd252b5bdc88bc6faae2283566b"
     },
     "configure_gmail.py": {
       "sha256": "189c2fa40acec1214cf8717150217085e6fd30b98af8ffc0682f57df489ead9b"
@@ -54,7 +54,7 @@
       "sha256": "21cd103f7d4acd1096130db504d41ffea13d467fcf2536f43bc9671e60806131"
     },
     "examples/owner-publisher.json": {
-      "sha256": "c54c549a7f5ee5a710c0be3de57e6710d398fa0a497501ed1dd7c828883ac6f4"
+      "sha256": "aa9762b47f58d447c86336e3ef513fc60ccd8df3c7caec5162843913e71b6875"
     },
     "examples/publisher.json": {
       "sha256": "c0684809456b3c9269dbf443bf2073f406ed6fdfa54a87aa9edc9fd1c11f8d4c"
@@ -93,16 +93,16 @@
       "sha256": "9ff9cb76a111932fc8f9a4f28da61b952c89b0c8d0a6f8e109a60de212c7f636"
     },
     "owner_archive_publisher.py": {
-      "sha256": "93d05b5944dba955e10deef1ee95a543421c6d3afd8bab4de35fe4eb06d56d83"
+      "sha256": "ef0b4f1761559405bdc50c94f2bed1fa87c398c78c4d85629a5e248fef333691"
     },
     "owner_onboarding.py": {
       "sha256": "ac712284d7eabb07b2691f9ed5c06f6aa50d7630d2d9882c04afacb2e9d96b15"
     },
     "owner_publish_cli.py": {
-      "sha256": "5eb29504aa33ed94ac577b5be225fd58f8122a9e96d67cb81c70ed42062d7f03"
+      "sha256": "2e210c15f410dceec8f9ef332b07d41ec4af5886a493e924d8c9bae1e233e9ea"
     },
     "publisher_status.py": {
-      "sha256": "eb8e904443fce7282a68916bab90fac5073f5c0eb316a92c5521b9805e1b998b"
+      "sha256": "25e6e493807a8da91238450b2ba7b49382d20c03f5b153288f724e575f98d27e"
     },
     "requirements-google.txt": {
       "sha256": "4983962a6aa6cf7fc2764bb9bac89f05adc128c9eb3505bffc3f2c16590cd3ab"
@@ -111,10 +111,10 @@
       "sha256": "9c4a96b70b7c5fd57d0641792d2d89284eff39e33662cce9c6338503bcb194c2"
     },
     "scripts/build_gmkit_media.py": {
-      "sha256": "c2e84c588c942e2c7511581f54a531a88257044ed9812724bf50b65ba815810e"
+      "sha256": "0a9af7df18fe042e764947abd701c2c7bb64382fe5824aad2c0f9a256316e293"
     },
     "scripts/gmkit-media.patch": {
-      "sha256": "de4b7232303e079330ed3dd0ef531a20c5f55995bfe6d4fd7539fed73627a36d"
+      "sha256": "c40cfae5eafdf3031dd81bc0226d8446489f7ce9671f01e8810f9f43f6deef91"
     },
     "services/minbox-archive-publisher@.service": {
       "sha256": "4e6de97a9eef7dceadb9ad969fea2d1b97a4eae927de49d13db2337556c7c951"
@@ -171,7 +171,7 @@
       "sha256": "ce2e722fe0a158b7aa404d2d88d128f20a1688a5ed59b16816b5093869f58031"
     },
     "tests/test_archive_io.py": {
-      "sha256": "974fbf3db6ec290c8c7538238b1b65fdadfddc38b7ceabecb4fe7db21ed4dce5"
+      "sha256": "7bd0067677e3c8e23e1f16caf93f55c09d3e143cfc415744bca81e44c5dfe682"
     },
     "tests/test_archive_publisher.py": {
       "sha256": "a718a6e10dd26c0cea4cab8e10f76ac12e897e11c84b571d9821d70b7a86ab41"
@@ -183,7 +183,7 @@
       "sha256": "79df03fbd08b772e2502d57265d4adba0a148b8c5d4cf9524f51e1aa9f3ae9c6"
     },
     "tests/test_attachment_drive.py": {
-      "sha256": "b2f1cdb3fcebf5c63b2a29fd49d12e95871f8a0ecc19508bba6f2782e3d66e73"
+      "sha256": "5802af256f5a67d05e11843d50e553b73ec540d29076bfb197af779b41ad10ee"
     },
     "tests/test_configure_email.py": {
       "sha256": "001898a4a4ff129962cf51feb34514a57ad25c188a7b062c63c68250dc300324"
@@ -207,7 +207,7 @@
       "sha256": "a0a657aad61508b8ec1a4afa5cab092c18479a9ef2b2801676ede459b2a8c49b"
     },
     "tests/test_gmkit_media_patch.py": {
-      "sha256": "0280b472f813e2f01b26211f62d7771a802eb071662cccc41d30cb354b74557a"
+      "sha256": "e5ec4709d3571dfa5d02c370be9dd05f1e02a71654e535cbb8bc2b908fc9eecb"
     },
     "tests/test_health.py": {
       "sha256": "31f2132b0e21dcf636c9cbfd9049d833cce65f391de270950c4cdaae751977c9"
@@ -234,7 +234,7 @@
       "sha256": "40a2247cf129ce34d1ae824a2b71b32007374438e15441778f786ca93527f5c6"
     },
     "tests/test_owner_archive_publisher.py": {
-      "sha256": "b29fd4bbd46e49e27cfd5312a4778913023c6fc9f278b8e2347eb7d715783717"
+      "sha256": "c3d1107c647421be4ec78f761f7837bc0931fffbd8e058011c4a5314753bb1d6"
     },
     "tests/test_owner_onboarding.py": {
       "sha256": "1f0a5f89c1c9175936ac23cd5e10fc69c53b25e90498c3cfd3b1a0d64d3d1fbe"
@@ -246,13 +246,19 @@
       "sha256": "03cb9106b13797cb68aecc9952c1c7c1f87a7d3bc53d17f485eecf059854c5ab"
     },
     "tests/test_publisher_status.py": {
-      "sha256": "fcc17f539ee4293018f359b087cfe035cd3481761ab2dcd0b46fb2c642cc943b"
+      "sha256": "0bae8bce99bee05401007b1fb1133c3fba7a725ab10ea72a7440b639663f8bbc"
     },
     "tests/test_storage.py": {
       "sha256": "01ae2536fd0c6bad904a937f8cc5b52f71511d9f9b17107f613583cd0a28dec8"
     },
     "tests/test_work_destination_bindings.py": {
       "sha256": "10a294ba94d60ae246f62abe0951a7834acddefbe2639b3fb631e2ae1b7e6294"
+    },
+    "phone_spam.py": {
+      "sha256": "df07f85784b3edac0355be5f79765f0290bc3d2e3e88b8ec07eb6ae7ab3cde7a"
+    },
+    "tests/test_phone_spam.py": {
+      "sha256": "ed3e6c32334a0525ce7ad45684f0d6a9b6139530168490fc1e406791b56230d1"
     }
   }
 }

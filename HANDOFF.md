@@ -51,3 +51,28 @@ Relocation validation passed: 382 Python tests (five optional skips), the
 exact local linkage verification. Private original notes were hash-verified.
 Hosted helper tests used synthetic clipboard/SSH commands only. Source changes
 are checkpointed locally; website publication is a separate future operation.
+
+## Android phone spam exclusion implementation
+
+Implemented opt-in `phone_spam_policy: spam_and_blocked`: reviewed numeric phone
+folder observations become sticky owner/conversation exclusions. Both publishers
+filter before model/image inputs under a shared owner operation lock. Current
+Drive text/derived views are rebuilt and stale chunks blanked; matching managed
+images use guarded permanent deletion and crash-safe reconciliation. Historical
+source-ID moves remain excluded; cache generation is stable for later backfill.
+Local originals and revisions remain, as requested in the clarified scope.
+
+409 Python tests pass (five optional skips); pinned Go package tests and both
+binaries built with the current patch and locked dependencies. A complete AGPL
+source/provenance bundle was prepared outside Git. Release checks pass for 121
+files and 86 manifested application/test files. No phone, runtime or Drive deletion
+was performed; policy defaults off and live acceptance remains pending.
+
+Blocking activation decision: the protocol exposes Spam & blocked folder state,
+not a manual Report spam receipt. The owner approved whole-conversation scope but
+has not yet answered whether automatic spam and block-only threads should also
+be excluded. Do not enable broader deletion without that choice. Native Docs
+history is not erased by current-content rewrites; see PHONE_SPAM.md.
+Next: obtain that policy choice, then perform a reviewed rollout and benign phone
+acceptance if the chosen scope is supported. Keep local/private rollout details
+outside Git and preserve all existing owner/account/root/Doc bindings and pauses.

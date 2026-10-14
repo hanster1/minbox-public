@@ -111,6 +111,8 @@ class PublisherLifecycle(unittest.TestCase):
         self.status = root / 'status.json'
         self.analysis = root / 'analysis.sqlite'
         self.config = root / 'config.json'
+        from storage import Archive
+        Archive(root).init(owners=('Synthetic',))
         write_json(self.config, {'owner': 'Synthetic', 'scope': 'owner_all',
                                 'status_file': str(self.status), 'analysis_path': str(self.analysis),
                                 'archive_root': str(root), 'credentials_file': str(root / 'credentials.json'),
@@ -134,7 +136,8 @@ class PublisherLifecycle(unittest.TestCase):
                 patch('owner_archive_publisher.run', return_value={
                     'writes': 0, 'published_messages': 3, 'excluded_messages': 1, 'model_calls': 0,
                     'verified_images': 0, 'published_images': 0, 'pending_images': 0,
-                    'unavailable_images': 0, 'attachment_writes': 0}):
+                    'unavailable_images': 0, 'attachment_writes': 0,
+                    'withdrawn_images': 0, 'phone_spam_conversations': 0}):
             self.assertEqual(self.invoke(owner_publish_cli), 0)
         self.assertEqual(json.loads(self.status.read_text())['run_state'], 'succeeded')
 

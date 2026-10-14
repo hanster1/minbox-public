@@ -10,7 +10,7 @@ def fingerprint(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
-def snapshot(root, owner, conversations, start_date):
+def snapshot(root, owner, conversations, start_date, *, phone_spam_policy=None):
     path = Path(root).expanduser() / 'archive.sqlite3'
     if path.is_symlink() or not path.is_file():
         raise ValueError('archive database must be an existing regular file')
@@ -18,10 +18,18 @@ def snapshot(root, owner, conversations, start_date):
     db.row_factory = sqlite3.Row
     try:
         db.execute('BEGIN')
+        from phone_spam import excluded_conversations
+        excluded_threads = excluded_conversations(db, owner, phone_spam_policy)
+        excluded_ids = set()
+        excluded_images = []
         messages = []
         message_gaps = []
         for row in db.execute('SELECT source,id,payload,imported_at FROM messages WHERE owner=?', (owner,)):
             value = json.loads(row['payload'])
+            if row['source'] == 'google-messages' and value['conversation_id'] in excluded_threads:
+                sid = 'archive://' + '/'.join(quote(x, safe='') for x in (owner, row['source'], row['id']))
+                excluded_ids.add(sid)
+                continue
             if (conversations is not None and value['conversation_id'] not in conversations) or value['timestamp'][:10] < start_date:
                 continue
             sid = 'archive://' + '/'.join(quote(x, safe='') for x in (owner, row['source'], row['id']))
@@ -60,6 +68,21 @@ def snapshot(root, owner, conversations, start_date):
                 conversation_name=value.get('conversation_name') or '',
                 sender_name=value.get('sender_name') or ('self' if value.get('direction') in ('sent', 'outgoing') else ''),
                 timestamp_known=value.get('timestamp_ms', 1) != 0))
+        if excluded_threads:
+            # A stable source ID stays excluded even if a later payload moves it
+            # into another thread. Do not publish an ID scheduled for withdrawal.
+            for row in db.execute("SELECT id,payload FROM revisions WHERE owner=? AND source='google-messages'", (owner,)):
+                value = json.loads(row['payload'])
+                if value['conversation_id'] in excluded_threads:
+                    excluded_ids.add('archive://' + '/'.join(quote(x, safe='') for x in (owner, 'google-messages', row['id'])))
+            messages = [m for m in messages if m['source_id'] not in excluded_ids]
+            for row in db.execute("SELECT id,payload FROM revisions WHERE owner=? AND source='google-messages'", (owner,)):
+                sid = 'archive://' + '/'.join(quote(x, safe='') for x in (owner, 'google-messages', row['id']))
+                if sid not in excluded_ids:
+                    continue
+                value = json.loads(row['payload'])
+                if value.get('attachments'):
+                    excluded_images.append({'source_id': sid, 'attachments': value['attachments']})
         messages.sort(key=lambda x: (x['timestamp'], x['source_id']))
         by_id = {m['source_id']: m for m in messages}
         transcripts = []
@@ -87,7 +110,9 @@ def snapshot(root, owner, conversations, start_date):
             if origins:
                 gaps.append({'video_id':queue['video_id'],'status':queue['status'],'origin_ids':origins})
         latest_import = db.execute('SELECT MAX(imported_at) FROM imports WHERE owner=?', (owner,)).fetchone()[0]
-        return {'message_gaps': message_gaps, 'loom_gaps': gaps, 'sources': messages + sorted(transcripts, key=lambda x: x['source_id']),
+        return {'phone_spam_generation': fingerprint(sorted(excluded_threads)),
+                'phone_spam_source_ids': sorted(excluded_ids), 'phone_spam_images': excluded_images,
+                'phone_spam_conversations': len(excluded_threads), 'message_gaps': message_gaps, 'loom_gaps': gaps, 'sources': messages + sorted(transcripts, key=lambda x: x['source_id']),
                 'latest_import': latest_import, 'latest_scoped_message': max((m['timestamp'] for m in messages), default=None),
                 'coverage': ('Selected threads only.' if conversations is not None else 'All currently captured owner conversations.') +
                     ' Import freshness does not prove full phone coverage. Image availability is reported per attachment; missing media may remain.'}

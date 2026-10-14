@@ -89,3 +89,25 @@ and should also be run with an external timeout. A separate operator must verify
 the candidate and deliberately promote it, restart the same read-only managed
 collector, and verify the owner's connection. A candidate is not proof of working
 phone collection. Tests use fixture JSON and make no account/network calls.
+
+## Phone spam-folder metadata
+
+The patched collector preserves exact numeric conversation status and records
+positive SPAM_FOLDER (5) and BLOCKED_FOLDER (6) observations in an owner-store
+`phone_spam_conversations` ledger. Incoming conversation events and a five-minute
+metadata-only scan use the existing paired connection; no phone folder changes,
+message sending or second collector are introduced. Archived, deleted, unknown
+and missing conversations never become spam by inference. Positive observations
+remain sticky despite later stale normal-folder events.
+
+The SDK exposes folder state, not the Android user's exact Report spam action.
+Spam can be automatic; blocked conversations can be blocked without reporting.
+The separate Drive publication policy must be explicitly chosen and enabled.
+Its current supported value is `spam_and_blocked`; `off` is the default.
+
+Scans are capped at 500 conversations, with explicit snapshot/capped/pending/failed
+coverage recorded in `phone_spam_scan_state`. The SDK's public method does not
+support cursor traversal or cancellation. One in-flight scan maximum and caller
+deadlines bound retries; a permanently hung SDK request needs collector recovery.
+Never interpret absence or a capped scan as proof of complete phone coverage.
+The library and native Docs revision limitations remain explicit in PHONE_SPAM.md.

@@ -137,6 +137,18 @@ restart and offline catch-up where practical and record untested checks. A servi
 being active is not proof of complete phone history. History/media queues are
 bounded; pending/unavailable items stay explicit.
 
+## Optional Android Spam & blocked synchronization
+
+Explain the whole-folder scope in PHONE_SPAM.md before enabling this policy.
+The protocol cannot reliably distinguish manual reports from automatic spam or
+block-only actions. After the owner chooses the all-Spam-&-blocked policy and the
+updated collector/import signal is verified, set the private owner publishers'
+`phone_spam_policy` to `spam_and_blocked`. This removes whole conversations from
+current Drive views and managed images, while local originals remain. Default
+is off; never enable this Android policy for iPhone or bypass missing metadata.
+Perform a benign disposable phone-conversation acceptance check if the owner
+agrees, and record unverified event propagation honestly.
+
 ## Optional AI connection
 
 **Owner, phone or computer:** connect your preferred compatible AI app to the

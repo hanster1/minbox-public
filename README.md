@@ -66,7 +66,7 @@ A local monitor cannot notify during complete host/network failure.
 
 - [Agent setup entry](AGENTS.md), [onboarding](ONBOARDING.md) and [Google application setup](GOOGLE_SETUP.md).
 - [Mac setup](MAC_SETUP.md), [Mac repair](MAC_RECOVERY.md) and [Android recovery](ANDROID_RECOVERY.md).
-- [Archive behavior](OWNER_ARCHIVE.md), [health policy](HEALTH_ALERTS.md), [collector source](GMKIT_MEDIA.md).
+- [Phone spam exclusions](PHONE_SPAM.md), [archive behavior](OWNER_ARCHIVE.md), [health policy](HEALTH_ALERTS.md), [collector source](GMKIT_MEDIA.md).
 - [Where to make changes](MAINTENANCE.md), [website source](information-site/README.md).
 - [Development and release checks](CONTRIBUTING.md), [license](LICENSE) and [third-party notices](THIRD_PARTY_NOTICES.md).
 

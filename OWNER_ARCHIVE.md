@@ -113,3 +113,13 @@ Add backfills with `owner` and the `.last-run.json` path beside its checkpoint.
 Existing delivery settings remain unchanged. Deferred work-analysis input alerts
 wait thirty minutes, allowing normal bounded analysis/backfill to catch up.
 See HEALTH_ALERTS.md. Quiet chats are healthy; process uptime is not proof of capture.
+
+## Android phone spam exclusions
+
+An explicitly enabled `phone_spam_policy: "spam_and_blocked"` excludes whole
+Google Messages conversations observed in the phone's Spam & blocked folder.
+See PHONE_SPAM.md for the signal, setup and limits. Local originals and revisions
+remain; the publisher removes current Drive text and dependent outputs and
+permanently deletes matching managed image files. Sticky exclusions prevent
+ordinary history/backfill or stale updates from republishing them. This is separate
+from a Corrections Doc spam label, which remains a publication filter.

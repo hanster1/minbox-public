@@ -1,6 +1,7 @@
 """Run the private Drive archive publisher with existing owner authorization."""
 import argparse
 import fcntl
+import hashlib
 import json
 import os
 import sys
@@ -56,33 +57,41 @@ def main(argv=None):
         except BlockingIOError:
             print(json.dumps({'status': 'already_running'}, sort_keys=True))
             return 0
+        from phone_spam import owner_operation
         with PublisherStatus(private_path(config['analysis_path']).with_suffix('.last-run.json')) as status:
-            auth=GoogleAuth(config['credentials_file'],scopes=config.get('google_scopes'))
-            def get(url):
-                return _http_request('GET',url,None,{'Authorization':'Bearer '+auth.token()},20)
-            account=get('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)')['user']['emailAddress']
-            if account.lower() != config['google_account_email'].lower():
-                raise ValueError('connected Google account differs from the configured owner binding')
-            verify_destinations(config, account, get)
-            client=DocsClient(config['documents'].values(),token_provider=auth.token,
-                              write_ids=[v for k,v in config['documents'].items() if k!='corrections'])
-            config['analysis_policy']='archive-work-v1:'+config.get('model','gpt-6.1-sol')
-            analyzer=ArchiveAnalyzer(model=config.get('model','gpt-6.1-sol'),executable=config.get('model_executable','codex'),timeout=120)
-            status.phase('snapshot')
-            current=snapshot(config['archive_root'],config['owner'],config['conversations'],config['start_date'])
-            status.phase('publishing', current['latest_import'])
-            result=run(config,current,client,analyzer)
-            safe={'writes':result['writes'],'work_messages':result['work_messages'],'work_looms':result['work_looms'],
-                  'deferred_sources':sum(len(result[k].get('deferred',[])) for k in ['message_analysis','loom_analysis']),
-                  'model_calls':sum(result[k].get('model_calls',0) for k in ['message_analysis','loom_analysis']),
-                  'analysis_failed_or_paused':any(result[k].get('analysis_failed') or result[k].get('paused') for k in ['message_analysis','loom_analysis'])}
-            safe.update({key: result[key] for key in ('analysis_state', 'analysis_error_code',
-                'analysis_retryable', 'pending_sources', 'deferred_reasons', 'model_attempts',
-                'analysis_retry_after', 'recovery_probes') if key in result})
-            status.success(current['latest_import'], safe)
-            print(json.dumps(safe))
-            return 0
-
+            with owner_operation(config['archive_root'], config['owner']):
+                auth=GoogleAuth(config['credentials_file'],scopes=config.get('google_scopes'))
+                def get(url):
+                    return _http_request('GET',url,None,{'Authorization':'Bearer '+auth.token()},20)
+                account=get('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)')['user']['emailAddress']
+                if account.lower() != config['google_account_email'].lower():
+                    raise ValueError('connected Google account differs from the configured owner binding')
+                verify_destinations(config, account, get)
+                client=DocsClient(config['documents'].values(),token_provider=auth.token,
+                                  write_ids=[v for k,v in config['documents'].items() if k!='corrections'])
+                config['analysis_policy']='archive-work-v1:'+config.get('model','gpt-6.1-sol')
+                analyzer=ArchiveAnalyzer(model=config.get('model','gpt-6.1-sol'),executable=config.get('model_executable','codex'),timeout=120)
+                status.phase('snapshot')
+                current=snapshot(config['archive_root'],config['owner'],config['conversations'],config['start_date'],
+                                 phone_spam_policy=config.get('phone_spam_policy'))
+                if current.get('phone_spam_source_ids', []):
+                    config.pop('seed_decisions', None)
+                    config.pop('seed_revisions', None)
+                if current.get('phone_spam_source_ids'):
+                    config['analysis_policy'] += ':phone-exclusions:' + hashlib.sha256(
+                        current['phone_spam_generation'].encode()).hexdigest()
+                status.phase('publishing', current['latest_import'])
+                result=run(config,current,client,analyzer)
+                safe={'writes':result['writes'],'work_messages':result['work_messages'],'work_looms':result['work_looms'],
+                      'deferred_sources':sum(len(result[k].get('deferred',[])) for k in ['message_analysis','loom_analysis']),
+                      'model_calls':sum(result[k].get('model_calls',0) for k in ['message_analysis','loom_analysis']),
+                      'analysis_failed_or_paused':any(result[k].get('analysis_failed') or result[k].get('paused') for k in ['message_analysis','loom_analysis'])}
+                safe.update({key: result[key] for key in ('analysis_state', 'analysis_error_code',
+                    'analysis_retryable', 'pending_sources', 'deferred_reasons', 'model_attempts',
+                    'analysis_retry_after', 'recovery_probes') if key in result})
+                status.success(current['latest_import'], safe)
+                print(json.dumps(safe))
+                return 0
 
 if __name__=='__main__':
     try:
