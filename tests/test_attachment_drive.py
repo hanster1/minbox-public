@@ -87,6 +87,130 @@ class Images(unittest.TestCase):
     def client(self):
         return OwnerDocs(self.config, request=self.request, raw_request=self.raw, token_provider=lambda: 'synthetic')
 
+    def listing_calls(self, called):
+        listings, searches = [], []
+        for call in called.call_args_list:
+            if call.args[0] != 'GET' or not call.args[1].startswith('files?'):
+                continue
+            query = parse_qs(urlparse(call.args[1]).query).get('q', [''])[0]
+            (searches if 'appProperties' in query else listings).append(call)
+        return listings, searches
+
+    def test_absent_historical_images_use_one_fresh_scan_and_no_identity_searches(self):
+        client = self.client()
+        client.attachments.folder()
+        history = dict(self.message, attachments=[dict(self.item, media_id='history-' + str(i))
+                                                 for i in range(140)])
+        for _ in range(2):
+            with patch.object(client, 'call', wraps=client.call) as called, \
+                    patch('attachment_drive.image_bytes', side_effect=AssertionError('absent image has no byte read')):
+                result = client.withdraw_phone_spam([self.message['source_id']], [history])
+            listings, searches = self.listing_calls(called)
+            self.assertEqual(result, {'withdrawn_images': 0, 'pending_image_deletions': 0})
+            self.assertEqual(len(listings), 1)
+            self.assertEqual(searches, [])
+
+    def test_fresh_scan_discovers_orphan_added_after_prior_absence_and_checks_metadata(self):
+        client = self.client()
+        client.publish_attachments([self.message])
+        file_id = self.item['drive_file_id']
+        remote = copy.deepcopy(self.files[file_id])
+        client.withdraw_phone_spam([self.message['source_id']], [self.message])
+        client.withdraw_phone_spam([self.message['source_id']], [self.message])
+        orphan = 'orphan-restored'
+        self.files[orphan] = dict(remote, id=orphan)
+        with patch.object(client, 'call', wraps=client.call) as called:
+            result = client.withdraw_phone_spam([self.message['source_id']], [self.message])
+        self.assertEqual(result['withdrawn_images'], 1)
+        self.assertNotIn(orphan, self.files)
+        listings, searches = self.listing_calls(called)
+        self.assertEqual(len(listings), 1)
+        self.assertEqual(searches, [])
+        methods = [(call.args[0], call.args[1].split('?')[0]) for call in called.call_args_list]
+        deletion = methods.index(('DELETE', 'files/' + orphan))
+        self.assertIn(('GET', 'files/' + orphan), methods[:deletion])
+
+    def test_scan_clears_cached_children_that_disappeared(self):
+        client = self.client()
+        client.publish_attachments([self.message])
+        file_id = self.item['drive_file_id']
+        self.assertIn(file_id, client.attachments._metadata)
+        self.files.pop(file_id)
+        client.manifest['attachments'].clear()
+        result = client.withdraw_phone_spam([self.message['source_id']], [self.message])
+        self.assertEqual(result['withdrawn_images'], 0)
+        self.assertNotIn(file_id, client.attachments._metadata)
+
+    def test_incomplete_id_only_scan_falls_back_to_exact_identity_search(self):
+        client = self.client()
+        client.publish_attachments([self.message])
+        client.manifest['attachments'].clear()
+        original = client.call
+        def incomplete(method, suffix, body=None):
+            result = original(method, suffix, body)
+            query = parse_qs(urlparse(suffix).query).get('q', [''])[0]
+            if method == 'GET' and suffix.startswith('files?') and 'appProperties' not in query:
+                return {'files': [{'id': item['id']} for item in result['files']]}
+            return result
+        with patch.object(client, 'call', side_effect=incomplete) as called:
+            result = client.withdraw_phone_spam([self.message['source_id']], [self.message])
+        self.assertEqual(result['withdrawn_images'], 1)
+        listings, searches = self.listing_calls(called)
+        self.assertEqual((len(listings), len(searches)), (1, 1))
+
+    def test_duplicate_image_identity_listing_refuses_any_deletion(self):
+        client = self.client()
+        client.publish_attachments([self.message])
+        self.files['duplicate'] = dict(copy.deepcopy(self.files[self.item['drive_file_id']]), id='duplicate')
+        with self.assertRaisesRegex(ValueError, 'duplicate attachment identities'):
+            client.withdraw_phone_spam([self.message['source_id']], [self.message])
+        self.assertFalse(self.deletes)
+
+    def test_paged_scan_resolves_orphans_without_per_identity_searches(self):
+        client = self.client()
+        client.publish_attachments([self.message])
+        client.manifest['attachments'].clear()
+        original = client.call
+        def paged(method, suffix, body=None):
+            query = parse_qs(urlparse(suffix).query)
+            if method == 'GET' and suffix.startswith('files?') and 'appProperties' not in query.get('q', [''])[0]:
+                if 'pageToken' not in query:
+                    return {'files': [], 'nextPageToken': 'second'}
+                self.assertEqual(query['pageToken'], ['second'])
+            return original(method, suffix, body)
+        with patch.object(client, 'call', side_effect=paged) as called:
+            result = client.withdraw_phone_spam([self.message['source_id']], [self.message])
+        self.assertEqual(result['withdrawn_images'], 1)
+        listings, searches = self.listing_calls(called)
+        self.assertEqual((len(listings), len(searches)), (2, 0))
+
+    def test_pagination_repeats_bounds_and_incomplete_search_cannot_prove_absence(self):
+        client = self.client()
+        folder = client.attachments.folder()
+        for mode in ('token', 'duplicate_id', 'bound', 'incomplete', 'wrong_parent', 'oversize_page'):
+            with self.subTest(mode=mode):
+                pages = 0
+                def result(*args):
+                    nonlocal pages
+                    pages += 1
+                    if mode == 'incomplete':
+                        return {'files': [], 'incompleteSearch': True}
+                    if mode == 'oversize_page':
+                        return {'files': [{'id': 'file-' + str(i)} for i in range(1001)]}
+                    if mode == 'token':
+                        return {'files': [], 'nextPageToken': 'same'}
+                    if mode == 'duplicate_id':
+                        return {'files': [{'id': 'same'}], 'nextPageToken': 'page-' + str(pages)}
+                    if mode == 'wrong_parent':
+                        return {'files': [dict(id='wrong', mimeType='image/png', parents=['outside'],
+                                             shared=False, trashed=False, owners=[], capabilities={}, appProperties={})]}
+                    return {'files': [], 'nextPageToken': 'page-' + str(pages)}
+                with patch.object(client, 'call', side_effect=result):
+                    with self.assertRaises(ValueError):
+                        client.attachments.prefetch(folder)
+                self.assertLessEqual(pages, 100)
+        self.assertFalse(self.deletes)
+
     def test_withdraw_only_selected_images_preserves_other_images_and_docs(self):
         client = self.client()
         other = dict(self.message, source_id='archive://Casey/google-messages/2', attachments=[dict(self.item, media_id='other')])

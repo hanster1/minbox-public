@@ -115,22 +115,58 @@ class AttachmentDrive:
         return self._metadata[file_id]
 
     def prefetch(self, folder):
-        """Read child metadata in pages instead of one request per archived image."""
+        """Refresh child metadata and return a complete, parent-scoped image index.
+
+        An incomplete adapter response can warm metadata but cannot prove absence.
+        The returned index is used only within the caller's fresh withdrawal scan.
+        """
+        folder = _identifier(folder)
         token = None
         seen = set()
+        members, identities = {}, {}
+        complete = True
+        required = {'id', 'mimeType', 'parents', 'shared', 'trashed', 'owners',
+                    'capabilities', 'appProperties'}
         for _ in range(100):
-            params = {'q': "'" + _identifier(folder) + "' in parents and trashed = false",
-                      'fields': 'nextPageToken,files(' + FIELDS + ')', 'pageSize': 1000}
+            params = {'q': "'" + folder + "' in parents and trashed = false",
+                      'fields': 'nextPageToken,incompleteSearch,files(' + FIELDS + ')', 'pageSize': 1000}
             if token:
                 params['pageToken'] = token
             result = self.docs.call('GET', 'files?' + urlencode(params))
+            if (not isinstance(result, dict) or not isinstance(result.get('files'), list)
+                    or len(result['files']) > 1000 or result.get('incompleteSearch', False) is not False):
+                raise ValueError('attachment metadata listing incomplete')
             for item in result['files']:
+                if not isinstance(item, dict):
+                    raise ValueError('invalid attachment metadata listing')
+                file_id = _identifier(item.get('id'))
+                if file_id in members:
+                    raise ValueError('attachment metadata pagination repeated')
+                members[file_id] = item
+                if not required <= item.keys():
+                    complete = False
+                else:
+                    if (item['parents'] != [folder] or item['trashed'] is not False
+                            or not isinstance(item['appProperties'], dict)):
+                        raise ValueError('invalid attachment metadata listing')
+                    identity = item['appProperties'].get('familyArchiveImage')
+                    if identity is not None:
+                        if not isinstance(identity, str) or not identity:
+                            raise ValueError('invalid attachment metadata listing')
+                        if identity in identities:
+                            raise ValueError('duplicate attachment identities need review')
+                        identities[identity] = file_id
                 # Test adapters may return IDs only; production fields are explicit.
-                if 'mimeType' in item:
-                    self._metadata[_identifier(item['id'])] = item
             token = result.get('nextPageToken')
+            if token is not None and (not isinstance(token, str) or not token):
+                raise ValueError('invalid attachment metadata pagination')
             if not token:
-                return
+                # Drop members from older scans, including files created since
+                # the last prefetch. A missing fresh child must not remain cached.
+                self._metadata = {file_id: item for file_id, item in self._metadata.items()
+                                  if folder not in item.get('parents', [])}
+                self._metadata.update({file_id: item for file_id, item in members.items() if 'mimeType' in item})
+                return identities if complete else None
             if token in seen:
                 raise ValueError('attachment metadata pagination repeated')
             seen.add(token)
@@ -301,6 +337,9 @@ class AttachmentDrive:
         expected = hashlib.sha256((self.docs.config['owner'] + ':' + self.docs.config['folder_id'] + ':attachments').encode()).hexdigest()
         if self.metadata(folder).get('appProperties', {}).get('familyArchiveAttachments') != expected:
             raise ValueError('attachment folder identity mismatch')
+        # Constructor metadata may predate a long Doc publication. Only this
+        # newly completed scan can resolve identities or establish their absence.
+        image_index = self.prefetch(folder)
         candidates = {}
         for key in ('attachments', 'attachments_pending_uploads'):
             for identity, entry in manifest[key].items():
@@ -315,7 +354,8 @@ class AttachmentDrive:
                 identity = self.identity(message['source_id'], item)
                 if identity in candidates or identity in manifest['attachments_pending_deletions']:
                     continue
-                file_id = self.find(folder, 'familyArchiveImage', identity)
+                file_id = (image_index.get(identity) if image_index is not None
+                           else self.find(folder, 'familyArchiveImage', identity))
                 if file_id is None:
                     continue
                 # Never trust a candidate's remote checksum as its own proof.
