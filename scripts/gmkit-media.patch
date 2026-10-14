@@ -459,10 +459,10 @@ index 0000000..696bc11
 +}
 diff --git c/internal/cmd/phone_spam.go i/internal/cmd/phone_spam.go
 new file mode 100644
-index 0000000..3154094
+index 0000000..5d3073b
 --- /dev/null
 +++ i/internal/cmd/phone_spam.go
-@@ -0,0 +1,111 @@
+@@ -0,0 +1,273 @@
 +package cmd
 +
 +import (
@@ -477,52 +477,209 @@ index 0000000..3154094
 +)
 +
 +const phoneSpamLimit = 500
++const phoneRestoreLimit = 20
 +const phoneSpamInterval = 5 * time.Minute
 +const phoneSpamTimeout = 30 * time.Second
 +
 +type phoneSpamLister interface {
 +	ListConversations(int, gmproto.ListConversationsRequest_Folder) (*gmproto.ListConversationsResponse, error)
++	GetConversation(string) (*gmproto.Conversation, error)
 +}
 +type phoneSpamResult struct {
-+	response *gmproto.ListConversationsResponse
-+	err      error
++	response     *gmproto.ListConversationsResponse
++	conversation *gmproto.Conversation
++	err          error
 +}
 +
-+// phoneSpamScanner uses the already-connected client and reads metadata only.
-+// libgm has no cancellable list or exported cursor API. At most one request is
-+// outstanding; a timed-out request is retained for the next scan, not retried
-+// concurrently. Scan never infers spam, deletion or unblocking from absence.
++// One existing connection, one outstanding request, one shared deadline.
++// The SDK cannot cancel requests; timed-out work retains its original request
++// start and is resumed next cycle without a concurrent retry. Discovery never
++// infers removal from missing folder entries. Restoration uses targeted reads
++// so old conversations beyond the folder-list cap can return to the archive.
 +type phoneSpamScanner struct {
-+	client   phoneSpamLister
-+	store    *store.Store
-+	logger   zerolog.Logger
-+	inFlight <-chan phoneSpamResult
-+	timeout  time.Duration
++	client           phoneSpamLister
++	store            *store.Store
++	logger           zerolog.Logger
++	inFlight         <-chan phoneSpamResult
++	timeout          time.Duration
++	requestID        string // empty for folder discovery, otherwise targeted lookup
++	requestStartedAt int64
++	cursorLoaded     bool
++	lookupFailed     bool
++	lastLookupID     string // rotating cursor across active exclusions
++}
++
++func (s *phoneSpamScanner) start(id string) {
++	result := make(chan phoneSpamResult, 1)
++	s.inFlight = result
++	s.requestID = id
++	s.requestStartedAt = time.Now().UnixMilli()
++	go func() {
++		if id == "" {
++			response, err := s.client.ListConversations(phoneSpamLimit, gmproto.ListConversationsRequest_SPAM_BLOCKED)
++			result <- phoneSpamResult{response: response, err: err}
++		} else {
++			conversation, err := s.client.GetConversation(id)
++			result <- phoneSpamResult{conversation: conversation, err: err}
++		}
++	}()
++}
++
++func (s *phoneSpamScanner) receive(ctx, bounded context.Context, checked int) (bool, bool) {
++	id := s.requestID
++	var result phoneSpamResult
++	select {
++	case result = <-s.inFlight:
++		s.inFlight = nil
++	case <-bounded.Done():
++		if id == "" {
++			s.record(ctx, "pending", 0, false, "metadata request still pending; no concurrent retry")
++		} else {
++			s.recordRestore(ctx, "pending", checked, "targeted request still pending; no concurrent retry")
++		}
++		return false, id == ""
++	}
++	if id == "" {
++		s.applyDiscovery(ctx, bounded, result)
++		return true, true
++	}
++	s.lastLookupID = id
++	if _, err := s.store.DB().ExecContext(ctx, "UPDATE phone_restore_scan_state SET last_lookup_id=? WHERE id=1", id); err != nil {
++		s.logger.Warn().Err(err).Msg("Phone restore rotation persistence failed")
++	}
++	if result.err != nil || result.conversation == nil || result.conversation.GetConversationID() != id {
++		s.lookupFailed = true
++		s.recordRestore(ctx, "failed", checked+1, "targeted metadata unavailable or ID mismatch")
++		return true, false
++	}
++	row, ok := gmsync.ConversationRow(result.conversation, "gm")
++	if !ok || s.store.UpsertConversation(bounded, row) != nil {
++		s.lookupFailed = true
++		s.recordRestore(ctx, "failed", checked+1, "targeted metadata persistence failed")
++		return true, false
++	}
++	// Upserting positive5/6 excludes immediately. Ordinary metadata or events
++	// cannot clear; only this explicit matching lookup can confirm normal state.
++	if err := s.store.ConfirmPhoneFolderRestored(bounded, []store.Conversation{row}, s.requestStartedAt); err != nil {
++		s.lookupFailed = true
++		s.recordRestore(ctx, "failed", checked+1, "targeted restoration persistence failed")
++		return true, false
++	}
++	s.recordRestore(ctx, "snapshot", checked+1, "")
++	return true, false
 +}
 +
 +func (s *phoneSpamScanner) scan(ctx context.Context) {
-+	if s.inFlight == nil {
-+		result := make(chan phoneSpamResult, 1)
-+		s.inFlight = result
-+		go func() {
-+			response, err := s.client.ListConversations(phoneSpamLimit, gmproto.ListConversationsRequest_SPAM_BLOCKED)
-+			result <- phoneSpamResult{response, err}
-+		}()
-+	}
 +	wait := s.timeout
 +	if wait <= 0 {
 +		wait = phoneSpamTimeout
 +	}
 +	bounded, cancel := context.WithTimeout(ctx, wait)
 +	defer cancel()
-+	var result phoneSpamResult
-+	select {
-+	case result = <-s.inFlight:
-+		s.inFlight = nil
-+	case <-bounded.Done():
-+		s.record(ctx, "pending", 0, false, "metadata request still pending; no concurrent retry")
++	if !s.cursorLoaded {
++		if err := s.store.DB().QueryRowContext(bounded, "SELECT last_lookup_id FROM phone_restore_scan_state WHERE id=1").Scan(&s.lastLookupID); err != nil {
++			s.recordRestore(ctx, "failed", 0, "targeted rotation read failed")
++			return
++		}
++		s.cursorLoaded = true
++	}
++	s.lookupFailed = false
++	seen := make(map[string]bool)
++	discoveryDone := false
++	checked := 0
++	if s.inFlight != nil {
++		pendingID := s.requestID
++		done, discovery := s.receive(ctx, bounded, checked)
++		if !done {
++			return
++		}
++		discoveryDone = discovery
++		if !discovery {
++			seen[pendingID] = true
++			checked++
++		}
++	}
++	if !discoveryDone {
++		if bounded.Err() != nil {
++			return
++		}
++		s.start("")
++		if done, _ := s.receive(ctx, bounded, checked); !done {
++			return
++		}
++	}
++	// At most20 targeted reads per cycle. A sorted rotating cursor prevents a
++	// permanently blocked first page from starving older restored conversations.
++	for checked < phoneRestoreLimit && bounded.Err() == nil {
++		id, err := s.nextLookup(bounded)
++		if err != nil {
++			s.recordRestore(ctx, "failed", checked, "targeted queue read failed")
++			return
++		}
++		if id == "" || seen[id] {
++			if s.lookupFailed {
++				s.recordRestore(ctx, "failed", checked, "one or more targeted metadata reads failed")
++			} else {
++				s.recordRestore(ctx, "snapshot", checked, "")
++			}
++			return
++		}
++		seen[id] = true
++		s.start(id)
++		if done, _ := s.receive(ctx, bounded, checked); !done {
++			return
++		}
++		checked++
++	}
++	if bounded.Err() != nil {
++		s.recordRestore(ctx, "pending", checked, "cycle deadline reached")
 +		return
 +	}
++	if s.lookupFailed {
++		s.recordRestore(ctx, "failed", checked, "one or more targeted metadata reads failed")
++	} else {
++		s.recordRestore(ctx, "capped", checked, "rotating targeted lookup limit reached")
++	}
++}
++
++func (s *phoneSpamScanner) nextLookup(ctx context.Context) (string, error) {
++	cutoff := time.Now().Add(-time.Minute).UnixMilli()
++	var id string
++	// Eligibility is rechecked transactionally on confirmation using the
++	// ORIGINAL request-start timestamp, including after a timeout.
++	rows, err := s.store.DB().QueryContext(ctx, `SELECT conversation_id FROM phone_spam_conversations WHERE active=1 AND observed_at<=? AND conversation_id>? ORDER BY conversation_id LIMIT 1`, cutoff, s.lastLookupID)
++	if err != nil {
++		return "", err
++	}
++	if rows.Next() {
++		err = rows.Scan(&id)
++	}
++	if err == nil {
++		err = rows.Err()
++	}
++	rows.Close()
++	if err != nil || id != "" {
++		return id, err
++	}
++	if s.lastLookupID == "" {
++		return "", nil
++	}
++	s.lastLookupID = ""
++	rows, err = s.store.DB().QueryContext(ctx, `SELECT conversation_id FROM phone_spam_conversations WHERE active=1 AND observed_at<=? ORDER BY conversation_id LIMIT 1`, cutoff)
++	if err != nil {
++		return "", err
++	}
++	defer rows.Close()
++	if rows.Next() {
++		err = rows.Scan(&id)
++	}
++	if err == nil {
++		err = rows.Err()
++	}
++	return id, err
++}
++
++func (s *phoneSpamScanner) applyDiscovery(ctx, bounded context.Context, result phoneSpamResult) {
 +	if result.err != nil || result.response == nil {
 +		s.record(ctx, "failed", 0, false, "metadata request failed")
 +		return
@@ -533,13 +690,11 @@ index 0000000..3154094
 +	if len(conversations) >= phoneSpamLimit || cursor {
 +		coverage = "capped"
 +	}
-+	// Snapshot describes this one response, not a verified complete account.
-+	// Full cursor traversal requires a change to the locked SDK dependency.
-+	scanRows := conversations
-+	if len(scanRows) > phoneSpamLimit {
-+		scanRows = scanRows[:phoneSpamLimit]
++	rows := conversations
++	if len(rows) > phoneSpamLimit {
++		rows = rows[:phoneSpamLimit]
 +	}
-+	for _, conversation := range scanRows {
++	for _, conversation := range rows {
 +		if conversation == nil {
 +			continue
 +		}
@@ -547,12 +702,24 @@ index 0000000..3154094
 +		if !ok {
 +			continue
 +		}
-+		if err := s.store.UpsertConversation(ctx, row); err != nil {
++		if err := s.store.UpsertConversation(bounded, row); err != nil {
 +			s.record(ctx, "failed", len(conversations), cursor, "metadata persistence failed")
 +			return
 +		}
 +	}
 +	s.record(ctx, coverage, len(conversations), cursor, "")
++}
++
++func (s *phoneSpamScanner) recordRestore(ctx context.Context, coverage string, count int, failure string) {
++	now := time.Now().UnixMilli()
++	success := int64(0)
++	if coverage == "snapshot" || coverage == "capped" {
++		success = now
++	}
++	_, err := s.store.DB().ExecContext(ctx, `UPDATE phone_restore_scan_state SET attempted_at=?,succeeded_at=CASE WHEN ?>0 THEN ? ELSE succeeded_at END,coverage=?,lookup_limit=?,checked_count=?,error=? WHERE id=1`, now, success, success, coverage, phoneRestoreLimit, count, failure)
++	if err != nil {
++		s.logger.Warn().Err(err).Msg("Phone restore coverage persistence failed")
++	}
 +}
 +
 +func (s *phoneSpamScanner) record(ctx context.Context, coverage string, count int, cursor bool, failure string) {
@@ -561,30 +728,26 @@ index 0000000..3154094
 +	if coverage == "snapshot" || coverage == "capped" {
 +		success = now
 +	}
-+	_, err := s.store.DB().ExecContext(ctx, `UPDATE phone_spam_scan_state SET
-+ attempted_at=?, succeeded_at=CASE WHEN ? > 0 THEN ? ELSE succeeded_at END,
-+ coverage=?, conversation_limit=?, returned_count=?, has_cursor=?, error=? WHERE id=1`,
-+		now, success, success, coverage, phoneSpamLimit, count, cursor, failure)
++	_, err := s.store.DB().ExecContext(ctx, `UPDATE phone_spam_scan_state SET attempted_at=?,succeeded_at=CASE WHEN ?>0 THEN ? ELSE succeeded_at END,coverage=?,conversation_limit=?,returned_count=?,has_cursor=?,error=? WHERE id=1`, now, success, success, coverage, phoneSpamLimit, count, cursor, failure)
 +	if err != nil {
 +		s.logger.Warn().Err(err).Msg("Phone spam coverage persistence failed")
 +	}
 +	if failure != "" || coverage == "capped" {
 +		s.logger.Warn().Str("coverage", coverage).Int("limit", phoneSpamLimit).Int("returned", count).Bool("has_cursor", cursor).Msg(fmt.Sprintf("Phone spam metadata reconciliation: %s", failure))
-+	} else {
-+		s.logger.Info().Str("coverage", coverage).Int("returned", count).Msg("Phone spam metadata reconciled; absence is not evidence")
 +	}
 +}
 diff --git c/internal/cmd/phone_spam_test.go i/internal/cmd/phone_spam_test.go
 new file mode 100644
-index 0000000..0995b91
+index 0000000..4f1e8c6
 --- /dev/null
 +++ i/internal/cmd/phone_spam_test.go
-@@ -0,0 +1,114 @@
+@@ -0,0 +1,261 @@
 +package cmd
 +
 +import (
 +	"context"
 +	"errors"
++	"fmt"
 +	"path/filepath"
 +	"sync/atomic"
 +	"testing"
@@ -596,21 +759,28 @@ index 0000000..0995b91
 +)
 +
 +type spamListFixture struct {
-+	response    *gmproto.ListConversationsResponse
-+	err         error
-+	release     chan struct{}
-+	calls       atomic.Int32
-+	wrongFolder atomic.Bool
++	response      *gmproto.ListConversationsResponse
++	err           error
++	release       chan struct{}
++	calls         atomic.Int32
++	wrongFolder   atomic.Bool
++	conversation  *gmproto.Conversation
++	lookupError   error
++	lookupRelease chan struct{}
++	lookupCalls   atomic.Int32
++	rotate        bool
++	lookupIDs     []string
 +}
 +
 +func (f *spamListFixture) ListConversations(count int, folder gmproto.ListConversationsRequest_Folder) (*gmproto.ListConversationsResponse, error) {
 +	f.calls.Add(1)
-+	if count != 500 || folder != gmproto.ListConversationsRequest_SPAM_BLOCKED {
++	if count != 500 || (folder != gmproto.ListConversationsRequest_SPAM_BLOCKED && folder != gmproto.ListConversationsRequest_INBOX && folder != gmproto.ListConversationsRequest_ARCHIVE) {
 +		f.wrongFolder.Store(true)
 +	}
 +	if f.release != nil {
 +		<-f.release
 +	}
++
 +	return f.response, f.err
 +}
 +
@@ -688,10 +858,149 @@ index 0000000..0995b91
 +	scanner.timeout = time.Second
 +	scanner.scan(ctx)
 +	if fixture.calls.Load() != 1 {
-+		t.Fatal("completed pending response not reused")
++		t.Fatal("completed pending response not reused before remaining folders")
 +	}
 +	if err := st.DB().QueryRowContext(ctx, "SELECT coverage FROM phone_spam_scan_state").Scan(&coverage); err != nil || coverage != "snapshot" {
 +		t.Fatalf("recovered coverage %s %v", coverage, err)
++	}
++}
++
++func (f *spamListFixture) GetConversation(id string) (*gmproto.Conversation, error) {
++	f.lookupCalls.Add(1)
++	if f.rotate {
++		f.lookupIDs = append(f.lookupIDs, id)
++		return &gmproto.Conversation{ConversationID: id, Status: 0}, nil
++	}
++	if f.lookupRelease != nil {
++		<-f.lookupRelease
++	}
++	return f.conversation, f.lookupError
++}
++
++func TestPhoneFolderRestoreRequiresFreshSuccessfulTargetedRead(t *testing.T) {
++	ctx := context.Background()
++	for _, test := range []struct {
++		name                              string
++		status                            gmproto.ConversationStatus
++		missing, failed, recent, mismatch bool
++		wantActive                        int
++	}{
++		{name: "inbox", status: 1, wantActive: 0}, {name: "archive", status: 2, wantActive: 0}, {name: "keep_archive", status: 4, wantActive: 0},
++		{name: "unknown", status: 0, wantActive: 1}, {name: "deleted", status: 3, wantActive: 1}, {name: "spam", status: 5, wantActive: 1}, {name: "blocked", status: 6, wantActive: 1},
++		{name: "missing", missing: true, wantActive: 1}, {name: "failed", status: 1, failed: true, wantActive: 1}, {name: "race_guard", status: 1, recent: true, wantActive: 1}, {name: "wrong_id", status: 1, mismatch: true, wantActive: 1},
++	} {
++		t.Run(test.name, func(t *testing.T) {
++			st, err := store.Open(ctx, filepath.Join(t.TempDir(), "archive.db"))
++			if err != nil {
++				t.Fatal(err)
++			}
++			defer st.Close()
++			if err := st.UpsertConversation(ctx, store.Conversation{ID: "excluded", PhoneStatus: 5}); err != nil {
++				t.Fatal(err)
++			}
++			if !test.recent {
++				if _, err := st.DB().ExecContext(ctx, "UPDATE phone_spam_conversations SET observed_at=?", time.Now().Add(-2*time.Minute).UnixMilli()); err != nil {
++					t.Fatal(err)
++				}
++			}
++			fixture := &spamListFixture{response: &gmproto.ListConversationsResponse{CursorBytes: []byte{1}}, conversation: &gmproto.Conversation{ConversationID: "excluded", Status: test.status}}
++			if test.missing {
++				fixture.conversation = nil
++			}
++			if test.failed {
++				fixture.lookupError = errors.New("fixture")
++			}
++			if test.mismatch {
++				fixture.conversation.ConversationID = "other"
++			}
++			scanner := &phoneSpamScanner{client: fixture, store: st, logger: zerolog.Nop()}
++			scanner.scan(ctx)
++			var active int
++			var revision, status int64
++			if err := st.DB().QueryRowContext(ctx, "SELECT active,revision,status FROM phone_spam_conversations WHERE conversation_id='excluded'").Scan(&active, &revision, &status); err != nil {
++				t.Fatal(err)
++			}
++			if active != test.wantActive {
++				t.Fatalf("active%d want%d", active, test.wantActive)
++			}
++			if test.wantActive == 0 && (revision != 2 || status != 5) {
++				t.Fatal("restore lost historical exclusion")
++			}
++			if test.recent && fixture.lookupCalls.Load() != 0 {
++				t.Fatal("queried during60sec race guard")
++			}
++			var count int
++			if err := st.DB().QueryRowContext(ctx, "SELECT COUNT(*) FROM messages").Scan(&count); err != nil || count != 0 {
++				t.Fatal("targeted metadata fetched history")
++			}
++		})
++	}
++}
++
++func TestPhoneTargetedPendingRequestRetainsStartAndDoesNotClearReblock(t *testing.T) {
++	ctx := context.Background()
++	st, err := store.Open(ctx, filepath.Join(t.TempDir(), "archive.db"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer st.Close()
++	if err := st.UpsertConversation(ctx, store.Conversation{ID: "excluded", PhoneStatus: 5}); err != nil {
++		t.Fatal(err)
++	}
++	if _, err := st.DB().ExecContext(ctx, "UPDATE phone_spam_conversations SET observed_at=?", time.Now().Add(-2*time.Minute).UnixMilli()); err != nil {
++		t.Fatal(err)
++	}
++	release := make(chan struct{})
++	fixture := &spamListFixture{response: &gmproto.ListConversationsResponse{}, conversation: &gmproto.Conversation{ConversationID: "excluded", Status: 1}, lookupRelease: release}
++	scanner := &phoneSpamScanner{client: fixture, store: st, logger: zerolog.Nop(), timeout: 10 * time.Millisecond}
++	scanner.scan(ctx)
++	started := scanner.requestStartedAt
++	scanner.scan(ctx)
++	if scanner.requestStartedAt != started || fixture.lookupCalls.Load() != 1 {
++		t.Fatal("pending lookup retried or timestamp replaced")
++	}
++	if err := st.UpsertConversation(ctx, store.Conversation{ID: "excluded", PhoneStatus: 6}); err != nil {
++		t.Fatal(err)
++	}
++	close(release)
++	scanner.timeout = time.Second
++	scanner.scan(ctx)
++	var active int
++	if err := st.DB().QueryRowContext(ctx, "SELECT active FROM phone_spam_conversations WHERE conversation_id='excluded'").Scan(&active); err != nil || active != 1 {
++		t.Fatal("pending old request cleared reblock")
++	}
++}
++
++func TestPhoneTargetedLookupRotatesBeyondDiscoveryAndLookupCaps(t *testing.T) {
++	ctx := context.Background()
++	st, err := store.Open(ctx, filepath.Join(t.TempDir(), "archive.db"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer st.Close()
++	for n := 0; n < 25; n++ {
++		if err := st.UpsertConversation(ctx, store.Conversation{ID: fmt.Sprintf("%03d", n), PhoneStatus: 5}); err != nil {
++			t.Fatal(err)
++		}
++	}
++	if _, err := st.DB().ExecContext(ctx, "UPDATE phone_spam_conversations SET observed_at=?", time.Now().Add(-2*time.Minute).UnixMilli()); err != nil {
++		t.Fatal(err)
++	}
++	fixture := &spamListFixture{response: &gmproto.ListConversationsResponse{CursorBytes: []byte{1}}, rotate: true}
++	scanner := &phoneSpamScanner{client: fixture, store: st, logger: zerolog.Nop()}
++	scanner.scan(ctx)
++	if len(fixture.lookupIDs) != 20 || fixture.lookupIDs[19] != "019" {
++		t.Fatalf("unbounded first cycle: %v", fixture.lookupIDs)
++	}
++	scanner = &phoneSpamScanner{client: fixture, store: st, logger: zerolog.Nop()}
++	scanner.scan(ctx)
++	if len(fixture.lookupIDs) != 40 || fixture.lookupIDs[20] != "020" {
++		t.Fatalf("old exclusions starved: %v", fixture.lookupIDs)
++	}
++	var coverage string
++	var count int
++	if err := st.DB().QueryRowContext(ctx, "SELECT coverage,checked_count FROM phone_restore_scan_state").Scan(&coverage, &count); err != nil || coverage != "capped" || count != 20 {
++		t.Fatalf("coverage:%s %d %v", coverage, count, err)
 +	}
 +}
 diff --git c/internal/cmd/serve.go i/internal/cmd/serve.go
@@ -1253,7 +1562,7 @@ index 9e6f8a1..64270d1 100644
  
  type aliasParams struct {
 diff --git c/internal/store/conversations.go i/internal/store/conversations.go
-index df265dd..1eb1c41 100644
+index df265dd..a8a58b6 100644
 --- c/internal/store/conversations.go
 +++ i/internal/store/conversations.go
 @@ -20,6 +20,7 @@ type Conversation struct {
@@ -1284,7 +1593,7 @@ index df265dd..1eb1c41 100644
  		ON CONFLICT(conversation_id) DO UPDATE SET
  			source_platform   = excluded.source_platform,
  			name              = excluded.name,
-@@ -48,22 +54,33 @@ func (s *Store) UpsertConversation(ctx context.Context, c Conversation) error {
+@@ -48,22 +54,34 @@ func (s *Store) UpsertConversation(ctx context.Context, c Conversation) error {
  			unread            = excluded.unread,
  			pinned            = excluded.pinned,
  			archived          = excluded.archived,
@@ -1301,11 +1610,12 @@ index df265dd..1eb1c41 100644
 -	return nil
 +	if platform == "gm" && (c.PhoneStatus == 5 || c.PhoneStatus == 6) {
 +		if _, err := tx.ExecContext(ctx, `
-+			INSERT INTO phone_spam_conversations (conversation_id, status, observed_at)
-+			VALUES (?, ?, ?)
-+			ON CONFLICT(conversation_id) DO UPDATE SET status=excluded.status,
++			INSERT INTO phone_spam_conversations (conversation_id, status, observed_at, first_observed_at)
++			VALUES (?, ?, ?, ?)
++			ON CONFLICT(conversation_id) DO UPDATE SET status=excluded.status, active=1,
++			revision=phone_spam_conversations.revision+1,
 +			observed_at=MAX(phone_spam_conversations.observed_at, excluded.observed_at)
-+		`, c.ID, c.PhoneStatus, now); err != nil {
++		`, c.ID, c.PhoneStatus, now, now); err != nil {
 +			return fmt.Errorf("record phone spam observation: %w", err)
 +		}
 +	}
@@ -1321,7 +1631,7 @@ index df265dd..1eb1c41 100644
  		       COALESCE(al.alias, '')
  		  FROM conversations c
  		  LEFT JOIN aliases al ON al.target_type = 'conversation' AND al.target_id = c.conversation_id
-@@ -94,7 +111,7 @@ func (s *Store) ListConversations(ctx context.Context, opts ListConversationOpts
+@@ -94,7 +112,7 @@ func (s *Store) ListConversations(ctx context.Context, opts ListConversationOpts
  	}
  	q := `
  		SELECT c.conversation_id, c.source_platform, c.name, c.is_group, c.participants_json,
@@ -1330,7 +1640,7 @@ index df265dd..1eb1c41 100644
  		       COALESCE(al.alias, '')
  		  FROM conversations c
  		  LEFT JOIN aliases al ON al.target_type = 'conversation' AND al.target_id = c.conversation_id`
-@@ -134,7 +151,7 @@ func scanConversation(r interface {
+@@ -134,7 +152,7 @@ func scanConversation(r interface {
  	var lastMsg, updated, isGroup, unread, pinned, archived int64
  	if err := r.Scan(
  		&c.ID, &c.SourcePlatform, &c.Name, &isGroup, &c.ParticipantsJSON,
@@ -1360,9 +1670,184 @@ index 2e51139..d74a29e 100644
  			updated_at      = excluded.updated_at
  	`,
  		m.ID, m.ConversationID, platform, m.SenderID,
+diff --git c/internal/store/phone_folder.go i/internal/store/phone_folder.go
+new file mode 100644
+index 0000000..2d9335f
+--- /dev/null
++++ i/internal/store/phone_folder.go
+@@ -0,0 +1,32 @@
++package store
++
++import (
++	"context"
++	"time"
++)
++
++// ConfirmPhoneFolderRestored accepts only a fresh targeted GetConversation response, never events or missing entries. Request start must be at least a
++// minute after the latest spam/blocked observation, preventing stale responses
++// and Google's known status race from clearing a newly excluded conversation.
++// The historical positive ledger is retained and its revision increases only
++// on an actual transition. Callers must verify the returned conversation ID matches the request.
++// All confirmations commit together.
++func (s *Store) ConfirmPhoneFolderRestored(ctx context.Context, rows []Conversation, requestStartedAt int64) error {
++	tx, err := s.db.BeginTx(ctx, nil)
++	if err != nil {
++		return err
++	}
++	defer tx.Rollback()
++	now := time.Now().UnixMilli()
++	for _, row := range rows {
++		if row.PhoneStatus != 1 && row.PhoneStatus != 2 && row.PhoneStatus != 4 {
++			continue
++		}
++		if _, err := tx.ExecContext(ctx, `UPDATE phone_spam_conversations SET
++ active=0,restored_status=?,restored_at=MAX(restored_at,?,?,observed_at+1),revision=revision+1
++ WHERE conversation_id=? AND active=1 AND observed_at<=?`, row.PhoneStatus, now, requestStartedAt, row.ID, requestStartedAt-time.Minute.Milliseconds()); err != nil {
++			return err
++		}
++	}
++	return tx.Commit()
++}
+diff --git c/internal/store/phone_folder_test.go i/internal/store/phone_folder_test.go
+new file mode 100644
+index 0000000..a12187c
+--- /dev/null
++++ i/internal/store/phone_folder_test.go
+@@ -0,0 +1,131 @@
++package store
++
++import (
++	"context"
++	"path/filepath"
++	"testing"
++	"time"
++)
++
++func TestPhoneFolderRestorationRevisionAndStaleResponseGuard(t *testing.T) {
++	ctx := context.Background()
++	st, err := Open(ctx, filepath.Join(t.TempDir(), "archive.db"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer st.Close()
++	if err := st.UpsertConversation(ctx, Conversation{ID: "thread", PhoneStatus: 6}); err != nil {
++		t.Fatal(err)
++	}
++	old := time.Now().Add(-2 * time.Minute).UnixMilli()
++	if _, err := st.DB().ExecContext(ctx, "UPDATE phone_spam_conversations SET observed_at=?,first_observed_at=?", old, old); err != nil {
++		t.Fatal(err)
++	}
++	rows := []Conversation{{ID: "thread", PhoneStatus: 1}}
++	if err := st.ConfirmPhoneFolderRestored(ctx, rows, time.Now().UnixMilli()); err != nil {
++		t.Fatal(err)
++	}
++	if err := st.ConfirmPhoneFolderRestored(ctx, rows, time.Now().UnixMilli()); err != nil {
++		t.Fatal(err)
++	}
++	var active int
++	var revision, first, status, restored int64
++	read := func() {
++		t.Helper()
++		if err := st.DB().QueryRowContext(ctx, "SELECT active,revision,first_observed_at,status,restored_at FROM phone_spam_conversations WHERE conversation_id='thread'").Scan(&active, &revision, &first, &status, &restored); err != nil {
++			t.Fatal(err)
++		}
++	}
++	read()
++	if active != 0 || revision != 2 || first != old || status != 6 || restored <= 0 {
++		t.Fatalf("bad restored state: %d %d %d %d %d", active, revision, first, status, restored)
++	}
++	// A reblock while a normal-folder request is in flight must win.
++	started := time.Now().UnixMilli()
++	if err := st.UpsertConversation(ctx, Conversation{ID: "thread", PhoneStatus: 5}); err != nil {
++		t.Fatal(err)
++	}
++	if err := st.ConfirmPhoneFolderRestored(ctx, rows, started); err != nil {
++		t.Fatal(err)
++	}
++	read()
++	if active != 1 || revision != 3 || first != old || status != 5 {
++		t.Fatal("stale normal response cleared reblock")
++	}
++	// A normal event updates metadata only; it cannot restore.
++	if err := st.UpsertConversation(ctx, rows[0]); err != nil {
++		t.Fatal(err)
++	}
++	read()
++	if active != 1 || revision != 3 {
++		t.Fatal("normal event restored without fresh folder query")
++	}
++}
++
++func TestPhoneFolderRestorationBatchFailureKeepsAllExclusions(t *testing.T) {
++	ctx := context.Background()
++	st, err := Open(ctx, filepath.Join(t.TempDir(), "archive.db"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer st.Close()
++	for _, id := range []string{"first", "second"} {
++		if err := st.UpsertConversation(ctx, Conversation{ID: id, PhoneStatus: 5}); err != nil {
++			t.Fatal(err)
++		}
++	}
++	if _, err := st.DB().ExecContext(ctx, "UPDATE phone_spam_conversations SET observed_at=?", time.Now().Add(-2*time.Minute).UnixMilli()); err != nil {
++		t.Fatal(err)
++	}
++	if _, err := st.DB().ExecContext(ctx, `CREATE TRIGGER fixture_restore_failure BEFORE UPDATE OF active ON phone_spam_conversations WHEN NEW.conversation_id='second' AND NEW.active=0 BEGIN SELECT RAISE(ABORT,'fixture failure'); END;`); err != nil {
++		t.Fatal(err)
++	}
++	if err := st.ConfirmPhoneFolderRestored(ctx, []Conversation{{ID: "first", PhoneStatus: 1}, {ID: "second", PhoneStatus: 2}}, time.Now().UnixMilli()); err == nil {
++		t.Fatal("expected failed batch")
++	}
++	var count int
++	if err := st.DB().QueryRowContext(ctx, "SELECT COUNT(*) FROM phone_spam_conversations WHERE active=1 AND revision=1").Scan(&count); err != nil || count != 2 {
++		t.Fatalf("partially restored failed response: %d %v", count, err)
++	}
++}
++
++func TestPhoneFolderMigrationRetainsV4SpamEvidence(t *testing.T) {
++	ctx := context.Background()
++	path := filepath.Join(t.TempDir(), "archive.db")
++	st, err := Open(ctx, path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err := st.UpsertConversation(ctx, Conversation{ID: "prior", PhoneStatus: 6}); err != nil {
++		t.Fatal(err)
++	}
++	var observed int64
++	if err := st.DB().QueryRowContext(ctx, "SELECT observed_at FROM phone_spam_conversations WHERE conversation_id='prior'").Scan(&observed); err != nil {
++		t.Fatal(err)
++	}
++	for _, column := range []string{"active", "first_observed_at", "revision", "restored_status", "restored_at"} {
++		if _, err := st.DB().ExecContext(ctx, "ALTER TABLE phone_spam_conversations DROP COLUMN "+column); err != nil {
++			t.Fatal(err)
++		}
++	}
++	if _, err := st.DB().ExecContext(ctx, "DROP TABLE phone_restore_scan_state"); err != nil {
++		t.Fatal(err)
++	}
++	if _, err := st.DB().ExecContext(ctx, "DELETE FROM schema_version WHERE version=5"); err != nil {
++		t.Fatal(err)
++	}
++	st.Close()
++	st, err = Open(ctx, path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer st.Close()
++	var active int
++	var status, first, revision int64
++	if err := st.DB().QueryRowContext(ctx, "SELECT active,status,first_observed_at,revision FROM phone_spam_conversations WHERE conversation_id='prior'").Scan(&active, &status, &first, &revision); err != nil {
++		t.Fatal(err)
++	}
++	if active != 1 || status != 6 || first != observed || revision != 1 {
++		t.Fatalf("migration lost exclusion: %d %d %d %d", active, status, first, revision)
++	}
++}
 diff --git c/internal/store/phone_spam_test.go i/internal/store/phone_spam_test.go
 new file mode 100644
-index 0000000..0a2421d
+index 0000000..7465303
 --- /dev/null
 +++ i/internal/store/phone_spam_test.go
 @@ -0,0 +1,45 @@
@@ -1385,7 +1870,7 @@ index 0000000..0a2421d
 +		t.Fatal(err)
 +	}
 +	// Restore the actual v3 schema and reopen as an existing installation.
-+	for _, sql := range []string{"DROP TABLE phone_spam_conversations", "DROP TABLE phone_spam_scan_state", "ALTER TABLE conversations DROP COLUMN phone_status", "DELETE FROM schema_version WHERE version=4"} {
++	for _, sql := range []string{"DROP TABLE phone_restore_scan_state", "DELETE FROM schema_version WHERE version=5", "DROP TABLE phone_spam_conversations", "DROP TABLE phone_spam_scan_state", "ALTER TABLE conversations DROP COLUMN phone_status", "DELETE FROM schema_version WHERE version=4"} {
 +		if _, err := st.DB().ExecContext(ctx, sql); err != nil {
 +			t.Fatal(err)
 +		}
@@ -1412,10 +1897,10 @@ index 0000000..0a2421d
 +	}
 +}
 diff --git c/internal/store/schema.go i/internal/store/schema.go
-index 064bd78..ce0d04e 100644
+index 064bd78..6302f17 100644
 --- c/internal/store/schema.go
 +++ i/internal/store/schema.go
-@@ -153,4 +153,26 @@ var migrations = []string{
+@@ -153,4 +153,47 @@ var migrations = []string{
  
  	INSERT INTO schema_version (version) VALUES (3);
  	`,
@@ -1441,6 +1926,27 @@ index 064bd78..ce0d04e 100644
 +	INSERT INTO phone_spam_scan_state (id) VALUES (1);
 +	INSERT INTO schema_version (version) VALUES (4);
 +	`,
++	// v5: current exclusion state with positive, race-guarded restorations.
++	`
++	ALTER TABLE phone_spam_conversations ADD COLUMN active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0,1));
++	ALTER TABLE phone_spam_conversations ADD COLUMN first_observed_at INTEGER NOT NULL DEFAULT 0;
++	ALTER TABLE phone_spam_conversations ADD COLUMN revision INTEGER NOT NULL DEFAULT 1;
++	ALTER TABLE phone_spam_conversations ADD COLUMN restored_status INTEGER NOT NULL DEFAULT 0;
++	ALTER TABLE phone_spam_conversations ADD COLUMN restored_at INTEGER NOT NULL DEFAULT 0;
++	UPDATE phone_spam_conversations SET first_observed_at=observed_at;
++	CREATE TABLE phone_restore_scan_state (
++		id INTEGER PRIMARY KEY CHECK (id=1),
++		attempted_at INTEGER NOT NULL DEFAULT 0,
++		succeeded_at INTEGER NOT NULL DEFAULT 0,
++		coverage TEXT NOT NULL DEFAULT 'never',
++		lookup_limit INTEGER NOT NULL DEFAULT 20,
++		last_lookup_id TEXT NOT NULL DEFAULT '',
++		checked_count INTEGER NOT NULL DEFAULT 0,
++		error TEXT NOT NULL DEFAULT ''
++	) STRICT;
++	INSERT INTO phone_restore_scan_state (id) VALUES (1);
++	INSERT INTO schema_version (version) VALUES (5);
++	`,
  }
 diff --git c/internal/store/search.go i/internal/store/search.go
 index e55b772..b70a0bb 100644
@@ -1456,7 +1962,7 @@ index e55b772..b70a0bb 100644
  		  FROM conversations c
  		  LEFT JOIN aliases a ON a.target_type = 'conversation' AND a.target_id = c.conversation_id
 diff --git c/internal/store/store_test.go i/internal/store/store_test.go
-index 44c8fb2..a89db75 100644
+index 44c8fb2..e07f688 100644
 --- c/internal/store/store_test.go
 +++ i/internal/store/store_test.go
 @@ -33,8 +33,8 @@ func TestOpenMigratesFreshDB(t *testing.T) {
@@ -1465,8 +1971,8 @@ index 44c8fb2..a89db75 100644
  	}
 -	if v, err := st.SchemaVersion(ctx); err != nil || v != 3 {
 -		t.Fatalf("schema version: got %d err=%v, want 3", v, err)
-+	if v, err := st.SchemaVersion(ctx); err != nil || v != 4 {
-+		t.Fatalf("schema version: got %d err=%v, want 4", v, err)
++	if v, err := st.SchemaVersion(ctx); err != nil || v != 5 {
++		t.Fatalf("schema version: got %d err=%v, want 5", v, err)
  	}
  }
  

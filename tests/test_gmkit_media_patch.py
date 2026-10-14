@@ -44,7 +44,13 @@ class GmkitMediaPatchTests(unittest.TestCase):
                      'TestPhoneSpamMetadataOnlyReconciliationReportsCoverage',
                      'TestPhoneSpamPendingRequestIsBoundedWithoutConcurrentRetry',
                      'TestPhoneSpamMigrationPreservesExistingArchive',
-                     'TestPhoneSpamStatusDistinguishesArchiveDeleteUnknownAndStaysSticky']:
+                     'TestPhoneSpamStatusDistinguishesArchiveDeleteUnknownAndStaysSticky',
+                     'TestPhoneFolderRestoreRequiresFreshSuccessfulTargetedRead',
+                     'TestPhoneFolderRestorationRevisionAndStaleResponseGuard',
+                     'TestPhoneFolderRestorationBatchFailureKeepsAllExclusions',
+                     'TestPhoneFolderMigrationRetainsV4SpamEvidence',
+                     'TestPhoneTargetedPendingRequestRetainsStartAndDoesNotClearReblock',
+                     'TestPhoneTargetedLookupRotatesBeyondDiscoveryAndLookupCaps']:
             self.assertIn(name, source)
         self.assertIn('GNU Affero General Public License', builder.NOTICE)
         self.assertIn(builder.COMMIT, builder.NOTICE)
