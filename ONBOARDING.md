@@ -113,6 +113,13 @@ folder sandbox. Minbox separately enforces the chosen root and managed parents.
 Manually inserted unrelated files are neither automatically authorized nor imported.
 Existing broad grants use DRIVE_MIGRATION.md before fresh limited consent.
 
+Before enabling the owner_all schedule, follow
+[publication performance](OWNER_ARCHIVE.md#publication-performance): establish a
+verified first run and warm repeat, inspect actual completed timestamps, and
+measure locally before tuning concurrent reads, part sizes or image attempts.
+Use this computer's private config and reviewed installed runtime; the examples
+are optional settings, not universal onboarding defaults.
+
 ## Schedules and health
 
 **Computer, agent:** after live checks, enable only the verified owner jobs:

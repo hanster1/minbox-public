@@ -233,6 +233,14 @@ Drive refresh grants. Verify the application's actual status before claiming
 unattended authorization is durable; the installer does not infer it offline.
 [Google OAuth documentation](https://developers.google.com/identity/protocols/oauth2).
 
+Read [publication performance](OWNER_ARCHIVE.md#publication-performance) before
+enabling the schedule. The shared publisher supports optional bounded revision
+reads and part/image budgets; keep defaults until local measurements justify a
+trial. Cold proofs still need full reads. On an existing Mac installation, follow
+the guide's runtime-refresh and publisher-config digest/rebind procedure rather
+than changing JSON and blindly running a saved-settings update. Live Linux
+timings do not establish Mac/iPhone acceptance.
+
 **Mac owner:** explicitly authorize publishing your all-captured filtered private
 archive. **Mac coding agent:** run once, verify readback/filtering, then verify a
 repeat with zero writes and zero model calls. Then enable its scheduled publisher separately:

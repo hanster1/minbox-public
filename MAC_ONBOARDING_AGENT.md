@@ -5,7 +5,10 @@ For other work, follow the current task without starting an installation.
 
 This is the common entry point for local Mac setup/repair from the actual repository
 checkout. Examples use Casey; preserve the agreed existing owner namespace.
-Read AGENTS.md, WORKFLOW.md, HANDOFF.md, MAC_SETUP.md and MAC_RECOVERY.md.
+Read AGENTS.md, WORKFLOW.md, HANDOFF.md, MAC_SETUP.md and MAC_RECOVERY.md, plus
+[publication performance](OWNER_ARCHIVE.md#publication-performance) before
+enabling or tuning the full publisher. Preserve defaults unless local completed
+runs justify a change; validate the scheduled repeat and configuration binding.
 Installed Linux workflows/skills are optional; report unavailable ones once and
 continue with these documents. Any usable CLI-capable coding agent may perform
 this work. Preserve host preferences and do not change global agent settings.

@@ -1,52 +1,42 @@
 # Minbox session checkpoint
 
-This public repository is the canonical home for application, onboarding/repair
-and information-site source. MAINTENANCE.md maps private hosting procedures and
-runtime state to their separate homes. Retain the historical private repository
-for reference; never merge its private history or overwrite current fixes.
-Minbox code is MIT; collector changes retain upstream AGPL and complete-source
-requirements in THIRD_PARTY_NOTICES.md and GMKIT_MEDIA.md.
+This public repository is the canonical application, onboarding/repair and
+information-site source. MAINTENANCE.md maps hosted operations to their separate
+home. Keep private history, runtime state and account bindings outside this Git
+history. Minbox code is MIT; collector changes retain upstream AGPL obligations.
 
-## Completed
+## Latest result
 
-Opt-in Android `spam_and_blocked` synchronization withdraws whole conversations
-and managed images from current Drive views while retaining local originals.
-Fresh, explicit normal phone status restores eligible content; missing/stale
-responses cannot clear exclusions. Text Doc IDs remain stable. Native Docs
-version history is retained. See PHONE_SPAM.md for scope and consent.
+Portable publication guidance now lives in
+[OWNER_ARCHIVE.md](OWNER_ARCHIVE.md#publication-performance), discovered through
+AGENTS.md, README and both platform setup/recovery paths. It covers defaults and
+bounds, cold/warm measurements, retry-aware comparisons, opt-in concurrent reads,
+part/image budgets, preserved identities, rollback and completed-run acceptance.
+Mac guidance distinguishes checkout updates from installed code and requires
+reviewed config-digest rebinds with exact saved settings after active jobs finish.
+Android recovery links the common procedure rather than duplicating it.
 
-Private owner/account/folder-bound document proofs let unchanged outputs use
-revision probes for up to 24 hours after full verification. Changed outputs can
-reuse fresh bound geometry or an explicit operator-provided previous body for
-revision-guarded repair; new content still requires full exact structural readback. Expired/cold outputs require structural reads. Corrections,
-privacy checks and deletion journals remain fresh. Spam-image withdrawal uses
-one bounded fresh folder scan; incomplete listings fall back to exact searches.
-
-Optional work analysis shares approved context once per batch, excludes explicit
-spam/personal/mixed inputs before AI, and shares one messages/Loom call budget,
-including failures. Undo can reuse matching history. Full publication uses no AI.
+The code supports at most three unchanged-output revision reads, paced to one
+logical launch per second; the default remains sequential. Proof/hash/age checks,
+privacy checks, correction reads, guarded writes and full readback remain.
+Warm changed outputs can reuse verified structure; uncertain writes are never
+blindly replayed. Full publication is model-free; work analysis stays optional.
+Phone spam exclusions retain originals and stable source/Doc identities.
 
 ## Verification and limits
 
-491 Python tests ran, five optional skips and no failures. Release checks passed
-for 122 files and 87 inventoried source/test files. Reviewed Linux installation and live cold/
-cached publishing passed. The latest smaller-part migration completed full
-verification and one automatic repeat under the normal ten-minute limit. Prior
-schedules and recovery pauses were restored; import/work catch-up passed. That
-repeat took about 9m48s and later runs timed out. An opt-in bounded revision
-prefetch now overlaps unchanged-output checks (default remains sequential);
-writes, full reads and Corrections remain sequential. Its first controlled full
-publication succeeded in 3m04s; an automatic repeat succeeded in 4m33s under
-the normal 600-second deadline. Prior schedules/recovery settings were restored.
-Collection continued. Private bindings, timings and rollback receipts remain
-outside Git. Historical image uploads remain pending; backlog drainage is
-unverified. Large Docs and daily verification can remain slow.
-ANDROID_RECOVERY.md describes smaller-part migration and scoped image-attempt limits for repeated timeouts.
-Website source was not deployed.
+Fresh-clone verification: 491 tests ran, five optional skips and no failures.
+Release/link checks cover 122 files and 87 inventoried source/test files;
+reachable-history private-marker review passed. Linux full publication
+completed in 3m04s and an automatic repeat in 4m33s; imports caught up, prior jobs
+and recovery settings were restored, and health was clear. These are observations,
+not throughput guarantees or independent-client acceptance.
 
-Real phone unspam restoration, Mac/iPhone and independent client setup, renewal,
-reboot and offline catch-up need further acceptance. Media coverage is bounded;
-external heartbeat and independent encrypted backup remain separate work.
+Cold/changed reads remain sequential and the owner lock remains. Historical image
+backlog drainage, live Mac/iPhone operation, independent onboarding, natural
+renewal, reboot/offline catch-up and independent backup need further acceptance.
+Private bindings and rollback/timing receipts stay outside Git. No website or
+new runtime deployment is part of this documentation checkpoint.
 
-Next: observe scheduled publication latency and image backlog progress, then
-perform remaining client acceptance checks when their devices are available.
+Next: observe scheduled/cold latency and perform independent client/device
+acceptance when available.

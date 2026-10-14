@@ -41,3 +41,10 @@ For interruptions, use the recovery guide, preserve existing bindings, and leave
 one concrete next action in a private local checkpoint outside Git. Repair source
 in the checkout, test it, then apply the reviewed update. Do not autonomously
 deploy generated background repairs, publish source or change global settings.
+
+Before enabling or tuning owner_all publication, read
+[publication performance](OWNER_ARCHIVE.md#publication-performance). Start with
+supported defaults, measure cold/warm completed runs, and apply optional bounded
+revision reads or smaller parts only with local evidence. Verify import catch-up,
+an automatic repeat and health; heartbeat or a zero exit with `owner_busy` is not
+completion. Use each platform's reviewed runtime update/configuration procedure.

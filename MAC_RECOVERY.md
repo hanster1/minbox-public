@@ -53,6 +53,7 @@ existence. An explicit pause is an instruction to preserve, not an outage to fix
 | Missing job, bad binding, modified installed source | Preserve evidence and reconcile against manifest/source; do not overwrite or enable with defaults. |
 | Auth, privacy or integrity error | Stop the affected writes/recovery and request the specific owner action; preserve grants and stable IDs. |
 | Optional Loom/work-analysis issue | Keep local maintenance status while checking the essential full mirror separately. |
+| Slow or stale full publication | Follow [publication performance](OWNER_ARCHIVE.md#publication-performance); distinguish skipped imports, cold proofs and slow revision reads before tuning. |
 
 ## Recover an interrupted installer
 
@@ -96,6 +97,11 @@ publisher binding and enabled state must survive. Review inconsistencies and
 modified tracked files; do not reset Git, delete manifests, change hashes blindly,
 replace credentials, or overwrite pauses. Git updates require reviewed clean or
 preserved local state and deliberate reconciliation; fetch and reconcile reviewed source revisions while runtime paths remain unchanged.
+
+For performance configuration changes, use the shared guide's Mac digest/rebind
+procedure. A reviewed publisher JSON edit must be rebound with an `install`
+that preserves all actual settings and pauses; do not change recorded hashes to
+bypass the saved-settings update check.
 
 Verify a benign scheduled fresh capture and native Doc readback/status afterward,
 plus relevant repeat/idle behavior. Record what actually passed; successful
