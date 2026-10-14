@@ -24,7 +24,7 @@
       "sha256": "70edbc992ffcc684e255598368ff467ecfb1cd43b564957aafffd09907a0463d"
     },
     "archive_publish_cli.py": {
-      "sha256": "1b7e8047cb85ff7f7b1b854173bc745ffb2a7f63bafd6a995af6c2cdebd5e1e7"
+      "sha256": "541ff764a096d341f9add88e3fa9f5bb3a6cd5aaad52c24079bc2e9bd2047a5a"
     },
     "archive_publisher.py": {
       "sha256": "db46cbd3804d444671dad21c087661b47f76ab3b7fc2838e688c34729ca8118e"
@@ -93,7 +93,7 @@
       "sha256": "9ff9cb76a111932fc8f9a4f28da61b952c89b0c8d0a6f8e109a60de212c7f636"
     },
     "owner_archive_publisher.py": {
-      "sha256": "ef0b4f1761559405bdc50c94f2bed1fa87c398c78c4d85629a5e248fef333691"
+      "sha256": "6aff709175fa02ffc75a940dface94560bb9119f99d002f7429950e251d18d6a"
     },
     "owner_onboarding.py": {
       "sha256": "ac712284d7eabb07b2691f9ed5c06f6aa50d7630d2d9882c04afacb2e9d96b15"
@@ -114,7 +114,7 @@
       "sha256": "0a9af7df18fe042e764947abd701c2c7bb64382fe5824aad2c0f9a256316e293"
     },
     "scripts/gmkit-media.patch": {
-      "sha256": "c40cfae5eafdf3031dd81bc0226d8446489f7ce9671f01e8810f9f43f6deef91"
+      "sha256": "49f48d714fa17bd00544e4a7a06726c1e1d92808e4f0b55270dc1b222cbed722"
     },
     "services/minbox-archive-publisher@.service": {
       "sha256": "4e6de97a9eef7dceadb9ad969fea2d1b97a4eae927de49d13db2337556c7c951"
@@ -183,7 +183,7 @@
       "sha256": "79df03fbd08b772e2502d57265d4adba0a148b8c5d4cf9524f51e1aa9f3ae9c6"
     },
     "tests/test_attachment_drive.py": {
-      "sha256": "5802af256f5a67d05e11843d50e553b73ec540d29076bfb197af779b41ad10ee"
+      "sha256": "ac6f27767264a6f82c6687cfd9d2a4a9235a9971518253be46421afecfc694af"
     },
     "tests/test_configure_email.py": {
       "sha256": "001898a4a4ff129962cf51feb34514a57ad25c188a7b062c63c68250dc300324"
@@ -207,7 +207,7 @@
       "sha256": "a0a657aad61508b8ec1a4afa5cab092c18479a9ef2b2801676ede459b2a8c49b"
     },
     "tests/test_gmkit_media_patch.py": {
-      "sha256": "e5ec4709d3571dfa5d02c370be9dd05f1e02a71654e535cbb8bc2b908fc9eecb"
+      "sha256": "75ee499e362796fa023740ab6641a5a030139cc93ff36b6ece289a3ae8e93124"
     },
     "tests/test_health.py": {
       "sha256": "31f2132b0e21dcf636c9cbfd9049d833cce65f391de270950c4cdaae751977c9"
@@ -234,7 +234,7 @@
       "sha256": "40a2247cf129ce34d1ae824a2b71b32007374438e15441778f786ca93527f5c6"
     },
     "tests/test_owner_archive_publisher.py": {
-      "sha256": "c3d1107c647421be4ec78f761f7837bc0931fffbd8e058011c4a5314753bb1d6"
+      "sha256": "789c2666d3dc672727e780ec1b458844673f57bd13876a33b67dabb55dcc1687"
     },
     "tests/test_owner_onboarding.py": {
       "sha256": "1f0a5f89c1c9175936ac23cd5e10fc69c53b25e90498c3cfd3b1a0d64d3d1fbe"
@@ -246,7 +246,7 @@
       "sha256": "03cb9106b13797cb68aecc9952c1c7c1f87a7d3bc53d17f485eecf059854c5ab"
     },
     "tests/test_publisher_status.py": {
-      "sha256": "0bae8bce99bee05401007b1fb1133c3fba7a725ab10ea72a7440b639663f8bbc"
+      "sha256": "222cff3daa8aeb3781ab5c5b7c3e7ee0be23b44470d82ccf13c29e665afd4c0e"
     },
     "tests/test_storage.py": {
       "sha256": "01ae2536fd0c6bad904a937f8cc5b52f71511d9f9b17107f613583cd0a28dec8"
@@ -255,10 +255,10 @@
       "sha256": "10a294ba94d60ae246f62abe0951a7834acddefbe2639b3fb631e2ae1b7e6294"
     },
     "phone_spam.py": {
-      "sha256": "df07f85784b3edac0355be5f79765f0290bc3d2e3e88b8ec07eb6ae7ab3cde7a"
+      "sha256": "8c37c4269a01af8f7f49d7ecf0de8f3fbb726614f9950391d1d557d60314b4c1"
     },
     "tests/test_phone_spam.py": {
-      "sha256": "ed3e6c32334a0525ce7ad45684f0d6a9b6139530168490fc1e406791b56230d1"
+      "sha256": "6e1d2e6b263ff48863aaf26eb67b152d4041f9187798c17b9d328f1fc405de31"
     }
   }
 }
