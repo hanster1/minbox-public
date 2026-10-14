@@ -1,5 +1,6 @@
 import copy
 import hashlib
+import json
 import tempfile
 from pathlib import Path
 import unittest
@@ -28,10 +29,28 @@ class Images(unittest.TestCase):
         self.posts = self.uploads = 0
         self.fail_creation = self.fail_upload = False
         self.bad_checksum = False
+        self.deletes = []
+        self.delete_mode = None
+        self.missing_status = 404
 
     def request(self, method, url, body, headers, timeout):
         path = urlparse(url).path
         query = parse_qs(urlparse(url).query)
+        file_id = path.rsplit('/', 1)[-1]
+        if method == 'DELETE':
+            self.assertIsNone(body)
+            persisted = json.loads(self.path.read_text())
+            self.assertTrue(any(record['entry']['drive_file_id'] == file_id for record in persisted['attachments_pending_deletions'].values()))
+            self.deletes.append(file_id)
+            if self.delete_mode == 'denied':
+                raise HTTPError(url, 403, 'synthetic denied', {}, None)
+            if self.delete_mode != 'retained':
+                self.files.pop(file_id, None)
+            if self.delete_mode in ('uncertain', 'retained'):
+                raise AdapterError('HTTP request failed; private details withheld')
+            return {}
+        if method == 'GET' and '/files/' in path and file_id not in self.files and file_id != 'generateIds':
+            raise HTTPError(url, self.missing_status, 'synthetic missing', {}, None)
         if path.endswith('/generateIds'):
             return {'ids': ['image-' + str(self.posts + 1)]}
         if method == 'GET' and path.endswith('/files') and 'q' in query:
@@ -67,6 +86,149 @@ class Images(unittest.TestCase):
 
     def client(self):
         return OwnerDocs(self.config, request=self.request, raw_request=self.raw, token_provider=lambda: 'synthetic')
+
+    def test_withdraw_only_selected_images_preserves_other_images_and_docs(self):
+        client = self.client()
+        other = dict(self.message, source_id='archive://Casey/google-messages/2', attachments=[dict(self.item, media_id='other')])
+        client.publish_attachments([self.message, other])
+        selected = self.item['drive_file_id']
+        retained = other['attachments'][0]['drive_file_id']
+        result = client.attachments.withdraw_phone_spam([self.message['source_id']])
+        self.assertEqual(result, {'withdrawn_images': 1, 'pending_image_deletions': 0})
+        self.assertEqual(self.deletes, [selected])
+        self.assertIn(retained, self.files)
+        self.assertIn('attachments-folder', self.files)
+        self.assertTrue(all(doc in self.files for doc in self.config['documents'].values()))
+        self.assertEqual(len(self.client().manifest['attachments']), 1)
+
+    def test_uncertain_delete_is_completed_only_after_missing_readback(self):
+        client = self.client()
+        client.publish_attachments([self.message])
+        self.delete_mode = 'uncertain'
+        self.assertEqual(client.attachments.withdraw_phone_spam([self.message['source_id']])['withdrawn_images'], 1)
+        self.assertFalse(self.client().manifest['attachments_pending_deletions'])
+
+    def test_delete_retained_then_crash_window_404_recovers_before_init_verify(self):
+        client = self.client()
+        client.publish_attachments([self.message])
+        self.delete_mode = 'retained'
+        with self.assertRaises(AdapterError):
+            client.attachments.withdraw_phone_spam([self.message['source_id']])
+        self.assertTrue(json.loads(self.path.read_text())['attachments_pending_deletions'])
+        self.files.pop(self.item['drive_file_id'])  # The uncertain request eventually completed.
+        resumed = self.client()
+        self.assertFalse(resumed.manifest['attachments'])
+        self.assertFalse(resumed.manifest['attachments_pending_deletions'])
+        self.assertEqual(len(self.deletes), 1)
+
+    def test_delete_403_holds_journal_for_later_publisher(self):
+        client = self.client()
+        client.publish_attachments([self.message])
+        self.delete_mode = 'denied'
+        with self.assertRaises(HTTPError) as caught:
+            client.attachments.withdraw_phone_spam([self.message['source_id']])
+        self.assertEqual(caught.exception.code, 403)
+        self.assertTrue(json.loads(self.path.read_text())['attachments_pending_deletions'])
+        self.delete_mode = None
+        self.assertFalse(self.client().manifest['attachments'])
+        self.assertEqual(len(self.deletes), 2)
+
+    def test_missing_readback_permission_denial_cannot_complete_deletion(self):
+        client = self.client()
+        client.publish_attachments([self.message])
+        self.missing_status = 403
+        with self.assertRaises(HTTPError) as caught:
+            client.attachments.withdraw_phone_spam([self.message['source_id']])
+        self.assertEqual(caught.exception.code, 403)
+        self.assertTrue(json.loads(self.path.read_text())['attachments_pending_deletions'])
+        self.missing_status = 404
+        self.assertFalse(self.client().manifest['attachments_pending_deletions'])
+        self.assertEqual(len(self.deletes), 1)
+
+    def test_unregistered_missing_image_is_not_treated_as_deleted(self):
+        client = self.client()
+        client.publish_attachments([self.message])
+        self.files.pop(self.item['drive_file_id'])
+        with self.assertRaises(HTTPError):
+            client.attachments.withdraw_phone_spam([self.message['source_id']])
+        self.assertFalse(self.deletes)
+        self.assertTrue(client.manifest['attachments'])
+
+    def test_durable_journal_write_failure_never_deletes(self):
+        client = self.client()
+        client.publish_attachments([self.message])
+        with patch('attachment_drive.write_json', side_effect=OSError('synthetic disk failure')):
+            with self.assertRaises(OSError):
+                client.attachments.withdraw_phone_spam([self.message['source_id']])
+        self.assertFalse(self.deletes)
+        self.assertFalse(client.manifest['attachments_pending_deletions'])
+
+    def test_withdraw_refresh_rejects_changed_parent_owner_identity_and_checksum(self):
+        client = self.client()
+        client.publish_attachments([self.message])
+        file_id = self.item['drive_file_id']
+        for key, value in [('parents', ['outside']), ('shared', True), ('owners', [{'emailAddress': 'other@example.invalid'}]),
+                           ('mimeType', 'application/vnd.google-apps.document'), ('size', '0'),
+                           ('md5Checksum', '0' * 32), ('appProperties', {'familyArchiveImage': 'wrong'})]:
+            original = copy.deepcopy(self.files[file_id])
+            self.files[file_id][key] = value
+            with self.assertRaises((ValueError, RuntimeError)):
+                client.attachments.withdraw_phone_spam([self.message['source_id']])
+            self.files[file_id] = original
+        self.assertFalse(self.deletes)
+
+    def test_changed_root_or_attachments_folder_privacy_blocks_withdrawal(self):
+        client = self.client()
+        client.publish_attachments([self.message])
+        for file_id in ('full-folder', 'attachments-folder'):
+            self.files[file_id]['shared'] = True
+            with self.assertRaises(ValueError):
+                client.attachments.withdraw_phone_spam([self.message['source_id']])
+            self.files[file_id]['shared'] = False
+        self.assertFalse(self.deletes)
+
+    def test_manifest_alias_to_doc_or_bystander_is_never_deleted(self):
+        client = self.client()
+        client.publish_attachments([self.message])
+        identity, entry = next(iter(client.manifest['attachments'].items()))
+        original = entry['drive_file_id']
+        for protected in ('guide', 'attachments-folder', 'full-folder'):
+            entry['drive_file_id'] = protected
+            with self.assertRaises(ValueError):
+                client.attachments.withdraw_phone_spam([self.message['source_id']])
+        entry['drive_file_id'] = original
+        self.assertFalse(self.deletes)
+
+    def test_historical_orphan_identity_deleted_with_original_checksum(self):
+        client = self.client()
+        client.publish_attachments([self.message])
+        historical = copy.deepcopy(self.message)
+        historical['attachments'][0]['media_id'] = 'older'
+        client.publish_attachments([historical])
+        old_identity = client.attachments.identity(historical['source_id'], historical['attachments'][0])
+        client.manifest['attachments'].pop(old_identity)
+        from publisher_status import write_json
+        write_json(client.path, client.manifest)
+        result = client.attachments.withdraw_phone_spam([self.message['source_id']], [self.message, historical])
+        self.assertEqual(result['withdrawn_images'], 2)
+
+    def test_proven_new_empty_failed_upload_can_be_deleted(self):
+        self.fail_creation = True
+        client = self.client()
+        self.assertEqual(client.publish_attachments([self.message])['pending_images'], 1)
+        self.assertTrue(client.manifest['attachments_pending_uploads'])
+        self.assertEqual(client.attachments.withdraw_phone_spam([self.message['source_id']])['withdrawn_images'], 1)
+        self.assertFalse(client.manifest['attachments_pending_uploads'])
+
+    def test_unproven_empty_orphan_is_not_deleted(self):
+        client = self.client()
+        client.publish_attachments([self.message])
+        client.manifest['attachments'].clear()
+        image = self.files[self.item['drive_file_id']]
+        image.update(size='0', md5Checksum=hashlib.md5(b'').hexdigest())
+        with self.assertRaises(RuntimeError):
+            client.attachments.withdraw_phone_spam([self.message['source_id']], [self.message])
+        self.assertFalse(self.deletes)
 
     def test_permission_failure_needs_intervention(self):
         client = self.client()

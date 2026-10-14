@@ -71,6 +71,8 @@ def _http_request(method, url, body, headers, timeout):
                     raw = response.read(MAX_HTTP_BYTES + 1)
                     if len(raw) > MAX_HTTP_BYTES:
                         raise AdapterError('HTTP response exceeds local limit')
+                    if request.get_method() == 'DELETE' and not raw and getattr(response, 'status', None) == 204:
+                        return {}
                     return json.loads(raw)
             except Exception as error:
                 if isinstance(error, urllib.error.HTTPError):

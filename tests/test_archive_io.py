@@ -37,6 +37,17 @@ class HttpTests(unittest.TestCase):
         return urllib.error.HTTPError('https://example.invalid/PRIVATE', code,
                                       'PRIVATE status detail', {}, body), body
 
+    def test_only_delete_accepts_empty_204(self):
+        class Empty204(io.BytesIO):
+            status = 204
+        with patch('archive_io._urlopen', return_value=Empty204()):
+            self.assertEqual(_http_request('DELETE', 'https://example.invalid', None, {}, 20), {})
+        for method in ('GET', 'POST', 'PATCH'):
+            with patch('archive_io._urlopen', return_value=Empty204()), self.assertRaises(AdapterError):
+                _http_request(method, 'https://example.invalid', None, {}, 20)
+        with patch('archive_io._urlopen', return_value=io.BytesIO()), self.assertRaises(AdapterError):
+            _http_request('DELETE', 'https://example.invalid', None, {}, 20)
+
     def test_transient_get_statuses_recover_and_close_errors_before_sleep(self):
         for code in (429, 500, 502, 503, 504):
             with self.subTest(code=code):
