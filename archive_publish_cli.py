@@ -58,8 +58,11 @@ def main(argv=None):
             print(json.dumps({'status': 'already_running'}, sort_keys=True))
             return 0
         from phone_spam import owner_operation
-        with PublisherStatus(private_path(config['analysis_path']).with_suffix('.last-run.json')) as status:
-            with owner_operation(config['archive_root'], config['owner']):
+        with owner_operation(config['archive_root'], config['owner'], blocking=False) as acquired:
+            if not acquired:
+                print(json.dumps({'status': 'owner_busy'}, sort_keys=True))
+                return 0
+            with PublisherStatus(private_path(config['analysis_path']).with_suffix('.last-run.json')) as status:
                 auth=GoogleAuth(config['credentials_file'],scopes=config.get('google_scopes'))
                 def get(url):
                     return _http_request('GET',url,None,{'Authorization':'Bearer '+auth.token()},20)
