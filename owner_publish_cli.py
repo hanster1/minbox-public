@@ -130,6 +130,9 @@ class OwnerDocs:
     def replace_verified(self, document_id, text):
         return self.client.replace_verified(document_id, text)
 
+    def prefetch_revisions(self, candidates, *, workers=1, progress=None):
+        return self.client.prefetch_revisions(candidates, workers=workers, progress=progress)
+
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)

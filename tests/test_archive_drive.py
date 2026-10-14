@@ -1,6 +1,8 @@
 import unittest
 import json
 import copy
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import tempfile
 from unittest.mock import patch
@@ -50,6 +52,269 @@ class Transport:
         if self.fail == 'uncertain':
             raise RuntimeError('lost response')
         return response
+
+
+class RevisionPrefetchTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.path = Path(self.temp.name) / 'proofs.json'
+        self.now = 1000
+        self.binding = {'account': 'synthetic@example.invalid', 'owner': 'Synthetic',
+                        'root_id': 'root', 'parent_id': 'parent'}
+        self.cache = DocsVerificationCache(self.path, self.binding, clock=lambda: self.now)
+        self.states = {name: Transport(name + '\n') for name in ('one', 'two', 'three', 'four')}
+        for revision, state in enumerate(self.states.values(), 1):
+            state.revision = revision
+        priming = self.client()
+        for identifier, state in self.states.items():
+            priming.replace_verified(identifier, state.text)
+            state.calls.clear()
+        self.sleep = patch('archive_drive.time.sleep', return_value=None)
+        self.sleep.start()
+        self.addCleanup(self.sleep.stop)
+
+    def request(self, *args):
+        identifier = urlparse(args[1]).path.rsplit('/', 1)[-1].split(':')[0]
+        return self.states[identifier](*args)
+
+    def client(self, *, request=None, cache=None, token=None):
+        return DocsClient([*self.states, 'corrections'], write_ids=self.states,
+                          request=request or self.request, token_provider=token or (lambda: 'synthetic'),
+                          verification_cache=cache or self.cache)
+
+    def candidates(self, *identifiers):
+        return {identifier: canonical_hash(self.states[identifier].text)
+                for identifier in identifiers or self.states}
+
+    def test_prefetch_is_readonly_associated_once_and_does_not_renew_proofs(self):
+        previous = self.path.read_bytes()
+        second_done = threading.Event()
+        def reordered(*args):
+            identifier = urlparse(args[1]).path.rsplit('/', 1)[-1]
+            if identifier == 'one':
+                self.assertTrue(second_done.wait(5))
+            result = self.request(*args)
+            if identifier == 'two':
+                second_done.set()
+            return result
+        client = self.client(request=reordered)
+        caller = threading.get_ident()
+        completions = []
+        with patch('archive_drive.write_json', side_effect=AssertionError('prefetch wrote proof')):
+            client.prefetch_revisions(self.candidates('one', 'two'), workers=3,
+                                      progress=lambda: completions.append(threading.get_ident()))
+            for identifier in ('one', 'two'):
+                result = client.replace_verified(identifier, self.states[identifier].text)
+                self.assertFalse(result['changed'])
+                self.assertEqual(result['revision'], str(self.states[identifier].revision))
+                self.assertIsNone(client.take_verified_readback(identifier))
+        self.assertEqual(completions, [caller, caller])
+        self.assertEqual(client.verification_counts, {'body_reads': 0, 'revision_probes': 2,
+                                                    'cache_hits': 2, 'writes': 0})
+        self.assertEqual(self.path.read_bytes(), previous)
+        client.replace_verified('one', self.states['one'].text)
+        self.assertEqual(client.verification_counts['revision_probes'], 3)
+        client.prefetch_revisions(self.candidates('two'), workers=3)
+        client.prefetch_revisions(self.candidates('two'))
+        client.replace_verified('two', self.states['two'].text)
+        self.assertEqual(client.verification_counts['revision_probes'], 5)
+
+    def test_three_workers_overlap_network_without_exceeding_bound(self):
+        release, saturated = threading.Event(), threading.Event()
+        lock = threading.Lock()
+        active, peak, started = 0, 0, 0
+        def blocked(*args):
+            nonlocal active, peak, started
+            self.assertEqual(args[0], 'GET')
+            self.assertEqual(parse_qs(urlparse(args[1]).query), {'fields': ['revisionId']})
+            with lock:
+                active += 1
+                started += 1
+                peak = max(peak, active)
+                if active == 3:
+                    saturated.set()
+            try:
+                self.assertTrue(release.wait(5))
+                return self.request(*args)
+            finally:
+                with lock:
+                    active -= 1
+        client = self.client(request=blocked)
+        with ThreadPoolExecutor(max_workers=1) as runner:
+            future = runner.submit(client.prefetch_revisions, self.candidates(), workers=3)
+            try:
+                self.assertTrue(saturated.wait(5))
+                with lock:
+                    self.assertEqual((active, peak, started), (3, 3, 3))
+            finally:
+                release.set()
+            future.result(timeout=5)
+        self.assertEqual(peak, 3)
+        self.assertEqual(started, 4)
+        self.assertEqual(client.verification_counts['writes'], 0)
+
+    def test_token_provider_calls_are_serialized_before_network(self):
+        first_entered, all_attempted, release = threading.Event(), threading.Event(), threading.Event()
+        counts_lock, actual_lock = threading.Lock(), threading.Lock()
+        attempted, active, peak = 0, 0, 0
+        class ObservedLock:
+            def __enter__(inner):
+                nonlocal attempted
+                with counts_lock:
+                    attempted += 1
+                    if attempted == 3:
+                        all_attempted.set()
+                actual_lock.acquire()
+            def __exit__(inner, *args):
+                actual_lock.release()
+        def token():
+            nonlocal active, peak
+            with counts_lock:
+                active += 1
+                peak = max(peak, active)
+            first_entered.set()
+            try:
+                self.assertTrue(release.wait(5))
+                return 'synthetic'
+            finally:
+                with counts_lock:
+                    active -= 1
+        client = self.client(token=token)
+        client._token_lock = ObservedLock()
+        with ThreadPoolExecutor(max_workers=1) as runner:
+            future = runner.submit(client.prefetch_revisions, self.candidates('one', 'two', 'three'), workers=3)
+            try:
+                self.assertTrue(first_entered.wait(5))
+                self.assertTrue(all_attempted.wait(5))
+                with counts_lock:
+                    self.assertEqual((active, peak), (1, 1))
+            finally:
+                release.set()
+            future.result(timeout=5)
+        self.assertEqual(peak, 1)
+
+    def test_logical_requests_are_paced_once_per_second(self):
+        clock, delays = [0.0], []
+        def advance(delay):
+            delays.append(delay)
+            clock[0] += delay
+        client = self.client()
+        with patch('archive_drive.time.monotonic', side_effect=lambda: clock[0]), \
+                patch('archive_drive.time.sleep', side_effect=advance):
+            client.prefetch_revisions(self.candidates(), workers=3)
+        self.assertEqual(delays, [1.0, 1.0, 1.0])
+
+    def test_default_and_ineligible_candidates_make_no_probe(self):
+        client = self.client()
+        client.prefetch_revisions(self.candidates())
+        self.assertEqual(client.verification_counts['revision_probes'], 0)
+        for mode in ('changed', 'expired', 'future', 'binding', 'cold'):
+            with self.subTest(mode=mode):
+                self.now = 1000
+                cache = self.cache
+                candidates = self.candidates('one')
+                if mode == 'changed':
+                    candidates['one'] = canonical_hash('different desired output')
+                elif mode == 'expired':
+                    self.now += VERIFICATION_MAX_AGE
+                elif mode == 'future':
+                    self.now -= 1
+                elif mode == 'binding':
+                    cache = DocsVerificationCache(self.path, {**self.binding, 'owner': 'Other'},
+                                                  clock=lambda: self.now)
+                else:
+                    cache = DocsVerificationCache(self.path.with_name('cold.json'), self.binding,
+                                                  clock=lambda: self.now)
+                client = self.client(cache=cache)
+                client.prefetch_revisions(candidates, workers=3)
+                self.assertEqual(client.verification_counts['revision_probes'], 0)
+        for state in self.states.values():
+            self.assertEqual(state.calls, [])
+
+    def test_worker_bound_hash_and_output_allowlist_fail_before_requests(self):
+        client = self.client()
+        for workers in (0, 4, -1, True, False, 2.0, None, '3'):
+            with self.assertRaises(ValueError):
+                client.prefetch_revisions(self.candidates(), workers=workers)
+        for identifier in ('corrections', 'unknown'):
+            with self.assertRaises(AdapterError):
+                client.prefetch_revisions({identifier: canonical_hash('private')}, workers=3)
+        for invalid in ('', 'bad', True):
+            with self.assertRaises(ValueError):
+                client.prefetch_revisions({'one': invalid}, workers=3)
+        self.assertEqual(client.verification_counts['revision_probes'], 0)
+
+    def test_revision_mismatch_goes_directly_to_full_guarded_verification(self):
+        original = self.states['one'].text
+        self.states['one'].text = 'external edit\n'
+        self.states['one'].revision += 1
+        client = self.client()
+        client.prefetch_revisions({'one': canonical_hash(original)}, workers=3)
+        self.assertTrue(client.replace_verified('one', original)['changed'])
+        self.assertEqual(client.verification_counts, {'body_reads': 2, 'revision_probes': 1,
+                                                    'cache_hits': 0, 'writes': 1})
+        self.assertEqual(self.states['one'].posts[-1]['writeControl'], {'requiredRevisionId': '2'})
+
+    def test_changed_output_never_uses_prefetched_revision_for_write(self):
+        client = self.client()
+        client.prefetch_revisions(self.candidates('one'), workers=3)
+        self.states['one'].text = 'concurrent text\n'
+        self.states['one'].revision += 1
+        self.assertTrue(client.replace_verified('one', 'different desired text')['changed'])
+        self.assertEqual(self.states['one'].posts[-1]['writeControl'], {'requiredRevisionId': '2'})
+        self.assertEqual(client.verification_counts['body_reads'], 2)
+        self.assertEqual(client.verification_counts['revision_probes'], 2)
+
+    def test_proof_expiry_during_probe_or_before_consumption_requires_body_read(self):
+        for when in ('during', 'after'):
+            with self.subTest(when=when):
+                self.now = 1000
+                self.cache.remember('one', canonical_hash(self.states['one'].text), '1')
+                def expiring(*args):
+                    value = self.request(*args)
+                    self.now += VERIFICATION_MAX_AGE
+                    return value
+                client = self.client(request=expiring if when == 'during' else None)
+                client.prefetch_revisions(self.candidates('one'), workers=3)
+                if when == 'after':
+                    self.now += VERIFICATION_MAX_AGE
+                client.request = self.request
+                result = client.replace_verified('one', self.states['one'].text)
+                self.assertEqual(result['verification'], 'full_readback')
+                self.assertEqual(client.verification_counts['body_reads'], 1)
+                self.assertEqual(client.verification_counts['cache_hits'], 0)
+
+    def test_replaced_full_proof_requires_a_new_probe(self):
+        client = self.client()
+        client.prefetch_revisions(self.candidates('one'), workers=3)
+        self.states['one'].revision += 1
+        self.cache.remember('one', canonical_hash(self.states['one'].text), '2')
+        result = client.replace_verified('one', self.states['one'].text)
+        self.assertEqual(result['revision'], '2')
+        self.assertEqual(client.verification_counts['revision_probes'], 2)
+
+    def test_errors_are_deferred_sanitized_and_consumed_without_duplicate_probe(self):
+        previous = self.path.read_bytes()
+        for mode in ('transport', 'malformed'):
+            with self.subTest(mode=mode):
+                def failed(*args):
+                    if mode == 'transport':
+                        raise TimeoutError('PRIVATE TOKEN BODY URL')
+                    return {'revisionId': None}
+                client = self.client(request=failed)
+                client.prefetch_revisions(self.candidates('one'), workers=3)
+                with self.assertRaises(AdapterError) as caught:
+                    client.replace_verified('one', self.states['one'].text)
+                self.assertNotIn('PRIVATE', str(caught.exception))
+                self.assertEqual(client.verification_counts['revision_probes'], 1)
+                self.assertEqual(client.verification_counts['body_reads'], 0)
+                self.assertEqual(client.verification_counts['writes'], 0)
+                self.assertEqual(self.path.read_bytes(), previous)
+                self.assertIsNone(client.take_verified_readback('one'))
+                client.request = self.request
+                self.assertFalse(client.replace_verified('one', self.states['one'].text)['changed'])
+                self.assertEqual(client.verification_counts['revision_probes'], 2)
 
 
 class CachedDocsTests(unittest.TestCase):

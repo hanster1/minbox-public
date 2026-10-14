@@ -141,6 +141,9 @@ def run(config, snapshot, client, *, progress=None):
     limit = config.get('max_document_bytes', MAX_DOCUMENT_BYTES)
     if not isinstance(limit, int) or not 1024 <= limit <= MAX_DOCUMENT_BYTES:
         raise ValueError('invalid document byte limit')
+    probe_workers = config.get('revision_probe_workers', 1)
+    if type(probe_workers) is not int or not 1 <= probe_workers <= 3:
+        raise ValueError('invalid revision probe worker bound')
     def phase(name):
         # Fixed stage labels only; no source or destination identities leave this run.
         if progress is not None:
@@ -250,6 +253,17 @@ def run(config, snapshot, client, *, progress=None):
                 if client.read(document)['text'] != text:
                     raise RuntimeError('publication readback mismatch')
 
+        if probe_workers > 1:
+            if not callable(getattr(type(client), 'prefetch_revisions', None)):
+                raise ValueError('publisher lacks revision prefetch')
+            phase('revision_prefetch')
+            candidates = {document_ids[key]: canonical_hash(document_text(outputs.get(key, ('', ''))[1]))
+                          for key in sorted(document_ids)}
+            client.prefetch_revisions(candidates, workers=probe_workers,
+                                      progress=lambda: phase('revision_prefetch'))
+        elif callable(getattr(type(client), 'prefetch_revisions', None)):
+            # Reusing a client for a sequential run must discard earlier probes.
+            client.prefetch_revisions({}, workers=1)
         # Withdraw stale chunks before the final status acknowledges this generation.
         for key in sorted(document_ids):
             phase('output_verification')

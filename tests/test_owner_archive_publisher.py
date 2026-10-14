@@ -60,6 +60,64 @@ def config(root):
 
 
 class OwnerPublisherTests(unittest.TestCase):
+    def test_revision_prefetch_optin_uses_exact_chunk_hashes_and_fixed_progress(self):
+        self_test = self
+        class PrefetchClient(Client):
+            def prefetch_revisions(self, candidates, *, workers, progress):
+                self_test.assertEqual(set(candidates), set(self.keys.values()))
+                self_test.assertNotIn('corrections', candidates)
+                self_test.assertNotIn('guide', candidates)
+                self_test.assertNotIn('status', candidates)
+                self_test.assertEqual(self.writes, [])
+                self.prefetched = candidates
+                self.workers = workers
+                progress()
+                progress()
+            def replace(self, document, text):
+                if document in self.keys.values():
+                    self_test.assertEqual(self.prefetched[document], canonical_hash(text))
+                return super().replace(document, text)
+        for workers in (2, 3):
+            with self.subTest(workers=workers), tempfile.TemporaryDirectory() as root:
+                cfg, client, phases = config(root), PrefetchClient(), []
+                cfg['revision_probe_workers'] = workers
+                run(cfg, {'sources': [message(text='Control\x00\r\nline'),
+                                     message(2, timestamp='2021-01-01T12:00:00Z')]},
+                    client, progress=phases.append)
+                self.assertEqual(client.workers, workers)
+                self.assertEqual(phases.count('revision_prefetch'), 3)
+                self.assertLess(phases.index('revision_prefetch'), phases.index('output_verification'))
+                self.assertEqual(client.bodies['corrections'], 'Corrections begin below.\n')
+                self.assertTrue(all('doc-' not in phase and 'archive://' not in phase for phase in phases))
+
+    def test_revision_prefetch_defaults_to_sequential(self):
+        self_test = self
+        class SequentialClient(Client):
+            def prefetch_revisions(self, candidates, *, workers):
+                self_test.assertEqual(candidates, {})
+                self_test.assertEqual(workers, 1)
+                self.cleared = True
+        for explicit in (False, True):
+            with self.subTest(explicit=explicit), tempfile.TemporaryDirectory() as root:
+                cfg, client = config(root), SequentialClient()
+                if explicit:
+                    cfg['revision_probe_workers'] = 1
+                result = run(cfg, {'sources': [message()]}, client)
+                self.assertEqual(result['published_messages'], 1)
+                self.assertTrue(client.cleared)
+
+    def test_invalid_revision_prefetch_config_fails_before_corrections_or_outputs(self):
+        class NoReadsClient(Client):
+            def read(self, document):
+                raise AssertionError('invalid worker configuration must fail first')
+        for invalid in (0, 4, -1, True, False, None, 3.0, '3'):
+            with self.subTest(invalid=invalid), tempfile.TemporaryDirectory() as root:
+                cfg, client = config(root), NoReadsClient()
+                cfg['revision_probe_workers'] = invalid
+                with self.assertRaisesRegex(ValueError, 'worker bound'):
+                    run(cfg, {'sources': [message()]}, client)
+                self.assertEqual(client.writes, [])
+
     def test_private_progress_uses_fixed_stages_before_operations(self):
         phases = []
         class ProgressClient(Client):

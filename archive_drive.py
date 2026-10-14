@@ -3,7 +3,9 @@ import hashlib
 import json
 import math
 import re
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import urlencode
 from archive_io import AdapterError, GoogleAuth, _http_request
 from publisher_status import private_path, write_json
@@ -87,7 +89,9 @@ class DocsClient:
         self.request = request or _http_request
         auth = GoogleAuth(credentials_file, scopes=['https://www.googleapis.com/auth/drive.file'])
         self.token_provider = token_provider or auth.token
+        self._token_lock = threading.Lock()
         self._verified_readbacks = {}
+        self._prefetched_revisions = {}
         self.verification_cache = verification_cache
         self.verification_counts = {'body_reads': 0, 'revision_probes': 0, 'cache_hits': 0, 'writes': 0}
 
@@ -95,16 +99,19 @@ class DocsClient:
         """Consume the readback from the immediately preceding replacement once."""
         return self._verified_readbacks.pop(document_id, None)
 
-    def _call(self, document_id, method, suffix, body=None, *, required_proof=None):
+    def _call(self, document_id, method, suffix, body=None, *, required_proof=None, request_gate=None):
         if document_id not in self.allowed_ids or (method != 'GET' and document_id not in self.write_ids):
             raise AdapterError('Document is not allowlisted')
         try:
             # Large native Docs can read slowly; writes retain their shorter bound.
-            headers = {'Authorization': 'Bearer ' + self.token_provider(),
-                       'Content-Type': 'application/json'}
+            with self._token_lock:
+                token = self.token_provider()
+            headers = {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'}
             if required_proof is not None and (self.verification_cache is None
                     or self.verification_cache.fresh(document_id) != required_proof):
                 raise AdapterError('Text repair proof expired before request')
+            if request_gate is not None:
+                request_gate()
             result = self.request(method, 'https://docs.googleapis.com/v1/documents/' + document_id + suffix,
                                   body, headers, 90 if method == 'GET' else 45)
             if not isinstance(result, dict) or 'error' in result:
@@ -155,6 +162,61 @@ class DocsClient:
     def replace(self, document_id, text):
         return self.replace_verified(document_id, text)['changed']
 
+    def prefetch_revisions(self, candidates, *, workers=1, progress=None):
+        """Read unchanged output revisions; consume each result once on this client."""
+        if type(workers) is not int or not 1 <= workers <= 3:
+            raise ValueError('invalid revision probe worker bound')
+        self._prefetched_revisions.clear()
+        for document_id, desired_hash in candidates.items():
+            if document_id not in self.write_ids:
+                raise AdapterError('Document is not allowlisted')
+            if not isinstance(desired_hash, str) or not re.fullmatch(r'[0-9a-f]{64}', desired_hash):
+                raise ValueError('invalid revision probe hash')
+        if workers == 1 or self.verification_cache is None:
+            return
+        eligible = {}
+        for document_id, desired_hash in candidates.items():
+            proof = self.verification_cache.reusable(document_id, desired_hash)
+            if proof is not None:
+                eligible[document_id] = (desired_hash, proof)
+        rate_lock = threading.Lock()
+        next_launch = 0.0
+
+        def throttle():
+            nonlocal next_launch
+            # Bound logical GET launches separately from the HTTP retry limit.
+            with rate_lock:
+                delay = max(0.0, next_launch - time.monotonic())
+                if delay:
+                    time.sleep(delay)
+                next_launch = time.monotonic() + 1.0
+
+        def probe(document_id):
+            return self._call(document_id, 'GET', '?' + urlencode({'fields': 'revisionId'}),
+                              request_gate=throttle)
+
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = {pool.submit(probe, identifier): identifier for identifier in eligible}
+            try:
+                for future in as_completed(futures):
+                    identifier = futures[future]
+                    desired_hash, proof = eligible[identifier]
+                    result = {'hash': desired_hash, 'proof': proof}
+                    self.verification_counts['revision_probes'] += 1
+                    try:
+                        revision = future.result().get('revisionId')
+                        if not isinstance(revision, str) or not revision:
+                            raise AdapterError('Invalid Docs revision probe')
+                        result['revision'] = revision
+                    except Exception as error:
+                        result['error'] = error
+                    self._prefetched_revisions[identifier] = result
+                    if progress is not None:
+                        progress()
+            finally:
+                for future in futures:
+                    future.cancel()
+
     def _probe_write_state(self, document_id, proof):
         """Reuse verified plaintext structure only at its unchanged revision."""
         fields = ('revisionId,tabs(tabProperties(tabId),childTabs(tabProperties(tabId)),'
@@ -202,6 +264,7 @@ class DocsClient:
         text = text.rstrip('\n') + '\n'
         desired_hash = canonical_hash(text)
         self._verified_readbacks.pop(document_id, None)
+        prefetched = self._prefetched_revisions.pop(document_id, None)
         cache = self.verification_cache
         proof = cache.fresh(document_id) if cache is not None else None
         before = None
@@ -230,11 +293,17 @@ class DocsClient:
             # Expiry during preparation earns no write permission.
             proof = cache.fresh(document_id)
         if proof and proof['hash'] == desired_hash:
-            self.verification_counts['revision_probes'] += 1
-            raw = self._call(document_id, 'GET', '?' + urlencode({'fields': 'revisionId'}))
-            revision = raw.get('revisionId')
-            if not isinstance(revision, str) or not revision:
-                raise AdapterError('Invalid Docs revision probe')
+            if (prefetched is not None and prefetched['hash'] == desired_hash
+                    and prefetched['proof'] == proof):
+                if 'error' in prefetched:
+                    raise prefetched['error']
+                revision = prefetched['revision']
+            else:
+                self.verification_counts['revision_probes'] += 1
+                raw = self._call(document_id, 'GET', '?' + urlencode({'fields': 'revisionId'}))
+                revision = raw.get('revisionId')
+                if not isinstance(revision, str) or not revision:
+                    raise AdapterError('Invalid Docs revision probe')
             # A slow response can cross the guarantee window. Only accept a
             # proof that remains fresh when the revision probe completes.
             if revision == proof['revision'] and cache.reusable(document_id, desired_hash) == proof:

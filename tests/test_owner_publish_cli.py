@@ -99,7 +99,11 @@ class OwnerTransport(unittest.TestCase):
         warm = first.replace_verified('guide', 'new')
         self.assertEqual(warm['verification'], 'revision_probe')
         resumed = OwnerDocs(self.config, request=request, token_provider=lambda: 'synthetic')
+        from archive_drive import canonical_hash
+        before_calls = len(docs['guide'].calls)
+        resumed.prefetch_revisions({'guide': canonical_hash('new')}, workers=3)
         self.assertEqual(resumed.replace_verified('guide', 'new')['verification'], 'revision_probe')
+        self.assertEqual(len(docs['guide'].calls), before_calls + 1)
         self.assertEqual(resumed.client.verification_counts['body_reads'], 0)
         resumed.read('corrections')
         resumed.read('corrections')
