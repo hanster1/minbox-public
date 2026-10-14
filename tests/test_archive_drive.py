@@ -26,6 +26,25 @@ class Transport:
 
 
 class DocsTests(unittest.TestCase):
+    def test_slow_reads_get_more_time_without_extending_or_replaying_writes(self):
+        transport = Transport()
+        calls = []
+        def bounded(method, url, body, headers, timeout):
+            calls.append((method, timeout))
+            if method == 'GET' and timeout < 90:
+                raise TimeoutError('synthetic slow document read')
+            if method == 'POST':
+                self.assertEqual(timeout, 45)
+            return transport(method, url, body, headers, timeout)
+        client = DocsClient(['doc'], request=bounded, token_provider=lambda: 'test')
+        transport.fail = 'uncertain'
+        with self.assertRaises(AdapterError):
+            client.replace('doc', 'new')
+        transport.fail = None
+        self.assertFalse(client.replace('doc', 'new'))
+        self.assertEqual(len(transport.posts), 1)
+        self.assertTrue(all(timeout == 90 for method, timeout in calls if method == 'GET'))
+
     def test_verified_readback_is_consumed_once_and_failed_write_clears_it(self):
         transport = Transport()
         client = DocsClient(['doc'], request=transport, token_provider=lambda: 'test')

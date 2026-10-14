@@ -38,7 +38,9 @@ exclusions before publishing; they are not erased by this feature.
 5. Run and verify publication and image deletion, then restore prior schedules.
    A failed deletion retains its journal and does not acknowledge successful
    publication. Normal retries reconcile it; auth/privacy/integrity failures need
-   human attention under HEALTH_ALERTS.md. Busy publishing/imports serialize per owner.
+   human attention under HEALTH_ALERTS.md. Background publishing/imports skip a
+   busy owner and retry on their next scheduled run, without changing success
+   status or producing lock-wait failures.
 
 **Phone (owner's Android phone):** for live acceptance, report a benign disposable
 conversation as spam after its archive text/image has been verified. **Computer

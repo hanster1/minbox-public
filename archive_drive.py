@@ -25,9 +25,10 @@ class DocsClient:
         if document_id not in self.allowed_ids or (method != 'GET' and document_id not in self.write_ids):
             raise AdapterError('Document is not allowlisted')
         try:
+            # Large native Docs can read slowly; writes retain their shorter bound.
             result = self.request(method, 'https://docs.googleapis.com/v1/documents/' + document_id + suffix,
                                   body, {'Authorization': 'Bearer ' + self.token_provider(),
-                                         'Content-Type': 'application/json'}, 45)
+                                         'Content-Type': 'application/json'}, 90 if method == 'GET' else 45)
             if not isinstance(result, dict) or 'error' in result:
                 raise ValueError()
             return result

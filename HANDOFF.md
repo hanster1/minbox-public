@@ -74,7 +74,8 @@ after logout. Lifecycle and request races pass Go race tests. Historical evidenc
 Work-analysis cache scope includes the active set even when it becomes empty.
 Restored images may get new Drive IDs; text Doc IDs remain stable.
 
-417 Python tests pass (five optional skips); pinned Go tests and both binaries
+420 full Python tests pass (five optional skips); seven focused Docs tests pass,
+including slow reads and uncertain-write reconciliation. pinned Go tests and both binaries
 build with locked dependencies. Complete AGPL source/provenance bundles are
 prepared outside Git. Release checks pass for 121 files and 86 manifested source
 files. Synthetic restoration tests cover text across years, retained images,
@@ -86,4 +87,8 @@ That scope decision is resolved. Runtime rollout and real phone/Drive acceptance
 must be recorded separately; fixtures do not prove live propagation. Enable only
 for explicitly consenting owners, preserve their private account/root/Doc bindings,
 pauses and budgets. Native Docs history is not erased by current-content rewrites.
+Scheduled jobs skip owner contention before starting an attempt or touching
+publication status; direct library operations still serialize. Native Docs GETs
+have a 90-second bound, POSTs remain 45 seconds and writes are never blindly
+replayed. The existing whole-service limit still bounds a publication pass.
 See PHONE_SPAM.md. Private installation receipts and exact bindings stay outside Git.
