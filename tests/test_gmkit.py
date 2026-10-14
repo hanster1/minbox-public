@@ -12,6 +12,33 @@ from storage import Archive
 
 
 class GmkitTests(unittest.TestCase):
+    def test_background_cli_skips_busy_owner_without_import_or_failure(self):
+        from phone_spam import owner_operation
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            archive = Archive(root / 'archive')
+            archive.init(owners=('Casey',))
+            database = root / 'gmcli.db'
+            # An unreadable collector schema would fail if admitted to actual import.
+            with closing(sqlite3.connect(database)) as db:
+                db.execute('CREATE TABLE unused(value)')
+            before = archive.db.read_bytes()
+            with owner_operation(archive.root, 'Casey'):
+                with patch('archive_cli._import_gmkit') as importer, patch('phone_spam.sync_observations') as sync:
+                    self.assertEqual(import_gmkit(archive, 'Casey', database, blocking=False), {'status':'owner_busy'})
+                    importer.assert_not_called()
+                    sync.assert_not_called()
+                cli = subprocess.run([
+                    'python3', str(Path(__file__).resolve().parents[1] / 'archive_cli.py'),
+                    '--root', str(archive.root), 'import-gmkit', 'Casey', str(database)
+                ], capture_output=True, text=True, timeout=3)
+                self.assertEqual(cli.returncode, 0, cli.stderr)
+                self.assertEqual(json.loads(cli.stdout), {'status':'owner_busy'})
+                self.assertEqual(cli.stderr, '')
+            self.assertEqual(archive.db.read_bytes(), before)
+            self.assertEqual(archive.messages('Casey'), [])
+            self.assertEqual(list((archive.root / 'Casey' / 'raw').iterdir()), [])
+
     def test_import_retains_text_and_metadata_without_credentials_and_reimports_edits(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

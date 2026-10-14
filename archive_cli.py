@@ -16,11 +16,16 @@ from attachment_capture import AttachmentCapture
 DEFAULT_ROOT = Path.home() / '.local/share/minbox-text-archive'
 
 
-def import_gmkit(archive, owner, database, *, capture_options=None):
+def import_gmkit(archive, owner, database, *, capture_options=None, blocking=True):
     from phone_spam import owner_operation, sync_observations
     database = database.resolve(strict=True)
-    archive.init(owners=(owner,))
-    with owner_operation(archive.root, owner):
+    owner = _owner(owner)
+    if not archive.db.is_file() or owner not in archive.owner_names():
+        archive.init(owners=(owner,))
+    with owner_operation(archive.root, owner, blocking=blocking) as acquired:
+        if not acquired:
+            return {'status': 'owner_busy'}
+        archive.init(owners=(owner,))
         phone = sync_observations(archive, owner, database)
         result = _import_gmkit(archive, owner, database, capture_options=capture_options)
         result['phone_spam'] = phone
@@ -98,11 +103,12 @@ def main():
         if args.command == 'restore':
             result = {'restored_archive': str(Archive.restore(args.snapshot, args.destination).root)}
         else:
-            archive.init(owners=(args.owner,)) if args.command == 'init' and args.owner else archive.init()
+            if args.command != 'import-gmkit':
+                archive.init(owners=(args.owner,)) if args.command == 'init' and args.owner else archive.init()
             if args.command == 'init': result = {'archive': str(args.root), 'owners': archive.owner_names()}
             elif args.command == 'status': result = archive.status()
             elif args.command == 'import': result = archive.import_messages(args.owner, args.source, args.file)
-            elif args.command == 'import-gmkit': result = import_gmkit(archive, args.owner, args.database)
+            elif args.command == 'import-gmkit': result = import_gmkit(archive, args.owner, args.database, blocking=False)
             elif args.command == 'snapshot': result = str(archive.snapshot(args.destination))
             elif args.command == 'search':
                 result = [m for m in archive.messages(args.owner) if args.query.casefold() in m['text'].casefold()]

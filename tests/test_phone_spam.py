@@ -219,6 +219,19 @@ class PhoneSpamTests(unittest.TestCase):
         self.assertEqual(len(self.current()['sources']), 1)
         self.assertEqual(self.current('Casey')['phone_spam_conversations'], 1)  # Missing blocked row stays excluded.
 
+    def test_nonblocking_admission_preserves_owner_isolation_and_validation(self):
+        with owner_operation(self.archive.root, 'Casey') as acquired:
+            self.assertTrue(acquired)
+            with owner_operation(self.archive.root, 'Casey', blocking=False) as admitted:
+                self.assertFalse(admitted)
+            with owner_operation(self.archive.root, 'Jordan', blocking=False) as admitted:
+                self.assertTrue(admitted)
+            with self.assertRaisesRegex(ValueError, 'existing owner'):
+                with owner_operation(self.archive.root, 'Missing', blocking=False):
+                    self.fail('missing namespace admitted')
+        with owner_operation(self.archive.root, 'Casey', blocking=False) as admitted:
+            self.assertTrue(admitted)
+
     def test_import_cannot_race_owner_publication(self):
         waiting=threading.Event();finished=threading.Event()
         def reconcile():

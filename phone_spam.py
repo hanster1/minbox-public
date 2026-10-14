@@ -17,7 +17,8 @@ STATUSES = (5, 6)
 
 
 @contextmanager
-def owner_operation(root, owner):
+def owner_operation(root, owner, *, blocking=True):
+    """Yield admission; scheduled callers may skip contention without waiting."""
     owner = _owner(owner)
     archive = Archive(Path(root))
     if not archive.db.is_file():
@@ -29,8 +30,12 @@ def owner_operation(root, owner):
     fd = os.open(directory / '.phone-publication.lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     with os.fdopen(fd, 'a+b') as lock:
         os.fchmod(lock.fileno(), 0o600)
-        fcntl.flock(lock, fcntl.LOCK_EX)
-        yield
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
+        except BlockingIOError:
+            yield False
+            return
+        yield True
 
 
 def ensure_schema(db):

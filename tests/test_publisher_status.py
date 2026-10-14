@@ -189,6 +189,34 @@ class PublisherLifecycle(unittest.TestCase):
         self.assertTrue(all(':phone-exclusions:' in policy for policy in policies))
         self.assertNotEqual(*policies)
 
+    def test_busy_owner_skips_publishers_without_auth_or_status_changes(self):
+        from phone_spam import owner_operation
+        config = json.loads(self.config.read_text())
+        for module, status_path, network_constructor in (
+            (owner_publish_cli, self.status, 'OwnerDocs'),
+            (archive_publish_cli, self.analysis.with_suffix('.last-run.json'), 'GoogleAuth'),
+        ):
+            for existing_status in (False, True):
+                with self.subTest(module=module.__name__, existing_status=existing_status):
+                    if status_path.exists():
+                        status_path.unlink()
+                    before = None
+                    if existing_status:
+                        write_json(status_path, {'run_state':'succeeded','checked_at':'old','last_success_at':'old'})
+                        before = status_path.read_bytes()
+                    with owner_operation(config['archive_root'], config['owner']), \
+                            patch.object(module, network_constructor) as network, \
+                            patch.object(module, 'snapshot') as snap, \
+                            patch.object(module, 'PublisherStatus') as status:
+                        output = io.StringIO()
+                        with contextlib.redirect_stdout(output):
+                            self.assertEqual(self.invoke(module), 0)
+                        self.assertEqual(json.loads(output.getvalue()), {'status':'owner_busy'})
+                        network.assert_not_called()
+                        snap.assert_not_called()
+                        status.assert_not_called()
+                    self.assertEqual(status_path.read_bytes() if status_path.exists() else None, before)
+
     def test_locks_leave_active_attempt_status_unchanged(self):
         for module, lock_path, status_path in (
             (owner_publish_cli, self.status.with_suffix('.lock'), self.status),
