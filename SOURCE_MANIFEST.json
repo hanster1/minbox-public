@@ -15,7 +15,7 @@
       "sha256": "45bd54a092550bbd0970532c9942aa213ac18c15dad7adbea4a4f5c5b6a7cb68"
     },
     "archive_drive.py": {
-      "sha256": "1a8caabc7a47ce00ca3dc4d75bc147de8e987fc956308e2494cb2810bff18230"
+      "sha256": "07a3a63727dd3ff22c9faa04394e19b64938bdaf4cd00a24c87204f56877f17e"
     },
     "archive_incremental.py": {
       "sha256": "dd541438a414b6aef58e0a8fe0dad18eab13b3e8250cbb7b726cfe58faf9e7b4"
@@ -165,7 +165,7 @@
       "sha256": "d11f5a3446957a2b408e1c239d08043af0c482ced803819bdec1bfdebec1dfc1"
     },
     "tests/test_archive_drive.py": {
-      "sha256": "4044f02d7a05d4c4a7defc96e759bff105a91275034941cf13d230831a4f8615"
+      "sha256": "406a9dafca3994afc7cc357cfec7be56daebddf102798f26d3f4efe4e99957d3"
     },
     "tests/test_archive_incremental.py": {
       "sha256": "35d5469cf005124324f91681e92989c9d45fa6d4f7e34adaa68603cc90e7676b"

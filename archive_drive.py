@@ -51,12 +51,16 @@ class DocsVerificationCache:
                 and isinstance(proof['revision'], str) and bool(proof['revision'])
                 and type(proof['verified_at']) in (int, float) and math.isfinite(proof['verified_at']))
 
-    def reusable(self, document_id, desired_hash):
+    def fresh(self, document_id):
+        """Return a recent full plaintext proof, regardless of the next output."""
         proof = self.documents.get(document_id)
-        if (proof and proof['hash'] == desired_hash
-                and 0 <= self.clock() - proof['verified_at'] < VERIFICATION_MAX_AGE):
+        if proof and 0 <= self.clock() - proof['verified_at'] < VERIFICATION_MAX_AGE:
             return dict(proof)
         return None
+
+    def reusable(self, document_id, desired_hash):
+        proof = self.fresh(document_id)
+        return proof if proof and proof['hash'] == desired_hash else None
 
     def remember(self, document_id, desired_hash, revision):
         proof = {'hash': desired_hash, 'revision': revision, 'verified_at': self.clock()}
@@ -147,6 +151,41 @@ class DocsClient:
     def replace(self, document_id, text):
         return self.replace_verified(document_id, text)['changed']
 
+    def _probe_write_state(self, document_id, proof):
+        """Reuse verified plaintext structure only at its unchanged revision."""
+        fields = ('revisionId,tabs(tabProperties(tabId),childTabs(tabProperties(tabId)),'
+                  'documentTab(body(content(endIndex))))')
+        self.verification_counts['revision_probes'] += 1
+        raw = self._call(document_id, 'GET', '?' + urlencode({'includeTabsContent': 'true', 'fields': fields}))
+        try:
+            if raw['revisionId'] != proof['revision']:
+                return None
+            tabs = raw['tabs']
+            if not isinstance(tabs, list) or len(tabs) != 1:
+                return None
+            tab = tabs[0]
+            children = tab.get('childTabs', [])
+            tab_id = tab['tabProperties']['tabId']
+            if (not isinstance(children, list) or children
+                    or not isinstance(tab_id, str) or not tab_id):
+                return None
+            content = tab['documentTab']['body']['content']
+            if not isinstance(content, list) or not content:
+                return None
+            previous = 0
+            for block in content:
+                if not isinstance(block, dict) or set(block) != {'endIndex'}:
+                    return None
+                end_index = block['endIndex']
+                if type(end_index) is not int or end_index <= previous:
+                    return None
+                previous = end_index
+            if end_index < 2:
+                return None
+            return {'revision': raw['revisionId'], 'tab_id': tab_id, 'end_index': end_index}
+        except (KeyError, TypeError, AttributeError):
+            return None
+
     def replace_verified(self, document_id, text):
         """Only publisher-owned outputs. Input correction Docs must never be passed here."""
         if document_id not in self.write_ids:
@@ -157,8 +196,9 @@ class DocsClient:
         desired_hash = canonical_hash(text)
         self._verified_readbacks.pop(document_id, None)
         cache = self.verification_cache
-        proof = cache.reusable(document_id, desired_hash) if cache is not None else None
-        if proof:
+        proof = cache.fresh(document_id) if cache is not None else None
+        before = None
+        if proof and proof['hash'] == desired_hash:
             self.verification_counts['revision_probes'] += 1
             raw = self._call(document_id, 'GET', '?' + urlencode({'fields': 'revisionId'}))
             revision = raw.get('revisionId')
@@ -169,12 +209,19 @@ class DocsClient:
             if revision == proof['revision'] and cache.reusable(document_id, desired_hash) == proof:
                 self.verification_counts['cache_hits'] += 1
                 return {'changed': False, **proof, 'verification': 'revision_probe'}
-        before = self.read(document_id)
-        if before['text'] == text:
-            proof = (cache.remember(document_id, desired_hash, before['revision']) if cache is not None
-                     else {'hash': desired_hash, 'revision': before['revision'], 'verified_at': time.time()})
-            self._verified_readbacks[document_id] = before
-            return {'changed': False, **proof, 'verification': 'full_readback'}
+        elif proof:
+            # The proof already established plain text at this revision. Fetch
+            # only its current UTF-16 range, retaining the full post-write read.
+            before = self._probe_write_state(document_id, proof)
+            if cache.fresh(document_id) != proof:
+                before = None
+        if before is None:
+            before = self.read(document_id)
+            if before['text'] == text:
+                proof = (cache.remember(document_id, desired_hash, before['revision']) if cache is not None
+                         else {'hash': desired_hash, 'revision': before['revision'], 'verified_at': time.time()})
+                self._verified_readbacks[document_id] = before
+                return {'changed': False, **proof, 'verification': 'full_readback'}
         tab = before['tab_id']
         requests = []
         if before['end_index'] > 2:
