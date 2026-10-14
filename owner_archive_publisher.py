@@ -7,9 +7,11 @@ from collections import Counter, defaultdict
 from datetime import datetime
 import json
 import re
+import time
 
 from archive_corrections import CorrectionLedger, parse_corrections
 from archive_incremental import hard_excluded
+from archive_drive import canonical_hash, DocsVerificationCache, VERIFICATION_MAX_AGE
 
 MAX_DOCUMENT_BYTES = 700_000
 
@@ -220,9 +222,24 @@ def run(config, snapshot, client):
             text = document_text(text).rstrip('\n') + '\n'
             if len(text.encode('utf-8')) > MAX_DOCUMENT_BYTES:
                 raise ValueError('document exceeds byte bounds')
-            writes += bool(client.replace(document, text))
-            if client.read(document)['text'] != text:
-                raise RuntimeError('publication readback mismatch')
+            # Only an explicit class capability can replace a fresh readback;
+            # dynamically fabricated attributes (for example mocks) cannot.
+            if callable(getattr(type(client), 'replace_verified', None)):
+                proof = client.replace_verified(document, text)
+                if (not isinstance(proof, dict)
+                        or set(proof) != {'changed', 'hash', 'revision', 'verified_at', 'verification'}
+                        or type(proof['changed']) is not bool
+                        or proof['verification'] not in {'full_readback', 'revision_probe'}
+                        or not DocsVerificationCache.valid_proof({k: proof[k] for k in ('hash', 'revision', 'verified_at')})
+                        or proof['hash'] != canonical_hash(text)
+                        or not 0 <= time.time() - proof['verified_at'] < VERIFICATION_MAX_AGE
+                        or (proof['verification'] == 'revision_probe' and proof['changed'])):
+                    raise RuntimeError('publication verification proof mismatch')
+                writes += proof['changed']
+            else:
+                writes += bool(client.replace(document, text))
+                if client.read(document)['text'] != text:
+                    raise RuntimeError('publication readback mismatch')
 
         # Withdraw stale chunks before the final status acknowledges this generation.
         for key in sorted(document_ids):

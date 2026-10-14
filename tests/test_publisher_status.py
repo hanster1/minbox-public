@@ -114,6 +114,7 @@ class PublisherLifecycle(unittest.TestCase):
         from storage import Archive
         Archive(root).init(owners=('Synthetic',))
         write_json(self.config, {'owner': 'Synthetic', 'scope': 'owner_all',
+                                'folder_id': 'synthetic-folder',
                                 'status_file': str(self.status), 'analysis_path': str(self.analysis),
                                 'archive_root': str(root), 'credentials_file': str(root / 'credentials.json'),
                                 'conversations': [], 'start_date': '1970-01-01',

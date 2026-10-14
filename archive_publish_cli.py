@@ -7,7 +7,7 @@ import os
 import sys
 from folder_policy import verify_selected_folders
 from archive_analysis import ArchiveAnalyzer
-from archive_drive import DocsClient
+from archive_drive import DocsClient, DocsVerificationCache
 from archive_publisher import run
 from archive_snapshot import snapshot
 from archive_io import GoogleAuth, _http_request
@@ -70,8 +70,14 @@ def main(argv=None):
                 if account.lower() != config['google_account_email'].lower():
                     raise ValueError('connected Google account differs from the configured owner binding')
                 verify_destinations(config, account, get)
+                verification_cache = DocsVerificationCache(
+                    private_path(config['analysis_path']).with_suffix('.docs-cache.json'), {
+                        'account': account.lower(), 'owner': config['owner'],
+                        'root_id': config.get('archive_root_folder_id', config['folder_id']),
+                        'parent_id': config['folder_id']})
                 client=DocsClient(config['documents'].values(),token_provider=auth.token,
-                                  write_ids=[v for k,v in config['documents'].items() if k!='corrections'])
+                                  write_ids=[v for k,v in config['documents'].items() if k!='corrections'],
+                                  verification_cache=verification_cache)
                 config['analysis_policy']='archive-work-v1:'+config.get('model','gpt-6.1-sol')
                 analyzer=ArchiveAnalyzer(model=config.get('model','gpt-6.1-sol'),executable=config.get('model_executable','codex'),timeout=120)
                 status.phase('snapshot')

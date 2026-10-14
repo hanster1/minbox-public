@@ -84,6 +84,28 @@ class OwnerTransport(unittest.TestCase):
         self.assertEqual(recovered.ensure_document('messages:2026:part001', 'Casey Text Archive — Messages 2026'), doc)
         self.assertEqual(self.created, 1)
 
+    def test_output_verification_cache_survives_restart_and_adapter_rebuild(self):
+        from tests.test_archive_drive import Transport
+        docs = {key: Transport() for key in self.config['documents']}
+        def request(method, url, body, headers, timeout):
+            if urlparse(url).netloc == 'docs.googleapis.com':
+                document = urlparse(url).path.split('/')[-1].split(':')[0]
+                return docs[document](method, url, body, headers, timeout)
+            return self.request(method, url, body, headers, timeout)
+        first = OwnerDocs(self.config, request=request, token_provider=lambda: 'synthetic')
+        first.replace_verified('guide', 'new')
+        first.ensure_document('messages:2026:part001', 'Casey Text Archive — Messages 2026')
+        self.assertIs(first.client.verification_cache, first.verification_cache)
+        warm = first.replace_verified('guide', 'new')
+        self.assertEqual(warm['verification'], 'revision_probe')
+        resumed = OwnerDocs(self.config, request=request, token_provider=lambda: 'synthetic')
+        self.assertEqual(resumed.replace_verified('guide', 'new')['verification'], 'revision_probe')
+        self.assertEqual(resumed.client.verification_counts['body_reads'], 0)
+        resumed.read('corrections')
+        resumed.read('corrections')
+        self.assertEqual(len(docs['corrections'].calls), 2)
+        self.assertIsNone(resumed.client.take_verified_readback('guide'))
+
     def test_private_account_folder_doc_bindings_fail_closed(self):
         for file, key, value in [('full-folder','shared',True), ('guide','parents',['other']),
                                  ('corrections','trashed',True), ('guide','owners',[])]:
