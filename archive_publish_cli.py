@@ -74,10 +74,9 @@ def main(argv=None):
                 status.phase('snapshot')
                 current=snapshot(config['archive_root'],config['owner'],config['conversations'],config['start_date'],
                                  phone_spam_policy=config.get('phone_spam_policy'))
-                if current.get('phone_spam_source_ids', []):
+                if config.get('phone_spam_policy') == 'spam_and_blocked':
                     config.pop('seed_decisions', None)
                     config.pop('seed_revisions', None)
-                if current.get('phone_spam_source_ids'):
                     config['analysis_policy'] += ':phone-exclusions:' + hashlib.sha256(
                         current['phone_spam_generation'].encode()).hexdigest()
                 status.phase('publishing', current['latest_import'])

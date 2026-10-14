@@ -168,6 +168,27 @@ class PublisherLifecycle(unittest.TestCase):
         self.assertIn('last_publication_at', status)
         self.assertNotIn('last_success_at', status)
 
+    def test_enabled_phone_policy_versions_work_cache_even_after_last_restore(self):
+        config = json.loads(self.config.read_text())
+        config.update(phone_spam_policy='spam_and_blocked', seed_decisions=['old'], seed_revisions=['old'])
+        write_json(self.config, config)
+        policies = []
+        for excluded, generation in [(['junk'], 'active-junk'), ([], 'empty-active-set')]:
+            with patch.object(archive_publish_cli, 'GoogleAuth'), \
+                    patch.object(archive_publish_cli, '_http_request', return_value={'user': {'emailAddress': 'synthetic@example.invalid'}}), \
+                    patch.object(archive_publish_cli, 'verify_destinations'), \
+                    patch.object(archive_publish_cli, 'DocsClient'), \
+                    patch.object(archive_publish_cli, 'ArchiveAnalyzer'), \
+                    patch.object(archive_publish_cli, 'snapshot', return_value={'latest_import': 'source', 'phone_spam_source_ids': excluded, 'phone_spam_generation': generation}), \
+                    patch.object(archive_publish_cli, 'run', return_value={'writes':0,'work_messages':0,'work_looms':0,'message_analysis':{},'loom_analysis':{}}) as run:
+                self.assertEqual(self.invoke(archive_publish_cli), 0)
+                used = run.call_args.args[0]
+                self.assertNotIn('seed_decisions', used)
+                self.assertNotIn('seed_revisions', used)
+                policies.append(used['analysis_policy'])
+        self.assertTrue(all(':phone-exclusions:' in policy for policy in policies))
+        self.assertNotEqual(*policies)
+
     def test_locks_leave_active_attempt_status_unchanged(self):
         for module, lock_path, status_path in (
             (owner_publish_cli, self.status.with_suffix('.lock'), self.status),
