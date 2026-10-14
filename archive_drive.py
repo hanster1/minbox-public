@@ -1,11 +1,79 @@
 """Revision-guarded text-only Docs adapter for explicitly allowlisted archive files."""
+import hashlib
+import json
+import math
 import re
+import time
 from urllib.parse import urlencode
 from archive_io import AdapterError, GoogleAuth, _http_request
+from publisher_status import private_path, write_json
+
+
+VERIFICATION_MAX_AGE = 24 * 60 * 60
+
+
+def canonical_hash(text):
+    return hashlib.sha256((text.rstrip('\n') + '\n').encode('utf-8')).hexdigest()
+
+
+class DocsVerificationCache:
+    """Content-free proofs; publishers provide a freshly checked Drive binding."""
+    def __init__(self, path, binding, *, clock=None):
+        if (not isinstance(binding, dict)
+                or set(binding) != {'account', 'owner', 'root_id', 'parent_id'}
+                or any(not isinstance(v, str) or not v for v in binding.values())):
+            raise ValueError('invalid Docs verification binding')
+        self.path = private_path(path)
+        self.binding = dict(binding)
+        self.clock = clock or time.time
+        self.documents = {}
+        if self.path.exists():
+            if self.path.stat().st_mode & 0o777 != 0o600:
+                raise AdapterError('Docs verification cache must be private')
+            try:
+                value = json.loads(self.path.read_text())
+                if (set(value) != {'version', 'binding', 'documents'} or value['version'] != 1
+                        or not isinstance(value['binding'], dict)
+                        or not isinstance(value['documents'], dict)):
+                    raise ValueError()
+                for identifier, proof in value['documents'].items():
+                    if not re.fullmatch(r'[A-Za-z0-9_-]+', identifier) or not self.valid_proof(proof):
+                        raise ValueError()
+                if value['binding'] == self.binding:
+                    self.documents = value['documents']
+            except (ValueError, TypeError, AttributeError):
+                raise AdapterError('Invalid Docs verification cache') from None
+
+    @staticmethod
+    def valid_proof(proof):
+        return (isinstance(proof, dict) and set(proof) == {'hash', 'revision', 'verified_at'}
+                and isinstance(proof['hash'], str) and bool(re.fullmatch(r'[0-9a-f]{64}', proof['hash']))
+                and isinstance(proof['revision'], str) and bool(proof['revision'])
+                and type(proof['verified_at']) in (int, float) and math.isfinite(proof['verified_at']))
+
+    def reusable(self, document_id, desired_hash):
+        proof = self.documents.get(document_id)
+        if (proof and proof['hash'] == desired_hash
+                and 0 <= self.clock() - proof['verified_at'] < VERIFICATION_MAX_AGE):
+            return dict(proof)
+        return None
+
+    def remember(self, document_id, desired_hash, revision):
+        proof = {'hash': desired_hash, 'revision': revision, 'verified_at': self.clock()}
+        if not self.valid_proof(proof):
+            raise AdapterError('Invalid Docs verification proof')
+        documents = {**self.documents, document_id: proof}
+        try:
+            write_json(self.path, {'version': 1, 'binding': self.binding, 'documents': documents})
+        except Exception:
+            raise AdapterError('Docs verification persistence failed; publication is not confirmed') from None
+        self.documents = documents
+        return dict(proof)
 
 
 class DocsClient:
-    def __init__(self, allowed_ids, credentials_file=None, *, request=None, token_provider=None, write_ids=None):
+    def __init__(self, allowed_ids, credentials_file=None, *, request=None, token_provider=None, write_ids=None,
+                 verification_cache=None):
         self.allowed_ids = frozenset(allowed_ids)
         if not self.allowed_ids or any(not re.fullmatch(r'[A-Za-z0-9_-]+', i) for i in self.allowed_ids):
             raise ValueError('invalid document allowlist')
@@ -16,6 +84,8 @@ class DocsClient:
         auth = GoogleAuth(credentials_file, scopes=['https://www.googleapis.com/auth/drive.file'])
         self.token_provider = token_provider or auth.token
         self._verified_readbacks = {}
+        self.verification_cache = verification_cache
+        self.verification_counts = {'body_reads': 0, 'revision_probes': 0, 'cache_hits': 0, 'writes': 0}
 
     def take_verified_readback(self, document_id):
         """Consume the readback from the immediately preceding replacement once."""
@@ -43,8 +113,11 @@ class DocsClient:
                   'body(content(startIndex,endIndex,sectionBreak,paragraph('
                   'positionedObjectIds,elements(textRun(content,suggestedInsertionIds,'
                   'suggestedDeletionIds,suggestedTextStyleChanges))))),headers,footers,footnotes))')
+        self.verification_counts['body_reads'] += 1
         raw = self._call(document_id, 'GET', '?' + urlencode({'includeTabsContent':'true', 'fields':fields}))
         try:
+            if not isinstance(raw['revisionId'], str) or not raw['revisionId']:
+                raise ValueError()
             tabs = raw['tabs']
             if len(tabs) != 1 or tabs[0].get('childTabs'):
                 raise ValueError()
@@ -72,15 +145,36 @@ class DocsClient:
             raise AdapterError('Doc must have one plain text tab; no writes performed') from None
 
     def replace(self, document_id, text):
+        return self.replace_verified(document_id, text)['changed']
+
+    def replace_verified(self, document_id, text):
         """Only publisher-owned outputs. Input correction Docs must never be passed here."""
+        if document_id not in self.write_ids:
+            raise AdapterError('Document is not allowlisted')
         if not isinstance(text, str) or len(text.encode()) > 1_000_000:
             raise ValueError('output exceeds bounds')
         text = text.rstrip('\n') + '\n'
+        desired_hash = canonical_hash(text)
         self._verified_readbacks.pop(document_id, None)
+        cache = self.verification_cache
+        proof = cache.reusable(document_id, desired_hash) if cache is not None else None
+        if proof:
+            self.verification_counts['revision_probes'] += 1
+            raw = self._call(document_id, 'GET', '?' + urlencode({'fields': 'revisionId'}))
+            revision = raw.get('revisionId')
+            if not isinstance(revision, str) or not revision:
+                raise AdapterError('Invalid Docs revision probe')
+            # A slow response can cross the guarantee window. Only accept a
+            # proof that remains fresh when the revision probe completes.
+            if revision == proof['revision'] and cache.reusable(document_id, desired_hash) == proof:
+                self.verification_counts['cache_hits'] += 1
+                return {'changed': False, **proof, 'verification': 'revision_probe'}
         before = self.read(document_id)
         if before['text'] == text:
+            proof = (cache.remember(document_id, desired_hash, before['revision']) if cache is not None
+                     else {'hash': desired_hash, 'revision': before['revision'], 'verified_at': time.time()})
             self._verified_readbacks[document_id] = before
-            return False
+            return {'changed': False, **proof, 'verification': 'full_readback'}
         tab = before['tab_id']
         requests = []
         if before['end_index'] > 2:
@@ -89,10 +183,13 @@ class DocsClient:
         # Retain Docs' mandatory final newline.
         if text[:-1]:
             requests.append({'insertText': {'location': {'index': 1, 'tabId': tab}, 'text': text[:-1]}})
+        self.verification_counts['writes'] += 1
         self._call(document_id, 'POST', ':batchUpdate', {'requests': requests,
                    'writeControl': {'requiredRevisionId': before['revision']}})
         after = self.read(document_id)
         if after['text'] != text:
             raise AdapterError('Output readback differs; publication is not confirmed')
+        proof = (cache.remember(document_id, desired_hash, after['revision']) if cache is not None
+                 else {'hash': desired_hash, 'revision': after['revision'], 'verified_at': time.time()})
         self._verified_readbacks[document_id] = after
-        return True
+        return {'changed': True, **proof, 'verification': 'full_readback'}

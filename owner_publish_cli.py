@@ -6,7 +6,7 @@ import os
 from urllib.parse import urlencode
 
 from folder_policy import verify_selected_folders
-from archive_drive import DocsClient
+from archive_drive import DocsClient, DocsVerificationCache
 from archive_io import GoogleAuth, _http_request
 from archive_snapshot import snapshot
 from storage import _owner
@@ -51,6 +51,10 @@ class OwnerDocs:
                         correction_folder if kind == 'corrections' else config['folder_id'])
         for doc in self.manifest['chunks'].values():
             self.verify(self.metadata(doc), 'application/vnd.google-apps.document', config['folder_id'])
+        self.verification_cache = DocsVerificationCache(self.path.with_suffix('.docs-cache.json'), {
+            'account': account.lower(), 'owner': config['owner'],
+            'root_id': config.get('archive_root_folder_id', config['folder_id']),
+            'parent_id': config['folder_id']})
         from attachment_drive import AttachmentDrive
         self.attachments = AttachmentDrive(self, raw_request=raw_request)
         self.client = self.adapter()
@@ -74,7 +78,8 @@ class OwnerDocs:
         docs = self.config['documents']
         outputs = {docs['guide'], docs['status'], *self.manifest['chunks'].values()}
         return DocsClient(outputs | {docs['corrections']}, request=self.request,
-                          token_provider=self.token_provider, write_ids=outputs)
+                          token_provider=self.token_provider, write_ids=outputs,
+                          verification_cache=self.verification_cache)
 
     def ensure_document(self, key, title):
         if key in self.manifest['chunks']:
@@ -121,6 +126,9 @@ class OwnerDocs:
 
     def replace(self, document_id, text):
         return self.client.replace(document_id, text)
+
+    def replace_verified(self, document_id, text):
+        return self.client.replace_verified(document_id, text)
 
 
 def main(argv=None):

@@ -1,9 +1,11 @@
 import copy
 from pathlib import Path
 import tempfile
+import time
 import unittest
 
 from owner_archive_publisher import run, MAX_DOCUMENT_BYTES, document_text
+from archive_drive import canonical_hash
 
 
 class Client:
@@ -58,6 +60,50 @@ def config(root):
 
 
 class OwnerPublisherTests(unittest.TestCase):
+    def test_explicit_verification_avoids_output_reads_and_keeps_corrections_fresh(self):
+        class VerifiedClient(Client):
+            def __init__(self):
+                super().__init__()
+                self.reads = []
+            def read(self, document):
+                self.reads.append(document)
+                if document != 'corrections':
+                    raise AssertionError('verified output must not be read again')
+                return super().read(document)
+            def replace_verified(self, document, text):
+                changed = super().replace(document, text)
+                return {'changed': changed, 'hash': canonical_hash(text), 'revision': 'verified',
+                        'verified_at': time.time(),
+                        'verification': 'full_readback' if changed else 'revision_probe'}
+        with tempfile.TemporaryDirectory() as root:
+            cfg, client = config(root), VerifiedClient()
+            current = {'sources': [message()]}
+            first = run(cfg, current, client)
+            self.assertGreater(first['writes'], 0)
+            self.assertEqual(client.reads, ['corrections', 'corrections'])
+            self.assertEqual(run(cfg, current, client)['writes'], 0)
+            self.assertEqual(client.reads, ['corrections'] * 4)
+            client.race = True
+            client.writes.clear()
+            current['sources'][0]['text'] = 'changed captured text'
+            with self.assertRaisesRegex(RuntimeError, 'corrections changed'):
+                run(cfg, current, client)
+
+    def test_invalid_verification_proofs_cannot_acknowledge_publication(self):
+        class InvalidClient(Client):
+            def replace_verified(self, document, text):
+                return {**{'changed': False, 'hash': canonical_hash(text), 'revision': 'verified',
+                           'verified_at': time.time(), 'verification': 'revision_probe'}, **self.invalid}
+        for invalid in ({'hash': '0' * 64}, {'changed': 1}, {'revision': ''},
+                        {'verified_at': time.time() + 3600}, {'verification': 'unverified'},
+                        {'changed': True}, {'verified_at': 0}):
+            with self.subTest(invalid=invalid), tempfile.TemporaryDirectory() as root:
+                client = InvalidClient()
+                client.invalid = invalid
+                with self.assertRaisesRegex(RuntimeError, 'proof mismatch'):
+                    run(config(root), {'sources': [message()]}, client)
+                self.assertEqual(client.bodies['status'], '')
+
     def test_phone_spam_withdraws_all_years_before_image_deletion_and_stays_absent(self):
         with tempfile.TemporaryDirectory() as root:
             cfg, client = config(root), Client()
