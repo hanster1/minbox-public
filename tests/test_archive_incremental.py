@@ -58,6 +58,51 @@ class IncrementalTests(unittest.TestCase):
         self.archive.close()
         self.temp.cleanup()
 
+    def test_explicit_source_gates_filter_revisions_context_and_restore_history(self):
+        original = source()
+        self.archive.analyze('Owner A', [original], self.analyzer)
+        historical = self.archive.records('Owner A', [original])['m1']
+        for label in ('spam', 'personal', 'mixed'):
+            with self.subTest(label=label):
+                overrides = {'m1': label}
+                gated = self.archive.analyze('Owner A', [original], self.analyzer,
+                                             source_overrides=overrides)
+                self.assertEqual(gated['model_attempts'], 0)
+                record = self.archive.records('Owner A', [original], source_overrides=overrides)['m1']
+                self.assertEqual((record['label'], record['facts'], record['reason']),
+                                 (label, [], 'manual_' + label))
+                revised = source(revision='2', text='Private revised content')
+                new = source('new-' + label, context=['m1'])
+                self.archive.analyze('Owner A', [revised, new], self.analyzer,
+                                     labels={'m1': 'work'}, source_overrides=overrides)
+                payload = self.analyzer.calls[-1]
+                self.assertEqual([item['source_id'] for item in payload['sources']], [new['source_id']])
+                self.assertEqual(payload['sources'][0]['context'], [])
+                self.assertNotIn('Private revised content', json.dumps(payload))
+                restored = self.archive.analyze('Owner A', [original], self.analyzer)
+                self.assertEqual(restored['model_attempts'], 0)
+                self.assertEqual(self.archive.records('Owner A', [original])['m1']['facts'], historical['facts'])
+
+    def test_only_explicit_private_overrides_gate_own_source_and_security_wins(self):
+        items = [source('automatic'), source('uncertain'), source('work'),
+                 source('secret', text='Your login verification code is 123456')]
+        result = self.archive.analyze('Owner A', items, self.analyzer,
+                                     labels={'automatic': 'personal'},
+                                     source_overrides={'uncertain': 'uncertain', 'work': 'work', 'secret': 'personal'})
+        self.assertEqual(result['analyzed'], 3)
+        self.assertEqual({s['source_id'] for s in self.analyzer.calls[-1]['sources']},
+                         {'automatic', 'uncertain', 'work'})
+        self.assertEqual(self.archive.records('Owner A', items, source_overrides={'secret': 'personal'})['secret']['reason'],
+                         'security_filter')
+
+    def test_per_phase_quota_defers_without_changing_library_default(self):
+        result = self.archive.analyze('Owner A', [source()], self.analyzer, max_calls=0)
+        self.assertEqual((result['model_attempts'], result['deferred_reasons']), (0, {'call_limit': 1}))
+        self.assertEqual(self.archive.analyze('Owner A', [source()], self.analyzer)['model_attempts'], 1)
+        for invalid in (-1, True, 3):
+            with self.assertRaises(ValueError):
+                self.archive.analyze('Owner A', [], self.analyzer, max_calls=invalid)
+
     def test_idle_restart_and_changed_revision_content(self):
         originals = [source()]
         self.assertEqual(self.archive.analyze('Owner A', originals, self.analyzer)['model_calls'], 1)

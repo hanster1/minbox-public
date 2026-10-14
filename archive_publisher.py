@@ -52,35 +52,45 @@ def run(config, snapshot, client, analyzer):
         initial_corrections = ledger.ingest(owner, correction_records, registry)
         active_targets = {json.loads(row['payload']).get('target') for row in ledger.history(owner)
                           if row['status']=='applied' and json.loads(row['payload']).get('action')!='undo'}
+        # Applied corrections alone can gate a source; cached model labels only
+        # guide dependencies. Spam stays active until its explicit undo.
+        spam_targets = {json.loads(row['payload']).get('target') for row in ledger.history(owner)
+                        if row['status']=='applied' and json.loads(row['payload']).get('action')=='spam'}
         overrides = {s['source_id']:initial_corrections['effective_labels'][s['friendly_id']] for s in messages
                      if s['friendly_id'] in active_targets}
+        overrides.update({s['source_id']: 'spam' for s in messages if s['friendly_id'] in spam_targets})
+        attempts_before = cache.state(owner)['model_attempts']
         try:
-            message_run = cache.analyze(owner, core_messages, analyzer, policy=policy,labels=overrides)
+            message_run = cache.analyze(owner, core_messages, analyzer, policy=policy,labels=overrides,source_overrides=overrides)
         except AnalysisFailure as error:
             message_run = error.result
         except Exception:
             message_run = {'analysis_failed': True, 'analysis_state': 'needs_attention',
                            'error_code': 'analysis_failed', 'model_calls': 0, 'model_attempts': 0,
                            'pending_sources': len(core_messages), 'retryable': False}
-        message_records = cache.records(owner, core_messages,policy=policy,labels=overrides)
+        message_records = cache.records(owner, core_messages,policy=policy,labels=overrides,source_overrides=overrides)
         for source in messages:
             registry[source['friendly_id']]['label'] = message_records[source['source_id']]['label']
         corrections = ledger.ingest(owner, correction_records, registry)
         labels = {s['source_id']: corrections['effective_labels'][s['friendly_id']] for s in sources}
-        spam_targets = {json.loads(row['payload']).get('target') for row in ledger.history(owner)
-                        if row['status']=='applied' and json.loads(row['payload']).get('action')=='spam'}
         for s in sources:
             if hard_excluded(s['text']) or s['friendly_id'] in spam_targets:
                 labels[s['source_id']] = 'spam'
+        loom_overrides = {s['source_id']: labels[s['source_id']] for s in looms
+                          if s['friendly_id'] in active_targets}
+        # Durable attempts include failures and interrupted adapter completions.
+        message_attempts = cache.state(owner)['model_attempts'] - attempts_before
+        remaining_calls = max(0, cache.max_model_calls - message_attempts)
         try:
-            loom_run = cache.analyze(owner, core_looms, analyzer,policy=policy,labels=labels)
+            loom_run = cache.analyze(owner, core_looms, analyzer,policy=policy,labels=labels,
+                                     source_overrides=loom_overrides,max_calls=remaining_calls)
         except AnalysisFailure as error:
             loom_run = error.result
         except Exception:
             loom_run = {'analysis_failed': True, 'analysis_state': 'needs_attention',
                         'error_code': 'analysis_failed', 'model_calls': 0, 'model_attempts': 0,
                         'pending_sources': len(core_looms), 'retryable': False}
-        loom_records = cache.records(owner, core_looms,policy=policy,labels=labels)
+        loom_records = cache.records(owner, core_looms,policy=policy,labels=labels,source_overrides=loom_overrides)
         for source in looms:
             registry[source['friendly_id']]['label'] = loom_records[source['source_id']]['label']
         final_corrections = ledger.ingest(owner, correction_records, registry)
