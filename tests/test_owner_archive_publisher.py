@@ -85,6 +85,17 @@ class OwnerPublisherTests(unittest.TestCase):
             self.assertFalse(client.bodies[client.keys['messages:2025:part001']].strip())
             cfg['previous_chunk_keys'] = list(client.keys)
             self.assertEqual(run(cfg,current,client)['writes'],0)
+            # A confirmed phone restoration returns both years, without new Doc IDs.
+            keys_before = dict(client.keys)
+            client.withdraw_phone_spam = lambda ids, images: {'withdrawn_images': 0, 'pending_image_deletions': 0}
+            restored = {'sources': [junk, reply, keep], 'phone_spam_source_ids': [],
+                        'phone_spam_conversations': 0, 'phone_spam_images': []}
+            result = run(cfg, restored, client)
+            self.assertEqual(result['published_messages'], 3)
+            self.assertEqual(client.keys, keys_before)
+            self.assertIn('Synthetic discarded conversation', client.bodies[client.keys['messages:2025:part001']])
+            self.assertTrue(any('Synthetic discarded reply' in body for body in client.bodies.values()))
+            self.assertEqual(run(cfg, restored, client)['writes'], 0)
 
     def test_image_only_and_ocr_render_and_filter_before_upload(self):
         with tempfile.TemporaryDirectory() as root:
