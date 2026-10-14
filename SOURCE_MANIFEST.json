@@ -30,7 +30,7 @@
       "sha256": "db46cbd3804d444671dad21c087661b47f76ab3b7fc2838e688c34729ca8118e"
     },
     "archive_snapshot.py": {
-      "sha256": "3e86f0019adba6997ecd5c9690f4c7e88cf2cff765f54562d2e910732c237dc5"
+      "sha256": "42f3111155fcd941426edd7f64049e8f8d0b8e7f100533cef01a3cd480695744"
     },
     "attachment_capture.py": {
       "sha256": "18d7180722458d936e5b4e0af009515bbbc1541dda3cd2e8b6a03dca89ac77b7"
@@ -258,7 +258,7 @@
       "sha256": "6e0e5600ebf068857952f7c26a14aa9a434e6d9d737a672d66694563af4ecc19"
     },
     "tests/test_phone_spam.py": {
-      "sha256": "2bd5fa0c417488e7b773ae433f9b6ed1396b3a34619351421c17f8b6f414998f"
+      "sha256": "7155e4462f72be9ed2466ba5f1cc4098faa6591507511131f88411f19b9ea491"
     }
   }
 }

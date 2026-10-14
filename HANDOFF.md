@@ -71,7 +71,9 @@ caps and stale replay cannot clear exclusions. Targeted lookups rotate through
 one pending SDK request. Startup and recurring metadata reconciliation run before
 and independently of history import; connection/fatal-event gates prevent requests
 after logout. Lifecycle and request races pass Go race tests. Historical evidence and restoration state remain durable.
-Work-analysis cache scope includes the active set even when it becomes empty.
+Work-analysis cache scope includes relevant selected exclusions, even when empty,
+including excluded historical threads contributing moved selected source IDs.
+Unselected spam and its backfill do not invalidate unrelated work analysis.
 Restored images may get new Drive IDs; text Doc IDs remain stable.
 
 420 full Python tests pass (five optional skips); seven focused Docs tests pass,
@@ -92,3 +94,12 @@ publication status; direct library operations still serialize. Native Docs GETs
 have a 90-second bound, POSTs remain 45 seconds and writes are never blindly
 replayed. The existing whole-service limit still bounds a publication pass.
 See PHONE_SPAM.md. Private installation receipts and exact bindings stay outside Git.
+
+Reviewed Linux activation completed on one consenting installation: live paired
+collection remained read-only, an uncapped folder snapshot and import were
+verified, full Drive publication completed with current-content readback and
+managed-image withdrawal, and a separate guide/status/manifest readback found no
+pending deletions or registered excluded images. Existing root and Doc bindings
+were preserved. Exact owner/counts/runtime receipts remain private outside Git.
+Real phone-to-Drive unspam restoration has synthetic coverage but still needs a
+benign phone acceptance test. Source checkpoints remain local; no push in this task.

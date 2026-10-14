@@ -39,6 +39,32 @@ class PhoneSpamTests(unittest.TestCase):
     def current(self, owner='Casey', conversations=None):
         return snapshot(self.archive.root, owner, conversations, '1970-01-01', phone_spam_policy='spam_and_blocked')
 
+    def test_work_generation_ignores_unselected_spam_and_backfill(self):
+        self.import_one('keep', 'ordinary')
+        self.reconcile()
+        before = self.current(conversations=['ordinary'])['phone_spam_generation']
+        with closing(sqlite3.connect(self.collector)) as db:
+            db.execute('INSERT INTO phone_spam_conversations VALUES (?,?)', ('new-junk', 5))
+            db.commit()
+        self.reconcile()
+        self.import_one('outside', 'new-junk')
+        self.import_one('backfill', 'new-junk')
+        current = self.current(conversations=['ordinary'])
+        self.assertEqual(current['phone_spam_generation'], before)
+        self.assertEqual([s['friendly_id'] for s in current['sources']], ['Mkeep'])
+        self.assertEqual(len(current['phone_spam_source_ids']), 2)
+        self.assertNotEqual(self.current(conversations=['new-junk', 'ordinary'])['phone_spam_generation'], before)
+
+    def test_work_generation_includes_excluded_history_of_moved_selected_source(self):
+        self.reconcile()
+        before = self.current(conversations=['ordinary'])['phone_spam_generation']
+        self.import_one('moved', 'junk')
+        self.import_one('moved', 'ordinary')
+        current = self.current(conversations=['ordinary'])
+        self.assertNotEqual(current['phone_spam_generation'], before)
+        self.assertEqual(current['sources'], [])
+        self.assertEqual(current['phone_spam_source_ids'], ['archive://Casey/google-messages/moved'])
+
     def test_whole_thread_future_backfill_owner_and_source_isolation(self):
         self.import_one('old', 'junk')
         self.import_one('reply', 'junk', direction='outgoing')
@@ -163,6 +189,21 @@ class PhoneSpamTests(unittest.TestCase):
         self.assertEqual(self.reconcile()['new_exclusions'], 1)
         self.assertEqual(self.current()['sources'], [])
         self.assertEqual(len(self.archive.messages('Casey')), 1)
+
+    def test_selected_restore_and_reblock_change_only_relevant_generation(self):
+        self.import_one('one', 'junk')
+        self.modern_collector([('junk',5,1,1,100,0,0), ('blocked',6,1,1,100,0,0)])
+        self.reconcile()
+        excluded = self.current(conversations=['junk'])['phone_spam_generation']
+        empty = self.current(conversations=['ordinary'])['phone_spam_generation']
+        self.modern_collector([('junk',5,0,2,100,1,200), ('blocked',6,1,1,100,0,0)])
+        self.reconcile()
+        self.assertEqual(self.current(conversations=['junk'])['phone_spam_generation'], empty)
+        self.assertEqual(len(self.current(conversations=['junk'])['sources']), 1)
+        self.modern_collector([('junk',6,1,3,300,1,200), ('blocked',6,1,1,100,0,0)])
+        self.reconcile()
+        self.assertEqual(self.current(conversations=['junk'])['phone_spam_generation'], excluded)
+        self.assertEqual(self.current(conversations=['junk'])['sources'], [])
 
     def test_stale_replay_cannot_restore_reblocked_or_reexclude_restored(self):
         self.import_one('one','junk')

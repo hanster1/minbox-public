@@ -21,18 +21,22 @@ def snapshot(root, owner, conversations, start_date, *, phone_spam_policy=None):
         from phone_spam import excluded_conversations
         excluded_threads = excluded_conversations(db, owner, phone_spam_policy)
         excluded_ids = set()
+        scope_ids = set()
+        generation_threads = excluded_threads.copy() if conversations is None else excluded_threads & set(conversations)
         excluded_images = []
         messages = []
         message_gaps = []
         for row in db.execute('SELECT source,id,payload,imported_at FROM messages WHERE owner=?', (owner,)):
             value = json.loads(row['payload'])
+            sid = 'archive://' + '/'.join(quote(x, safe='') for x in (owner, row['source'], row['id']))
+            in_scope = (conversations is None or value['conversation_id'] in conversations) and value['timestamp'][:10] >= start_date
+            if in_scope:
+                scope_ids.add(sid)
             if row['source'] == 'google-messages' and value['conversation_id'] in excluded_threads:
-                sid = 'archive://' + '/'.join(quote(x, safe='') for x in (owner, row['source'], row['id']))
                 excluded_ids.add(sid)
                 continue
-            if (conversations is not None and value['conversation_id'] not in conversations) or value['timestamp'][:10] < start_date:
+            if not in_scope:
                 continue
-            sid = 'archive://' + '/'.join(quote(x, safe='') for x in (owner, row['source'], row['id']))
             revision_value = dict(value)
             revision_value['attachments'] = [{k: v for k, v in a.items() if k != 'local_path'}
                                              for a in value.get('attachments', [])]
@@ -74,7 +78,11 @@ def snapshot(root, owner, conversations, start_date, *, phone_spam_policy=None):
             for row in db.execute("SELECT id,payload FROM revisions WHERE owner=? AND source='google-messages'", (owner,)):
                 value = json.loads(row['payload'])
                 if value['conversation_id'] in excluded_threads:
-                    excluded_ids.add('archive://' + '/'.join(quote(x, safe='') for x in (owner, 'google-messages', row['id'])))
+                    sid = 'archive://' + '/'.join(quote(x, safe='') for x in (owner, 'google-messages', row['id']))
+                    excluded_ids.add(sid)
+                    # Historical exclusions can affect a source now in a selected thread.
+                    if sid in scope_ids:
+                        generation_threads.add(value['conversation_id'])
             messages = [m for m in messages if m['source_id'] not in excluded_ids]
             for row in db.execute("SELECT id,payload FROM revisions WHERE owner=? AND source='google-messages'", (owner,)):
                 sid = 'archive://' + '/'.join(quote(x, safe='') for x in (owner, 'google-messages', row['id']))
@@ -110,7 +118,7 @@ def snapshot(root, owner, conversations, start_date, *, phone_spam_policy=None):
             if origins:
                 gaps.append({'video_id':queue['video_id'],'status':queue['status'],'origin_ids':origins})
         latest_import = db.execute('SELECT MAX(imported_at) FROM imports WHERE owner=?', (owner,)).fetchone()[0]
-        return {'phone_spam_generation': fingerprint(sorted(excluded_threads)),
+        return {'phone_spam_generation': fingerprint(sorted(generation_threads)),
                 'phone_spam_source_ids': sorted(excluded_ids), 'phone_spam_images': excluded_images,
                 'phone_spam_conversations': len(excluded_threads), 'message_gaps': message_gaps, 'loom_gaps': gaps, 'sources': messages + sorted(transcripts, key=lambda x: x['source_id']),
                 'latest_import': latest_import, 'latest_scoped_message': max((m['timestamp'] for m in messages), default=None),
