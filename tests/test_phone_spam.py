@@ -128,6 +128,97 @@ class PhoneSpamTests(unittest.TestCase):
         self.import_one('older','junk')
         self.assertEqual(self.current()['phone_spam_generation'],before)
 
+    def modern_collector(self, rows):
+        with closing(sqlite3.connect(self.collector)) as db:
+            db.execute('DROP TABLE phone_spam_conversations')
+            db.execute('CREATE TABLE phone_spam_conversations(conversation_id TEXT PRIMARY KEY,status INTEGER,active INTEGER,revision INTEGER,observed_at INTEGER,restored_status INTEGER,restored_at INTEGER)')
+            db.executemany('INSERT INTO phone_spam_conversations VALUES (?,?,?,?,?,?,?)', rows)
+            db.commit()
+
+    def test_confirmed_restore_returns_original_text_images_and_loom_then_reblock(self):
+        image = {'media_id': 'kept', 'mime_type': 'image/png', 'sha256': 'a'*64}
+        self.import_one('one', 'junk', attachments=[image])
+        self.modern_collector([('junk', 5, 1, 1, 100, 0, 0)])
+        self.reconcile()
+        excluded_generation = self.current()['phone_spam_generation']
+        self.modern_collector([('junk',5,1,2,150,0,0)]);self.reconcile()
+        self.assertEqual(self.current()['phone_spam_generation'], excluded_generation)
+        with self.archive._connect() as db:
+            db.executescript('CREATE TABLE loom_queue(owner,video_id,current_revision,status); CREATE TABLE loom_origins(owner,video_id,source,message_id); CREATE TABLE loom_revisions(owner,video_id,revision,semantic_sha256,text,phrases,captured_at,source_url);')
+            db.execute('INSERT INTO loom_queue VALUES (?,?,?,?)', ('Casey','video',1,'captured'))
+            db.execute('INSERT INTO loom_origins VALUES (?,?,?,?)', ('Casey','video','google-messages','one'))
+            db.execute('INSERT INTO loom_revisions VALUES (?,?,?,?,?,?,?,?)', ('Casey','video',1,'hash','Synthetic transcript','[]','2026-10-13T10:01:00Z','https://www.loom.com/share/video'))
+        self.assertEqual(self.current()['sources'], [])
+        self.modern_collector([('junk', 5, 0, 3, 150, 2, 200)])
+        self.assertEqual(self.reconcile()['excluded_conversations'], 0)
+        restored = self.current()
+        self.assertEqual({s['kind'] for s in restored['sources']}, {'message','loom'})
+        self.assertEqual(restored['sources'][0]['attachments'], [image])
+        self.assertEqual(restored['phone_spam_images'], [])
+        self.assertNotEqual(restored['phone_spam_generation'], excluded_generation)
+        generation = restored['phone_spam_generation']
+        self.reconcile()
+        self.assertEqual(self.current()['phone_spam_generation'], generation)
+        self.modern_collector([('junk', 6, 1, 4, 300, 2, 200)])
+        self.assertEqual(self.reconcile()['new_exclusions'], 1)
+        self.assertEqual(self.current()['sources'], [])
+        self.assertEqual(len(self.archive.messages('Casey')), 1)
+
+    def test_stale_replay_cannot_restore_reblocked_or_reexclude_restored(self):
+        self.import_one('one','junk')
+        for row in [('junk',5,1,1,100,0,0), ('junk',5,0,2,100,1,200),
+                    ('junk',6,1,3,300,1,200)]:
+            self.modern_collector([row]);self.reconcile()
+        for row in [('junk',5,0,2,100,1,200), ('junk',6,0,3,300,1,400), ('junk',5,0,9,100,1,600)]:
+            self.modern_collector([row]);self.reconcile()
+            self.assertEqual(self.current()['sources'], [])
+        self.modern_collector([('junk',6,0,4,300,4,500)]);self.reconcile()
+        self.modern_collector([('junk',6,1,3,300,1,200)]);self.reconcile()
+        self.assertEqual(len(self.current()['sources']), 1)
+        # Missing rows and a downgraded legacy ledger are not fresh folder evidence.
+        self.modern_collector([]);self.reconcile()
+        self.assertEqual(len(self.current()['sources']), 1)
+        with closing(sqlite3.connect(self.collector)) as db:
+            db.execute('DROP TABLE phone_spam_conversations')
+            db.execute('CREATE TABLE phone_spam_conversations(conversation_id,status)')
+            db.execute('INSERT INTO phone_spam_conversations VALUES (?,?)', ('junk',5));db.commit()
+        self.reconcile()
+        self.assertEqual(len(self.current()['sources']), 1)
+
+    def test_equal_positive_replay_cannot_roll_back_collector_revision(self):
+        self.import_one('one','junk')
+        self.modern_collector([('junk',5,1,10,200,1,150)]);self.reconcile()
+        self.modern_collector([('junk',5,1,1,200,0,0)]);self.reconcile()
+        self.modern_collector([('junk',5,0,2,200,1,300)]);self.reconcile()
+        self.assertEqual(self.current()['sources'], [])
+
+    def test_equal_time_positive_wins_and_invalid_restoration_is_rejected(self):
+        self.import_one('one','junk')
+        self.modern_collector([('junk',5,0,2,100,1,200)]);self.reconcile()
+        self.modern_collector([('junk',6,1,1,200,0,0)]);self.reconcile()
+        self.assertEqual(self.current()['sources'], [])
+        for row in [('junk',6,0,3,200,3,300), ('junk',6,0,3,200,1,200),
+                    ('junk',6,0,0,200,1,300), ('junk',6,1,1,0,0,0)]:
+            with self.subTest(row=row):
+                self.modern_collector([row])
+                with self.assertRaisesRegex(ValueError, 'invalid collector'):
+                    self.reconcile()
+                self.assertEqual(self.current()['sources'], [])
+
+    def test_local_legacy_schema_migrates_conservatively_then_confirmed_restore(self):
+        self.import_one('one','junk')
+        with self.archive._connect() as db:
+            db.execute('CREATE TABLE phone_spam_exclusions(owner,source,conversation_id,status,observed_at,PRIMARY KEY(owner,source,conversation_id))')
+            db.execute('INSERT INTO phone_spam_exclusions VALUES (?,?,?,?,?)', ('Casey','google-messages','junk',5,'legacy'))
+            db.execute('CREATE TABLE phone_spam_sync(owner PRIMARY KEY,supported,checked_at)')
+            db.execute('INSERT INTO phone_spam_sync VALUES (?,?,?)', ('Casey',1,'legacy'))
+        self.assertEqual(self.current()['sources'], [])
+        self.reconcile()
+        self.assertEqual(self.current()['sources'], [])
+        self.modern_collector([('junk',5,0,2,100,1,200)]);self.reconcile()
+        self.assertEqual(len(self.current()['sources']), 1)
+        self.assertEqual(self.current('Casey')['phone_spam_conversations'], 1)  # Missing blocked row stays excluded.
+
     def test_import_cannot_race_owner_publication(self):
         waiting=threading.Event();finished=threading.Event()
         def reconcile():
