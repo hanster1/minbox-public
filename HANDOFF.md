@@ -28,12 +28,16 @@ including failures. Undo can reuse matching history. Full publication uses no AI
 
 ## Verification and limits
 
-477 Python tests passed, five optional skips. Release checks passed for 122 files
-and 87 inventoried source/test files. Reviewed Linux installation and live cold/
+491 Python tests ran, five optional skips and no failures. Release checks passed
+for 122 files and 87 inventoried source/test files. Reviewed Linux installation and live cold/
 cached publishing passed. The latest smaller-part migration completed full
 verification and one automatic repeat under the normal ten-minute limit. Prior
-schedules and recovery pauses were restored; import/work catch-up passed. The
-repeat took about 9m48s, so provider-latency margin remains narrow.
+schedules and recovery pauses were restored; import/work catch-up passed. That
+repeat took about 9m48s and later runs timed out. An opt-in bounded revision
+prefetch now overlaps unchanged-output checks (default remains sequential);
+writes, full reads and Corrections remain sequential. Its first controlled full
+publication succeeded in 3m04s; an automatic repeat succeeded in 4m33s under
+the normal 600-second deadline. Prior schedules/recovery settings were restored.
 Collection continued. Private bindings, timings and rollback receipts remain
 outside Git. Historical image uploads remain pending; backlog drainage is
 unverified. Large Docs and daily verification can remain slow.

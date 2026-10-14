@@ -22,6 +22,16 @@ successful guarded reads before they shrink, so retain verified partial progress
 does not establish that the image backlog is draining. Verify complete publication,
 import catch-up and a subsequent scheduled run before claiming recovery.
 
+For many unchanged parts, compare sequential revision checks with bounded
+concurrent reads before changing the private publisher config. The opt-in
+`revision_probe_workers: 3` setting permits at most three revision reads with
+one logical request launch per second. The default is sequential. Only fresh
+proofs matching the desired output qualify; writes, full structural reads and
+Corrections remain sequential. Results last only for this publication run and
+cannot renew a proof's verification age. Errors still prevent acknowledgement.
+Keep the owner lock and existing privacy checks; imports still wait for the
+publisher to finish. Verify full publication and a normal scheduled repeat.
+
 An explicit operator repair can supply the canonical previous body to
 `DocsClient.replace_verified` only when it matches a fresh bound verification
 proof. The revision-guarded literal replacement must report exactly one match
