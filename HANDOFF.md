@@ -5,7 +5,23 @@ information-site source. MAINTENANCE.md maps hosted operations to their separate
 home. Keep private history, runtime state and account bindings outside this Git
 history. Minbox code is MIT; collector changes retain upstream AGPL obligations.
 
-## Latest result
+## Verification preparation — 2026-10-14
+
+The reference update was pushed and its GitHub source checks passed. A fresh
+clone passed the release check. The public information site was still serving
+older family-specific pages; the reviewed canonical HTML/CSS is now published
+to the existing Vercel target. Homepage, privacy, terms and stylesheet return
+HTTP 200 without authentication and match source byte for byte. Only the static
+site upload allowlist was deployed; application runtimes and Google grants were
+unchanged. Deployment/rollback receipts and draft verification materials remain
+private outside Git.
+
+Google verification has not been submitted. Next: obtain the existing project's
+Audience, Branding, Data Access and Verification Center status from the owner,
+confirm authorized-domain ownership and review the Drive use-case policy before
+submission. Narrow scope alone is not a guarantee of approval.
+
+## Latest reference result
 
 Minbox is now positioned as an adaptable reference with a working implementation
 and documented lessons. REFERENCE_GUIDE.md covers collection, filtering, Drive,
