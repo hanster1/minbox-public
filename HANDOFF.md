@@ -16,8 +16,9 @@ responses cannot clear exclusions. Text Doc IDs remain stable. Native Docs
 version history is retained. See PHONE_SPAM.md for scope and consent.
 
 Private owner/account/folder-bound document proofs let unchanged outputs use
-revision probes for up to 24 hours after full verification. Changed/expired/cold
-outputs require structural reads and guarded writes/readback. Corrections,
+revision probes for up to 24 hours after full verification. Changed outputs can
+reuse fresh bound geometry or an explicit operator-provided previous body for
+revision-guarded repair; new content still requires full exact structural readback. Expired/cold outputs require structural reads. Corrections,
 privacy checks and deletion journals remain fresh. Spam-image withdrawal uses
 one bounded fresh folder scan; incomplete listings fall back to exact searches.
 
@@ -27,16 +28,21 @@ including failures. Undo can reuse matching history. Full publication uses no AI
 
 ## Verification and limits
 
-459 Python tests passed, five optional skips. Release checks passed for 122 files
+477 Python tests passed, five optional skips. Release checks passed for 122 files
 and 87 inventoried source/test files. Reviewed Linux installation and live cold/
-cached publishing passed; schedules and prior health pauses were restored.
+cached publishing passed. The latest smaller-part migration completed full
+verification and one automatic repeat under the normal ten-minute limit. Prior
+schedules and recovery pauses were restored; import/work catch-up passed. The
+repeat took about 9m48s, so provider-latency margin remains narrow.
 Collection continued. Private bindings, timings and rollback receipts remain
-outside Git. Historical image uploads are still draining; changed large Docs and
-daily verification can remain slow. Website source was not deployed.
+outside Git. Historical image uploads remain pending; backlog drainage is
+unverified. Large Docs and daily verification can remain slow.
+ANDROID_RECOVERY.md describes smaller-part migration and scoped image-attempt limits for repeated timeouts.
+Website source was not deployed.
 
 Real phone unspam restoration, Mac/iPhone and independent client setup, renewal,
 reboot and offline catch-up need further acceptance. Media coverage is bounded;
 external heartbeat and independent encrypted backup remain separate work.
 
-Next: observe backlog completion and scheduled cache reuse, then perform remaining
-client acceptance checks when their required devices are available.
+Next: observe scheduled publication latency and image backlog progress, then
+perform remaining client acceptance checks when their devices are available.

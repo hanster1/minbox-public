@@ -5,6 +5,29 @@ unit, its existing socket status, import/publisher status and local health repor
 Do not print session JSON, raw logs, copied cookies or message bodies. Confirm
 phone connectivity with the owner before inferring an authentication failure.
 
+For repeated owner-publication timeouts, inspect the private publisher's fixed
+`phase` and `heartbeat_at` fields. Stages distinguish corrections, images,
+document verification and final status without exposing source or Doc identities.
+An import or work publisher that exits successfully with `owner_busy` has skipped
+work while the full publisher holds the owner lock; check completed timestamps.
+
+If large managed Docs time out even on revision probes, review the owner's
+supported `max_document_bytes` setting. A smaller bound such as `100000` retains
+existing part IDs, creates additional parts and updates Start Here through the
+normal guarded publisher. Sources can move between parts; originals, correction
+bindings and native Doc history remain. Save a private config rollback and a
+sanitized render preview before applying it. The existing large Docs still need
+successful guarded reads before they shrink, so retain verified partial progress.
+`max_image_attempts: 1` can also reduce image work ahead of text publication, but
+does not establish that the image backlog is draining. Verify complete publication,
+import catch-up and a subsequent scheduled run before claiming recovery.
+
+An explicit operator repair can supply the canonical previous body to
+`DocsClient.replace_verified` only when it matches a fresh bound verification
+proof. The revision-guarded literal replacement must report exactly one match
+and pass full structural readback. An uncertain write is not acknowledged or
+blindly replayed; let the normal publisher reconcile it.
+
 Respect paused jobs. The monitor already retries enabled components with bounded
 cooldowns; active workers are not killed. Do not open a second collector or normal
 Google Messages web session to diagnose the first one. Media CLI connects only
