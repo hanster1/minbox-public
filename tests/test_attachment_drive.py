@@ -101,6 +101,40 @@ class Images(unittest.TestCase):
         self.assertTrue(all(doc in self.files for doc in self.config['documents'].values()))
         self.assertEqual(len(self.client().manifest['attachments']), 1)
 
+    def test_restored_image_reuploads_retained_original_once(self):
+        client = self.client()
+        client.publish_attachments([self.message])
+        old_id = self.item['drive_file_id']
+        client.attachments.withdraw_phone_spam([self.message['source_id']])
+        self.assertNotIn(old_id, self.files)
+        restored = dict(self.message, attachments=[dict(self.item)])
+        resumed = self.client()
+        resumed.publish_attachments([restored])
+        new_id = restored['attachments'][0]['drive_file_id']
+        self.assertNotEqual(old_id, new_id)
+        self.assertIn(new_id, self.files)
+        self.assertEqual(self.local.read_bytes(), self.data)
+        writes = (self.posts, self.uploads, len(self.deletes))
+        self.client().publish_attachments([restored])
+        self.assertEqual((self.posts, self.uploads, len(self.deletes)), writes)
+
+    def test_restore_after_pending_delete_finishes_then_reuploads(self):
+        client = self.client()
+        client.publish_attachments([self.message])
+        old_id = self.item['drive_file_id']
+        self.delete_mode = 'retained'
+        with self.assertRaises(AdapterError):
+            client.attachments.withdraw_phone_spam([self.message['source_id']])
+        self.delete_mode = None
+        restored = dict(self.message, attachments=[dict(self.item)])
+        resumed = self.client()
+        self.assertNotIn(old_id, self.files)
+        self.assertFalse(resumed.manifest['attachments_pending_deletions'])
+        resumed.publish_attachments([restored])
+        self.assertIn(restored['attachments'][0]['drive_file_id'], self.files)
+        self.assertNotEqual(old_id, restored['attachments'][0]['drive_file_id'])
+        self.assertTrue(all(doc in self.files for doc in self.config['documents'].values()))
+
     def test_uncertain_delete_is_completed_only_after_missing_readback(self):
         client = self.client()
         client.publish_attachments([self.message])

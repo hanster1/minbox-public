@@ -98,7 +98,11 @@ positive SPAM_FOLDER (5) and BLOCKED_FOLDER (6) observations in an owner-store
 metadata-only scan use the existing paired connection; no phone folder changes,
 message sending or second collector are introduced. Archived, deleted, unknown
 and missing conversations never become spam by inference. Positive observations
-remain sticky despite later stale normal-folder events.
+remain excluded despite later stale normal-folder events. A bounded rotating
+read-only `GetConversation` lookup of known exclusions can confirm restoration
+only for normal statuses (1, 2 or 4), with a request started after the latest spam
+observation and the safety delay. A newer spam observation wins the race.
+The ledger retains active/restored state and history rather than deleting rows.
 
 The SDK exposes folder state, not the Android user's exact Report spam action.
 Spam can be automatic; blocked conversations can be blocked without reporting.
@@ -109,5 +113,7 @@ Scans are capped at 500 conversations, with explicit snapshot/capped/pending/fai
 coverage recorded in `phone_spam_scan_state`. The SDK's public method does not
 support cursor traversal or cancellation. One in-flight scan maximum and caller
 deadlines bound retries; a permanently hung SDK request needs collector recovery.
-Never interpret absence or a capped scan as proof of complete phone coverage.
+Targeted restoration checks share the request budget and retain original request
+timestamps across caller timeouts. Never interpret absence, a nil response or a
+capped scan as proof of restoration or complete phone coverage.
 The library and native Docs revision limitations remain explicit in PHONE_SPAM.md.

@@ -265,7 +265,7 @@ def run(config, snapshot, client):
         if config.get('phone_spam_policy') == 'spam_and_blocked':
             guide.extend(['', 'Phone Spam & blocked',
                 'Whole conversations observed in Google Messages Spam & blocked are removed from the current Drive archive, including their managed images. This includes automatic spam filtering and blocking without a spam report.',
-                'Local originals remain. Unblocking on your phone does not automatically restore removed archive content. Earlier Google Docs versions can remain.'])
+                'Local originals remain. Moving a conversation out of Spam & blocked restores eligible text and images after a fresh phone-status confirmation and the next archive sync. Other archive corrections and filters still apply. Earlier Google Docs versions can remain.'])
         verified_write(docs['guide'], '\n'.join(guide))
         withdrawal = {'withdrawn_images': 0, 'pending_image_deletions': 0}
         if snapshot.get('phone_spam_source_ids'):

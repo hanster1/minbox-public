@@ -14,10 +14,11 @@ content. Old message chunks are blanked when withdrawn. Matching managed Drive
 images are permanently deleted with private-account/root/parent/identity/checksum
 checks and a durable retry journal; unrelated messages and images remain intact.
 
-Local originals, revisions and images are retained. Deleted Drive archive content
-cannot return through ordinary backfill, normal-folder updates or restore of a
-snapshot containing the exclusion ledger. Unblocking on the phone does not
-silently restore excluded content. An explicit reviewed policy change is required.
+Local originals, revisions and images are retained. Moving a conversation out of
+Spam & blocked restores eligible content after the collector confirms its normal
+folder status with a fresh, read-only lookup. Ordinary events, missing threads,
+failed scans and old responses cannot restore it. Other explicit archive
+corrections and filters still apply. Restored images may receive new Drive links.
 Earlier independent snapshots and old installations must honor the current
 exclusions before publishing; they are not erased by this feature.
 
@@ -44,14 +45,18 @@ conversation as spam after its archive text/image has been verified. **Computer
 (collection host), agent:** verify that exact observed conversation disappears
 from current Drive text views, its managed image files are gone, unrelated content
 remains, local originals remain and later import/idle cycles cannot republish it.
-Fixture tests alone do not prove a particular phone's event propagation.
+Then, on the phone, move that conversation out of Spam & blocked. Verify that a
+fresh normal-status confirmation restores its eligible text and images, without
+duplicates or changes to unrelated content. Fixture tests alone do not prove a particular phone's event propagation.
 
 ## Practical limits
 
 Incoming updates normally propagate promptly; the collector also scans folder
 metadata every five minutes. Import/publication schedules and ongoing work add
 latency. The SDK scan has a 500-conversation cap and reports incomplete coverage;
-it cannot prove every existing phone spam thread was seen.
+it cannot prove every existing phone spam thread was seen. Restoration uses
+bounded, rotating lookups of known excluded conversations rather than inferring
+normal status from absence or relying on the inbox list cap.
 
 Rewriting native Google Docs removes current archive content but does not erase
 Google's prior Doc versions. Google does not allow deleting individual native-Doc
