@@ -24,9 +24,10 @@ class Client:
 
 
 class Analyzer:
-    def __init__(self):self.calls=0
+    def __init__(self):self.calls=0;self.payloads=[]
     def analyze(self,payload):
         self.calls+=1
+        self.payloads.append(copy.deepcopy(payload))
         return {'decisions':[{'source_id':s['source_id'],'label':'work','facts':[{'kind':'request','statement':s['text']}]} for s in payload['sources']],
                 'usage':{'input_tokens':10,'output_tokens':5}}
 
@@ -76,6 +77,7 @@ class PublisherTests(unittest.TestCase):
     def test_changed_source_cache_survives_publish_failure(self):
         with tempfile.TemporaryDirectory() as root:
             config,snapshot=setup(root);client=Client();analyzer=Analyzer()
+            config['max_model_calls']=2
             run(config,snapshot,client,analyzer)
             snapshot['sources'][0].update(revision='v2',text='New request')
             client.fail='messages'
@@ -109,6 +111,100 @@ class PublisherTests(unittest.TestCase):
             self.assertEqual(run(config,current,client,analyzer)['work_messages'],1)
             current['sources'][0]['timestamp']='2025-01-01T10:00:00Z'
             with self.assertRaises(ValueError):run(config,current,client,analyzer)
+
+    @staticmethod
+    def correction(cid, target, action, undo=None):
+        text = (f'Correction ID: {cid}\nOwner: Casey\nTarget: {target}\nScope: message\n'
+                f'Action: {action}\nInstruction: test\nRequested at: 2026-10-12T10:00:00Z\n')
+        return text + (f'Undo correction: {undo}\n' if undo else '')
+
+    def test_uncached_and_revised_manual_sources_never_reach_model_or_context(self):
+        for label in ('spam', 'personal', 'mixed'):
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as root:
+                config,current=setup(root);client=Client();analyzer=Analyzer()
+                config['seed_decisions']=[];config['seed_revisions']={}
+                config['max_model_calls']=2
+                private=current['sources'][0]
+                private['text']='Private manual source'
+                other=copy.deepcopy(private)
+                other.update(source_id='archive://Casey/google-messages/2', friendly_id='M2',
+                             timestamp='2026-10-12T11:00:00Z', text='Public work request')
+                current['sources'].append(other)
+                client.bodies['corrections']+=self.correction('gate', 'M1', label)
+                if label=='spam':
+                    client.bodies['corrections']+=self.correction('later-work', 'M1', 'work')
+                for revision in ('v1', 'v2'):
+                    private.update(revision=revision, text='Private manual source '+revision)
+                    result=run(config,current,client,analyzer)
+                    self.assertEqual((result['work_messages'],result['work_looms']), (1,0))
+                    self.assertNotIn('Private manual source', json.dumps(analyzer.payloads))
+                    self.assertNotIn('Private manual source', client.bodies['knowledge'])
+                    self.assertNotIn('Private manual source', client.bodies['messages'])
+                self.assertTrue(analyzer.calls)
+
+    def test_explicit_loom_gate_preserves_origin_and_undo_restores_without_calls(self):
+        for label in ('spam', 'personal', 'mixed'):
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as root:
+                config,current=setup(root);client=Client();analyzer=Analyzer()
+                run(config,current,client,analyzer)
+                client.bodies['corrections']+=self.correction('gate', 'Loom-video', label)
+                if label=='spam':
+                    client.bodies['corrections']+=self.correction('later-work', 'Loom-video', 'work')
+                result=run(config,current,client,analyzer)
+                self.assertEqual((result['work_messages'],result['work_looms'],analyzer.calls), (1,0,0))
+                current['sources'][1].update(revision='v2',text='Private revised Loom')
+                result=run(config,current,client,analyzer)
+                self.assertEqual((result['work_looms'],analyzer.calls), (0,0))
+                current['sources'][1].update(revision='v1',text='Video request')
+                client.bodies['corrections']+=self.correction('restore', 'Loom-video', 'undo', 'gate')
+                result=run(config,current,client,analyzer)
+                self.assertEqual((result['work_looms'],analyzer.calls), (1,0))
+
+    def test_uncached_manual_loom_with_work_origin_is_filtered(self):
+        for label in ('spam', 'personal', 'mixed'):
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as root:
+                config,current=setup(root);client=Client();analyzer=Analyzer()
+                loom_id=current['sources'][1]['source_id']
+                del config['seed_revisions'][loom_id]
+                config['seed_decisions']=[d for d in config['seed_decisions'] if d['source_id']!=loom_id]
+                client.bodies['corrections']+=self.correction('gate', 'Loom-video', label)
+                result=run(config,current,client,analyzer)
+                self.assertEqual((result['work_messages'],result['work_looms'],analyzer.calls), (1,0,0))
+                cache=IncrementalArchive(config['analysis_path'])
+                try:
+                    row=cache.db.execute('SELECT decision,reason FROM analyses WHERE source_id=?', (loom_id,)).fetchone()
+                    self.assertEqual(json.loads(row['decision']), {'source_id':loom_id,'label':label,'facts':[]})
+                    self.assertEqual(row['reason'],'manual_'+label)
+                finally:
+                    cache.close()
+
+    def test_shared_model_budget_defers_loom_until_next_run(self):
+        with tempfile.TemporaryDirectory() as root:
+            config,current=setup(root);client=Client();analyzer=Analyzer()
+            config['seed_decisions']=[];config['seed_revisions']={}
+            result=run(config,current,client,analyzer)
+            self.assertEqual((result['model_attempts'], result['work_messages'],result['work_looms']), (1,1,0))
+            self.assertEqual(result['loom_analysis']['deferred_reasons'], {'call_limit':1})
+            complete=run(config,current,client,analyzer)
+            self.assertEqual((complete['model_attempts'],complete['work_looms'],analyzer.calls), (1,1,2))
+
+    def test_failed_message_attempt_consumes_shared_loom_quota(self):
+        with tempfile.TemporaryDirectory() as root:
+            config,current=setup(root);client=Client()
+            other=copy.deepcopy(current['sources'][0])
+            other.update(source_id='archive://Casey/google-messages/2',friendly_id='M2', text='New work source')
+            current['sources'].append(other)
+            current['sources'][1]['revision']='v2'
+            class Failed:
+                calls=0
+                def analyze(self,payload):
+                    self.calls+=1
+                    raise AdapterError('Codex analysis timed out')
+            analyzer=Failed()
+            result=run(config,current,client,analyzer)
+            self.assertEqual((analyzer.calls,result['model_attempts']), (1,1))
+            self.assertTrue(result['message_analysis']['analysis_failed'])
+            self.assertEqual(result['loom_analysis']['deferred_reasons'], {'call_limit':1})
 
     def test_oversized_source_reports_partial(self):
         with tempfile.TemporaryDirectory() as root:
@@ -144,6 +240,7 @@ class PublisherTests(unittest.TestCase):
     def test_recovery_probe_does_not_issue_a_second_call_for_loom(self):
         with tempfile.TemporaryDirectory() as root:
             config,current=setup(root);client=Client();analyzer=Analyzer()
+            config['max_model_calls']=2
             run(config,current,client,analyzer)
             cache=IncrementalArchive(config['analysis_path'])
             with cache.db:

@@ -316,7 +316,7 @@ class IncrementalArchive:
     def _cached(self, owner):
         return {r['source_id']: dict(r) for r in self.db.execute('SELECT * FROM analyses WHERE owner=?', (owner,))}
 
-    def _prepare(self, owner, sources, policy, labels=None, seed_labels=None):
+    def _prepare(self, owner, sources, policy, labels=None, seed_labels=None, source_overrides=None):
         sources = _validate_sources(owner, sources)
         if not isinstance(policy, str) or not policy.strip() or len(policy) > 4096:
             raise ValueError('invalid analysis policy')
@@ -325,10 +325,16 @@ class IncrementalArchive:
         labels = {} if labels is None else labels
         if not isinstance(labels, dict) or any(not isinstance(k, str) or v not in LABELS for k, v in labels.items()):
             raise ValueError('invalid effective labels')
+        source_overrides = {} if source_overrides is None else source_overrides
+        if not isinstance(source_overrides, dict) or any(
+                not isinstance(k, str) or v not in LABELS for k, v in source_overrides.items()):
+            raise ValueError('invalid source overrides')
         cached = self._cached(owner)
         base_hash = {sid: _hash(source) for sid, source in sources.items()}
         excluded = {sid: ('security_filter' if hard_excluded(s['text']) else
-                          'outside_scope' if self._scope_error(s) else '') for sid, s in sources.items()}
+                          'outside_scope' if self._scope_error(s) else
+                          'manual_' + source_overrides[sid] if source_overrides.get(sid) in {'spam', 'personal', 'mixed'}
+                          else '') for sid, s in sources.items()}
         effective = {}
         dependencies, kinds = {}, {}
         for sid in set(cached) | set(sources):
@@ -347,7 +353,7 @@ class IncrementalArchive:
             label = json.loads(old['decision'])['label'] if safe_cache else 'uncertain'
             if seed_labels and sid in seed_labels:
                 label = seed_labels[sid]
-            label = labels.get(sid, label)
+            label = source_overrides.get(sid, labels.get(sid, label))
             effective[sid] = label if safe else 'spam'
         prepared = {}
         for sid, source in sources.items():
@@ -371,7 +377,7 @@ class IncrementalArchive:
             # A model's own labels becoming available are not new source evidence.
             # Explicit correction labels and all declared dependency revisions are.
             deps = {i: {'source_hash': dependencies.get(i),
-                        'label': effective.get(i, 'uncertain') if i in origins else labels.get(i),
+                        'label': effective.get(i, 'uncertain') if i in origins else source_overrides.get(i, labels.get(i)),
                         'excluded': excluded.get(i, '')}
                     for i in sorted(set(declared_context_ids) | set(origins))}
             fingerprint = _hash({'source': base_hash[sid], 'policy': policy, 'scope': self.scope,
@@ -426,21 +432,26 @@ class IncrementalArchive:
             self._store(owner, prepared, seeded, policy, reason='reviewed_seed')
         return {'seeded': len(seeded), 'skipped': len(checked) - len(seeded), 'model_calls': 0}
 
-    def analyze(self, owner, sources, analyzer, policy='v1', *, labels=None):
+    def analyze(self, owner, sources, analyzer, policy='v1', *, labels=None, source_overrides=None, max_calls=None):
         """Analyze pending sources only; checkpoint each entire validated batch.
 
         Limits defer sources as uncertain. The automatic breaker admits bounded
-        cooldown probes; manual holds remain operator-controlled. Failed batches
+        cooldown probes; manual holds remain operator-controlled. Explicit source
+        overrides exclude spam/personal/mixed before input projection. max_calls
+        can reduce the instance budget for one phase of a shared run. Failed batches
         are never cached, and safe failed-attempt results retain usage and counts.
         """
-        prepared, cached = self._prepare(owner, sources, policy, labels)
+        if max_calls is not None and (type(max_calls) is not int or not 0 <= max_calls <= self.max_model_calls):
+            raise ValueError('invalid per-call model budget')
+        call_limit = self.max_model_calls if max_calls is None else max_calls
+        prepared, cached = self._prepare(owner, sources, policy, labels, source_overrides=source_overrides)
         pending, filtered, reusable, hits = [], {}, [], 0
         for sid, entry in prepared.items():
             if cached.get(sid, {}).get('fingerprint') == entry['fingerprint']:
                 hits += 1
                 reusable.append(sid)
             elif entry['reason']:
-                filtered[sid] = {'source_id': sid, 'label': 'spam' if entry['reason'] in {'security_filter', 'outside_scope'} else 'uncertain', 'facts': []}
+                filtered[sid] = {'source_id': sid, 'label': self._filtered_label(entry['reason']), 'facts': []}
             else:
                 pending.append(sid)
         with self.db:
@@ -486,7 +497,7 @@ class IncrementalArchive:
                     'state': current}
 
         while pending:
-            if calls >= self.max_model_calls:
+            if calls >= call_limit:
                 defer(pending, 'call_limit')
                 break
             hold = self._hold(owner, self.clock())
@@ -558,8 +569,14 @@ class IncrementalArchive:
                 usage[k] += reported[k]
         return result()
 
-    def records(self, owner, sources, policy='v1', *, labels=None):
-        prepared, cached = self._prepare(owner, sources, policy, labels)
+    @staticmethod
+    def _filtered_label(reason):
+        if reason in {'security_filter', 'outside_scope'}:
+            return 'spam'
+        return reason.removeprefix('manual_') if reason.startswith('manual_') else 'uncertain'
+
+    def records(self, owner, sources, policy='v1', *, labels=None, source_overrides=None):
+        prepared, cached = self._prepare(owner, sources, policy, labels, source_overrides=source_overrides)
         result = {}
         for sid, entry in prepared.items():
             old = cached.get(sid)
@@ -571,6 +588,6 @@ class IncrementalArchive:
                 record.update(json.loads(old['decision']))
                 record['reason'] = old['reason']
             elif entry['reason']:
-                record.update(label='spam' if entry['reason'] in {'security_filter', 'outside_scope'} else 'uncertain', reason=entry['reason'])
+                record.update(label=self._filtered_label(entry['reason']), reason=entry['reason'])
             result[sid] = record
         return result
