@@ -37,11 +37,19 @@ class Transport:
         if self.fail == 'conflict':
             raise RuntimeError('conflict')
         assert body['writeControl']['requiredRevisionId'] == str(self.revision)
-        self.text = next((r['insertText']['text'] for r in body['requests'] if 'insertText' in r), '') + '\n'
+        response = {}
+        if 'replaceAllText' in body['requests'][0]:
+            replacement = body['requests'][0]['replaceAllText']
+            body_text = self.text[:-1]
+            count = body_text.count(replacement['containsText']['text'])
+            self.text = body_text.replace(replacement['containsText']['text'], replacement['replaceText']) + '\n'
+            response = {'replies': [{'replaceAllText': {'occurrencesChanged': count}}]}
+        else:
+            self.text = next((r['insertText']['text'] for r in body['requests'] if 'insertText' in r), '') + '\n'
         self.revision += 1
         if self.fail == 'uncertain':
             raise RuntimeError('lost response')
-        return {}
+        return response
 
 
 class CachedDocsTests(unittest.TestCase):
@@ -61,6 +69,175 @@ class CachedDocsTests(unittest.TestCase):
         return DocsClient(['doc', 'corrections'], write_ids=['doc'],
                           request=request or self.transport, token_provider=lambda: 'synthetic',
                           verification_cache=cache or self.cache())
+
+    def test_explicit_text_repair_is_literal_guarded_and_strictly_read_back(self):
+        old = 'First 😀 [a.*] "quoted"\nsecond line $1 (literal)\\path'
+        self.client().replace('doc', old)
+        proof = self.cache().fresh('doc')
+        self.now += 60
+        client = self.client()
+        result = client.replace_verified('doc', 'Short 🐈\nnew text', previous_text=old + '\n\n')
+        self.assertEqual(client.verification_counts, {'body_reads': 1, 'revision_probes': 0,
+                                                     'cache_hits': 0, 'writes': 1})
+        self.assertEqual(self.transport.posts[-1], {'requests': [{'replaceAllText': {
+            'containsText': {'text': old, 'matchCase': True}, 'replaceText': 'Short 🐈\nnew text'}}],
+            'writeControl': {'requiredRevisionId': proof['revision']}})
+        self.assertEqual(result['verification'], 'full_readback')
+        self.assertEqual(client.take_verified_readback('doc')['text'], 'Short 🐈\nnew text\n')
+        self.assertIsNone(client.take_verified_readback('doc'))
+        value = json.loads(self.path.read_text())
+        self.assertEqual(value['version'], 1)
+        self.assertEqual(set(value['documents']['doc']), {'hash', 'revision', 'verified_at'})
+
+    def test_text_repair_can_empty_body_and_empty_old_uses_normal_path(self):
+        self.client().replace('doc', 'original')
+        client = self.client()
+        result = client.replace_verified('doc', '', previous_text='original')
+        self.assertTrue(result['changed'])
+        self.assertEqual(client.take_verified_readback('doc')['text'], '\n')
+        self.assertEqual(self.transport.posts[-1]['requests'][0]['replaceAllText']['replaceText'], '')
+        for empty in ('', '\n\n'):
+            with self.subTest(previous_text=empty):
+                client = self.client()
+                client.replace_verified('doc', 'content' + empty, previous_text=empty)
+                self.assertNotIn('replaceAllText', self.transport.posts[-1]['requests'][0])
+                self.client().replace('doc', '')
+
+    def test_text_repair_invalid_input_and_readonly_targets_make_no_requests(self):
+        for previous in (True, 4, [], '😀' * 250001):
+            with self.subTest(previous_type=type(previous)):
+                with self.assertRaises(ValueError):
+                    self.client().replace_verified('doc', 'changed', previous_text=previous)
+        for identifier in ('corrections', 'other'):
+            with self.assertRaises(AdapterError):
+                self.client().replace_verified(identifier, 'changed', previous_text='old')
+        self.assertEqual(self.transport.calls, [])
+
+    def test_text_repair_requires_matching_fresh_bound_proof_and_changes(self):
+        for mode in ('missing', 'mismatch', 'expired', 'future', 'binding', 'unchanged', 'omitted'):
+            with self.subTest(mode=mode):
+                if self.path.exists():
+                    self.path.unlink()
+                self.now = 1000
+                self.transport = Transport()
+                self.client().replace('doc', 'original')
+                binding = dict(self.binding)
+                if mode == 'missing':
+                    self.path.unlink()
+                elif mode == 'expired':
+                    self.now += VERIFICATION_MAX_AGE
+                elif mode == 'future':
+                    self.now -= 1
+                elif mode == 'binding':
+                    binding['account'] = 'other@example.invalid'
+                client = self.client(cache=self.cache(binding))
+                before_posts = len(self.transport.posts)
+                previous = 'wrong' if mode == 'mismatch' else None if mode == 'omitted' else 'original'
+                client.replace_verified('doc', 'original' if mode == 'unchanged' else 'changed',
+                                        previous_text=previous)
+                self.assertTrue(all('replaceAllText' not in p['requests'][0]
+                                    for p in self.transport.posts[before_posts:]))
+                if mode == 'unchanged':
+                    self.assertEqual(client.verification_counts['writes'], 0)
+
+    def test_text_repair_expiry_during_preparation_falls_back_without_literal_post(self):
+        self.client().replace('doc', 'original')
+        client = self.client()
+        from archive_drive import canonical_hash as real_hash
+        def expiring_hash(text):
+            value = real_hash(text)
+            if text == 'original':
+                self.now += VERIFICATION_MAX_AGE
+            return value
+        with patch('archive_drive.canonical_hash', side_effect=expiring_hash):
+            client.replace_verified('doc', 'changed', previous_text='original')
+        self.assertNotIn('replaceAllText', self.transport.posts[-1]['requests'][0])
+        self.assertEqual(client.verification_counts['body_reads'], 2)
+
+    def test_text_repair_expiry_during_token_preparation_makes_no_post(self):
+        self.client().replace('doc', 'original')
+        previous = self.path.read_bytes()
+        client = self.client()
+        def token():
+            self.now += VERIFICATION_MAX_AGE
+            return 'synthetic'
+        client.token_provider = token
+        original_calls = len(self.transport.calls)
+        with self.assertRaises(AdapterError):
+            client.replace_verified('doc', 'changed', previous_text='original')
+        self.assertEqual(len(self.transport.calls), original_calls)
+        self.assertEqual(self.path.read_bytes(), previous)
+        self.assertIsNone(client.take_verified_readback('doc'))
+
+    def test_text_repair_count_failures_never_renew_proof(self):
+        responses = ({}, {'replies': []}, {'replies': [{}]},
+            {'replies': [{'replaceAllText': {}}]},
+            *({'replies': [{'replaceAllText': {'occurrencesChanged': count}}]}
+              for count in (0, 2, True, '1', 1.0)),
+            {'replies': [{'replaceAllText': {'occurrencesChanged': 1}}] * 2})
+        for response in responses:
+            with self.subTest(response=response):
+                if self.path.exists():
+                    self.path.unlink()
+                self.transport = Transport()
+                self.client().replace('doc', 'original')
+                previous = self.path.read_bytes()
+                def request(*args):
+                    result = self.transport(*args)
+                    return response if args[0] == 'POST' else result
+                client = self.client(request=request)
+                with self.assertRaisesRegex(AdapterError, 'count is unconfirmed'):
+                    client.replace_verified('doc', 'changed', previous_text='original')
+                self.assertEqual(self.path.read_bytes(), previous)
+                self.assertEqual(client.verification_counts['body_reads'], 0)
+                self.assertIsNone(client.take_verified_readback('doc'))
+
+    def test_text_repair_write_race_ambiguity_and_strict_readback_fail_closed(self):
+        modes = ('race', 'uncertain', 'readback', 'mismatch', 'suggestion', 'nontext',
+                 'extra_tab', 'header', 'persist')
+        for mode in modes:
+            with self.subTest(mode=mode):
+                if self.path.exists():
+                    self.path.unlink()
+                self.transport = Transport()
+                self.client().replace('doc', 'original')
+                previous = self.path.read_bytes()
+                original_posts = len(self.transport.posts)
+                cache = self.cache()
+                if mode == 'uncertain':
+                    self.transport.fail = 'uncertain'
+                def request(*args):
+                    if mode == 'race' and args[0] == 'POST':
+                        self.transport.text = 'concurrent edit\n'
+                        self.transport.revision += 1
+                    value = self.transport(*args)
+                    if args[0] == 'GET':
+                        if mode == 'readback':
+                            raise TimeoutError('synthetic readback failure')
+                        tab = value['tabs'][0]['documentTab']
+                        if mode == 'mismatch':
+                            tab['body']['content'][-1]['paragraph']['elements'][0]['textRun']['content'] = 'different\n'
+                        elif mode == 'suggestion':
+                            tab['body']['content'][-1]['paragraph']['elements'][0]['textRun']['suggestedInsertionIds'] = ['s']
+                        elif mode == 'nontext':
+                            tab['body']['content'].append({'table': {}})
+                        elif mode == 'extra_tab':
+                            value['tabs'].append(copy.deepcopy(value['tabs'][0]))
+                        elif mode == 'header':
+                            tab['headers'] = {'h': {}}
+                    return value
+                client = self.client(cache=cache, request=request)
+                if mode == 'persist':
+                    with patch('archive_drive.write_json', side_effect=OSError('synthetic failure')):
+                        with self.assertRaises(AdapterError):
+                            client.replace_verified('doc', 'changed', previous_text='original')
+                else:
+                    with self.assertRaises(AdapterError):
+                        client.replace_verified('doc', 'changed', previous_text='original')
+                self.assertEqual(len(self.transport.posts), original_posts + 1)
+                self.assertEqual(self.path.read_bytes(), previous)
+                self.assertEqual(cache.documents, self.cache().documents)
+                self.assertIsNone(client.take_verified_readback('doc'))
 
     def test_warm_restart_uses_only_revision_probe_without_fabricated_readback(self):
         first = self.client()

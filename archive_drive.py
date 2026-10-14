@@ -95,14 +95,18 @@ class DocsClient:
         """Consume the readback from the immediately preceding replacement once."""
         return self._verified_readbacks.pop(document_id, None)
 
-    def _call(self, document_id, method, suffix, body=None):
+    def _call(self, document_id, method, suffix, body=None, *, required_proof=None):
         if document_id not in self.allowed_ids or (method != 'GET' and document_id not in self.write_ids):
             raise AdapterError('Document is not allowlisted')
         try:
             # Large native Docs can read slowly; writes retain their shorter bound.
+            headers = {'Authorization': 'Bearer ' + self.token_provider(),
+                       'Content-Type': 'application/json'}
+            if required_proof is not None and (self.verification_cache is None
+                    or self.verification_cache.fresh(document_id) != required_proof):
+                raise AdapterError('Text repair proof expired before request')
             result = self.request(method, 'https://docs.googleapis.com/v1/documents/' + document_id + suffix,
-                                  body, {'Authorization': 'Bearer ' + self.token_provider(),
-                                         'Content-Type': 'application/json'}, 90 if method == 'GET' else 45)
+                                  body, headers, 90 if method == 'GET' else 45)
             if not isinstance(result, dict) or 'error' in result:
                 raise ValueError()
             return result
@@ -186,18 +190,45 @@ class DocsClient:
         except (KeyError, TypeError, AttributeError):
             return None
 
-    def replace_verified(self, document_id, text):
-        """Only publisher-owned outputs. Input correction Docs must never be passed here."""
+    def replace_verified(self, document_id, text, *, previous_text=None):
+        """Verify owned outputs; previous_text explicitly opts into guarded literal repair."""
         if document_id not in self.write_ids:
             raise AdapterError('Document is not allowlisted')
         if not isinstance(text, str) or len(text.encode()) > 1_000_000:
             raise ValueError('output exceeds bounds')
+        if previous_text is not None and (not isinstance(previous_text, str)
+                or len(previous_text.encode()) > 1_000_000):
+            raise ValueError('previous output exceeds bounds')
         text = text.rstrip('\n') + '\n'
         desired_hash = canonical_hash(text)
         self._verified_readbacks.pop(document_id, None)
         cache = self.verification_cache
         proof = cache.fresh(document_id) if cache is not None else None
         before = None
+        if (proof and previous_text is not None and previous_text.rstrip('\n')
+                and proof['hash'] != desired_hash
+                and proof['hash'] == canonical_hash(previous_text)):
+            # Explicit repair of an entire previously verified body. Literal
+            # matching avoids requesting the expensive old body/geometry again.
+            request = {'replaceAllText': {'containsText': {
+                'text': previous_text.rstrip('\n'), 'matchCase': True},
+                'replaceText': text.rstrip('\n')}}
+            if cache.fresh(document_id) == proof:
+                self.verification_counts['writes'] += 1
+                response = self._call(document_id, 'POST', ':batchUpdate', {
+                    'requests': [request],
+                    'writeControl': {'requiredRevisionId': proof['revision']}}, required_proof=proof)
+                replies = response.get('replies')
+                if (not isinstance(replies, list) or len(replies) != 1
+                        or not isinstance(replies[0], dict) or set(replies[0]) != {'replaceAllText'}
+                        or not isinstance(replies[0]['replaceAllText'], dict)
+                        or set(replies[0]['replaceAllText']) != {'occurrencesChanged'}
+                        or type(replies[0]['replaceAllText']['occurrencesChanged']) is not int
+                        or replies[0]['replaceAllText']['occurrencesChanged'] != 1):
+                    raise AdapterError('Text repair replacement count is unconfirmed')
+                return self._confirm_replacement(document_id, text, desired_hash)
+            # Expiry during preparation earns no write permission.
+            proof = cache.fresh(document_id)
         if proof and proof['hash'] == desired_hash:
             self.verification_counts['revision_probes'] += 1
             raw = self._call(document_id, 'GET', '?' + urlencode({'fields': 'revisionId'}))
@@ -233,6 +264,10 @@ class DocsClient:
         self.verification_counts['writes'] += 1
         self._call(document_id, 'POST', ':batchUpdate', {'requests': requests,
                    'writeControl': {'requiredRevisionId': before['revision']}})
+        return self._confirm_replacement(document_id, text, desired_hash)
+
+    def _confirm_replacement(self, document_id, text, desired_hash):
+        cache = self.verification_cache
         after = self.read(document_id)
         if after['text'] != text:
             raise AdapterError('Output readback differs; publication is not confirmed')
