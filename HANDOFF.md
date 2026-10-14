@@ -16,10 +16,17 @@ site upload allowlist was deployed; application runtimes and Google grants were
 unchanged. Deployment/rollback receipts and draft verification materials remain
 private outside Git.
 
-Google verification has not been submitted. Next: obtain the existing project's
-Audience, Branding, Data Access and Verification Center status from the owner,
-confirm authorized-domain ownership and review the Drive use-case policy before
-submission. Narrow scope alone is not a guarantee of approval.
+Owner screenshots confirm an External app already In production, unverified
+branding named Minbox Text Archive, and no sensitive/restricted-scope review
+required. The owner reports Data Access completed for drive.file. Branding URLs
+and the authorized domain match the public site.
+
+The owner-supplied Search Console meta tag is now deployed in the homepage head;
+all four public assets return HTTP 200 and match reviewed source. Keep this
+public verification tag through future deployments. Search Console ownership is
+awaiting the owner's Verify action; OAuth brand verification is not submitted.
+Next: confirm ownership, then resolve the Drive use-case policy question before
+brand submission. Narrow scope alone is not a guarantee of approval.
 
 ## Latest reference result
 

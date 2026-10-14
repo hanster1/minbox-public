@@ -23,3 +23,6 @@ against current source, and the repository's public release checks. Source edits
 and this relocation do not deploy or change the live site. See the repository's
 [maintenance guidance](../MAINTENANCE.md) for source maintenance; hosting account
 and deployment details belong in a private operator runbook.
+
+The homepage contains the owner-supplied public Google Search Console verification
+meta tag. Preserve it through future deployments to retain ownership verification.
