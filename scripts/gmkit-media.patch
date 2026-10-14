@@ -457,6 +457,316 @@ index 0000000..696bc11
 +		t.Fatal("missing-daemon media call opened a collector store")
 +	}
 +}
+diff --git c/internal/cmd/phone_spam.go i/internal/cmd/phone_spam.go
+new file mode 100644
+index 0000000..3154094
+--- /dev/null
++++ i/internal/cmd/phone_spam.go
+@@ -0,0 +1,111 @@
++package cmd
++
++import (
++	"context"
++	"fmt"
++	"time"
++
++	"github.com/johnlindquist/gmkit/internal/store"
++	gmsync "github.com/johnlindquist/gmkit/internal/sync"
++	"github.com/rs/zerolog"
++	"go.mau.fi/mautrix-gmessages/pkg/libgm/gmproto"
++)
++
++const phoneSpamLimit = 500
++const phoneSpamInterval = 5 * time.Minute
++const phoneSpamTimeout = 30 * time.Second
++
++type phoneSpamLister interface {
++	ListConversations(int, gmproto.ListConversationsRequest_Folder) (*gmproto.ListConversationsResponse, error)
++}
++type phoneSpamResult struct {
++	response *gmproto.ListConversationsResponse
++	err      error
++}
++
++// phoneSpamScanner uses the already-connected client and reads metadata only.
++// libgm has no cancellable list or exported cursor API. At most one request is
++// outstanding; a timed-out request is retained for the next scan, not retried
++// concurrently. Scan never infers spam, deletion or unblocking from absence.
++type phoneSpamScanner struct {
++	client   phoneSpamLister
++	store    *store.Store
++	logger   zerolog.Logger
++	inFlight <-chan phoneSpamResult
++	timeout  time.Duration
++}
++
++func (s *phoneSpamScanner) scan(ctx context.Context) {
++	if s.inFlight == nil {
++		result := make(chan phoneSpamResult, 1)
++		s.inFlight = result
++		go func() {
++			response, err := s.client.ListConversations(phoneSpamLimit, gmproto.ListConversationsRequest_SPAM_BLOCKED)
++			result <- phoneSpamResult{response, err}
++		}()
++	}
++	wait := s.timeout
++	if wait <= 0 {
++		wait = phoneSpamTimeout
++	}
++	bounded, cancel := context.WithTimeout(ctx, wait)
++	defer cancel()
++	var result phoneSpamResult
++	select {
++	case result = <-s.inFlight:
++		s.inFlight = nil
++	case <-bounded.Done():
++		s.record(ctx, "pending", 0, false, "metadata request still pending; no concurrent retry")
++		return
++	}
++	if result.err != nil || result.response == nil {
++		s.record(ctx, "failed", 0, false, "metadata request failed")
++		return
++	}
++	conversations := result.response.GetConversations()
++	cursor := result.response.GetCursor() != nil || len(result.response.GetCursorBytes()) > 0
++	coverage := "snapshot"
++	if len(conversations) >= phoneSpamLimit || cursor {
++		coverage = "capped"
++	}
++	// Snapshot describes this one response, not a verified complete account.
++	// Full cursor traversal requires a change to the locked SDK dependency.
++	scanRows := conversations
++	if len(scanRows) > phoneSpamLimit {
++		scanRows = scanRows[:phoneSpamLimit]
++	}
++	for _, conversation := range scanRows {
++		if conversation == nil {
++			continue
++		}
++		row, ok := gmsync.ConversationRow(conversation, "gm")
++		if !ok {
++			continue
++		}
++		if err := s.store.UpsertConversation(ctx, row); err != nil {
++			s.record(ctx, "failed", len(conversations), cursor, "metadata persistence failed")
++			return
++		}
++	}
++	s.record(ctx, coverage, len(conversations), cursor, "")
++}
++
++func (s *phoneSpamScanner) record(ctx context.Context, coverage string, count int, cursor bool, failure string) {
++	now := time.Now().UnixMilli()
++	success := int64(0)
++	if coverage == "snapshot" || coverage == "capped" {
++		success = now
++	}
++	_, err := s.store.DB().ExecContext(ctx, `UPDATE phone_spam_scan_state SET
++ attempted_at=?, succeeded_at=CASE WHEN ? > 0 THEN ? ELSE succeeded_at END,
++ coverage=?, conversation_limit=?, returned_count=?, has_cursor=?, error=? WHERE id=1`,
++		now, success, success, coverage, phoneSpamLimit, count, cursor, failure)
++	if err != nil {
++		s.logger.Warn().Err(err).Msg("Phone spam coverage persistence failed")
++	}
++	if failure != "" || coverage == "capped" {
++		s.logger.Warn().Str("coverage", coverage).Int("limit", phoneSpamLimit).Int("returned", count).Bool("has_cursor", cursor).Msg(fmt.Sprintf("Phone spam metadata reconciliation: %s", failure))
++	} else {
++		s.logger.Info().Str("coverage", coverage).Int("returned", count).Msg("Phone spam metadata reconciled; absence is not evidence")
++	}
++}
+diff --git c/internal/cmd/phone_spam_test.go i/internal/cmd/phone_spam_test.go
+new file mode 100644
+index 0000000..0995b91
+--- /dev/null
++++ i/internal/cmd/phone_spam_test.go
+@@ -0,0 +1,114 @@
++package cmd
++
++import (
++	"context"
++	"errors"
++	"path/filepath"
++	"sync/atomic"
++	"testing"
++	"time"
++
++	"github.com/johnlindquist/gmkit/internal/store"
++	"github.com/rs/zerolog"
++	"go.mau.fi/mautrix-gmessages/pkg/libgm/gmproto"
++)
++
++type spamListFixture struct {
++	response    *gmproto.ListConversationsResponse
++	err         error
++	release     chan struct{}
++	calls       atomic.Int32
++	wrongFolder atomic.Bool
++}
++
++func (f *spamListFixture) ListConversations(count int, folder gmproto.ListConversationsRequest_Folder) (*gmproto.ListConversationsResponse, error) {
++	f.calls.Add(1)
++	if count != 500 || folder != gmproto.ListConversationsRequest_SPAM_BLOCKED {
++		f.wrongFolder.Store(true)
++	}
++	if f.release != nil {
++		<-f.release
++	}
++	return f.response, f.err
++}
++
++func TestPhoneSpamMetadataOnlyReconciliationReportsCoverage(t *testing.T) {
++	ctx := context.Background()
++	for _, test := range []struct {
++		name     string
++		response *gmproto.ListConversationsResponse
++		err      error
++		coverage string
++	}{
++		{"positive", &gmproto.ListConversationsResponse{Conversations: []*gmproto.Conversation{{ConversationID: "spam", Status: 5}, {ConversationID: "blocked", Status: 6}}}, nil, "snapshot"},
++		{"empty", &gmproto.ListConversationsResponse{}, nil, "snapshot"},
++		{"cursor", &gmproto.ListConversationsResponse{CursorBytes: []byte{1}}, nil, "capped"},
++		{"limit", &gmproto.ListConversationsResponse{Conversations: make([]*gmproto.Conversation, 500)}, nil, "capped"},
++		{"failure", nil, errors.New("fixture failure"), "failed"},
++	} {
++		t.Run(test.name, func(t *testing.T) {
++			st, err := store.Open(ctx, filepath.Join(t.TempDir(), "archive.db"))
++			if err != nil {
++				t.Fatal(err)
++			}
++			defer st.Close()
++			// Missing entries must never clear past observations.
++			if err := st.UpsertConversation(ctx, store.Conversation{ID: "existing", PhoneStatus: 5}); err != nil {
++				t.Fatal(err)
++			}
++			fixture := &spamListFixture{response: test.response, err: test.err}
++			scanner := &phoneSpamScanner{client: fixture, store: st, logger: zerolog.Nop()}
++			scanner.scan(ctx)
++			var coverage string
++			if err := st.DB().QueryRowContext(ctx, "SELECT coverage FROM phone_spam_scan_state").Scan(&coverage); err != nil || coverage != test.coverage {
++				t.Fatalf("coverage %s: %v", coverage, err)
++			}
++			var count int
++			if err := st.DB().QueryRowContext(ctx, "SELECT COUNT(*) FROM phone_spam_conversations WHERE conversation_id='existing'").Scan(&count); err != nil || count != 1 {
++				t.Fatal("scan cleared observation")
++			}
++
++			if fixture.wrongFolder.Load() {
++				t.Fatal("queried incorrect folder")
++			}
++			if test.name == "positive" {
++				if err := st.DB().QueryRowContext(ctx, "SELECT COUNT(*) FROM phone_spam_conversations").Scan(&count); err != nil || count != 3 {
++					t.Fatalf("positive metadata missing: %d %v", count, err)
++				}
++			}
++			if err := st.DB().QueryRowContext(ctx, "SELECT COUNT(*) FROM messages").Scan(&count); err != nil || count != 0 {
++				t.Fatal("metadata scan imported message history")
++			}
++		})
++	}
++}
++
++func TestPhoneSpamPendingRequestIsBoundedWithoutConcurrentRetry(t *testing.T) {
++	ctx := context.Background()
++	st, err := store.Open(ctx, filepath.Join(t.TempDir(), "archive.db"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer st.Close()
++	release := make(chan struct{})
++	fixture := &spamListFixture{response: &gmproto.ListConversationsResponse{}, release: release}
++	scanner := &phoneSpamScanner{client: fixture, store: st, logger: zerolog.Nop(), timeout: 10 * time.Millisecond}
++	scanner.scan(ctx)
++	scanner.scan(ctx)
++	if fixture.calls.Load() != 1 {
++		t.Fatal("pending request retried concurrently")
++	}
++	var coverage string
++	if err := st.DB().QueryRowContext(ctx, "SELECT coverage FROM phone_spam_scan_state").Scan(&coverage); err != nil || coverage != "pending" {
++		t.Fatalf("pending coverage %s %v", coverage, err)
++	}
++	close(release)
++	scanner.timeout = time.Second
++	scanner.scan(ctx)
++	if fixture.calls.Load() != 1 {
++		t.Fatal("completed pending response not reused")
++	}
++	if err := st.DB().QueryRowContext(ctx, "SELECT coverage FROM phone_spam_scan_state").Scan(&coverage); err != nil || coverage != "snapshot" {
++		t.Fatalf("recovered coverage %s %v", coverage, err)
++	}
++}
+diff --git c/internal/cmd/serve.go i/internal/cmd/serve.go
+index 7776778..e4dab0d 100644
+--- c/internal/cmd/serve.go
++++ i/internal/cmd/serve.go
+@@ -123,7 +123,9 @@ func serveCmd() *cobra.Command {
+ 			go func() { serveErr <- server.Serve(ctx, ln) }()
+ 			fmt.Fprintf(os.Stderr, "Daemon ready. RPC socket: %s (send mode: %s). Ctrl-C to stop.\n", sock, mode)
+ 
++			var spamScanner *phoneSpamScanner
+ 			if client != nil {
++				spamScanner = &phoneSpamScanner{client: client.Underlying(), store: st, logger: logger}
+ 				fmt.Fprintln(os.Stderr, "Connecting to Google Messages relay...")
+ 				if err := client.Connect(); err != nil {
+ 					return fmt.Errorf("connect: %w", err)
+@@ -132,6 +134,7 @@ func serveCmd() *cobra.Command {
+ 
+ 				if !noImport {
+ 					runInitialImport(ctx, client, pump, logger)
++					spamScanner.scan(ctx)
+ 					// The import writes through the pump directly, which
+ 					// bypasses the event broadcaster: tell clients that
+ 					// connected early to refetch.
+@@ -145,6 +148,8 @@ func serveCmd() *cobra.Command {
+ 			}
+ 			heartbeat := time.NewTicker(syncHeartbeatInterval)
+ 			defer heartbeat.Stop()
++			spamTicker := time.NewTicker(phoneSpamInterval)
++			defer spamTicker.Stop()
+ 			for {
+ 				select {
+ 				case <-ctx.Done():
+@@ -176,6 +181,10 @@ func serveCmd() *cobra.Command {
+ 				case <-server.Idle():
+ 					fmt.Fprintf(os.Stderr, "No clients for %s; exiting (auto mode).\n", idleExit)
+ 					return nil
++				case <-spamTicker.C:
++					if spamScanner != nil && client.IsConnected() && pumpFatal != nil {
++						spamScanner.scan(ctx)
++					}
+ 				case <-heartbeat.C:
+ 					if err := st.TouchSync(ctx); err != nil {
+ 						logger.Debug().Err(err).Msg("sync heartbeat failed")
+diff --git c/internal/cmd/sync.go i/internal/cmd/sync.go
+index e6166b0..54842e3 100644
+--- c/internal/cmd/sync.go
++++ i/internal/cmd/sync.go
+@@ -57,6 +57,8 @@ func syncCmd() *cobra.Command {
+ 			defer client.Disconnect()
+ 
+ 			runInitialImport(ctx, client, pump, logger)
++			spamScanner := &phoneSpamScanner{client: client.Underlying(), store: st, logger: logger}
++			spamScanner.scan(ctx)
+ 
+ 			if !follow {
+ 				select {
+@@ -71,6 +73,8 @@ func syncCmd() *cobra.Command {
+ 			fmt.Fprintln(os.Stderr, "Connected. Streaming events. Ctrl-C to stop.")
+ 			heartbeat := time.NewTicker(syncHeartbeatInterval)
+ 			defer heartbeat.Stop()
++			spamTicker := time.NewTicker(phoneSpamInterval)
++			defer spamTicker.Stop()
+ 			for {
+ 				select {
+ 				case <-ctx.Done():
+@@ -78,6 +82,8 @@ func syncCmd() *cobra.Command {
+ 					return nil
+ 				case err := <-pump.Fatal():
+ 					return err
++				case <-spamTicker.C:
++					spamScanner.scan(ctx)
+ 				case <-heartbeat.C:
+ 					if err := st.TouchSync(ctx); err != nil {
+ 						logger.Debug().Err(err).Msg("sync heartbeat failed")
 diff --git c/internal/gm/gm.go i/internal/gm/gm.go
 index d3f396e..15be658 100644
 --- c/internal/gm/gm.go
@@ -942,6 +1252,93 @@ index 9e6f8a1..64270d1 100644
  }
  
  type aliasParams struct {
+diff --git c/internal/store/conversations.go i/internal/store/conversations.go
+index df265dd..1eb1c41 100644
+--- c/internal/store/conversations.go
++++ i/internal/store/conversations.go
+@@ -20,6 +20,7 @@ type Conversation struct {
+ 	LastMessageTimeMS int64     `json:"last_message_time_ms"`
+ 	Unread            bool      `json:"unread"`
+ 	Pinned            bool      `json:"pinned"`
++	PhoneStatus       int64     `json:"phone_status"`
+ 	Archived          bool      `json:"archived"`
+ 	UpdatedAt         time.Time `json:"updated_at"`
+ }
+@@ -34,11 +35,16 @@ func (s *Store) UpsertConversation(ctx context.Context, c Conversation) error {
+ 		platform = "gm"
+ 	}
+ 	now := time.Now().UnixMilli()
+-	_, err := s.db.ExecContext(ctx, `
++	tx, err := s.db.BeginTx(ctx, nil)
++	if err != nil {
++		return err
++	}
++	defer tx.Rollback()
++	_, err = tx.ExecContext(ctx, `
+ 		INSERT INTO conversations (
+ 			conversation_id, source_platform, name, is_group, participants_json,
+-			last_message_ts, unread, pinned, archived, updated_at
+-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
++			last_message_ts, unread, pinned, archived, updated_at, phone_status
++		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ 		ON CONFLICT(conversation_id) DO UPDATE SET
+ 			source_platform   = excluded.source_platform,
+ 			name              = excluded.name,
+@@ -48,22 +54,33 @@ func (s *Store) UpsertConversation(ctx context.Context, c Conversation) error {
+ 			unread            = excluded.unread,
+ 			pinned            = excluded.pinned,
+ 			archived          = excluded.archived,
++			phone_status      = excluded.phone_status,
+ 			updated_at        = excluded.updated_at
+ 	`,
+ 		c.ID, platform, c.Name, boolToInt(c.IsGroup), nullableJSON(c.ParticipantsJSON),
+-		c.LastMessageTimeMS, boolToInt(c.Unread), boolToInt(c.Pinned), boolToInt(c.Archived), now,
++		c.LastMessageTimeMS, boolToInt(c.Unread), boolToInt(c.Pinned), boolToInt(c.Archived), now, c.PhoneStatus,
+ 	)
+ 	if err != nil {
+ 		return fmt.Errorf("upsert conversation %s: %w", c.ID, err)
+ 	}
+-	return nil
++	if platform == "gm" && (c.PhoneStatus == 5 || c.PhoneStatus == 6) {
++		if _, err := tx.ExecContext(ctx, `
++			INSERT INTO phone_spam_conversations (conversation_id, status, observed_at)
++			VALUES (?, ?, ?)
++			ON CONFLICT(conversation_id) DO UPDATE SET status=excluded.status,
++			observed_at=MAX(phone_spam_conversations.observed_at, excluded.observed_at)
++		`, c.ID, c.PhoneStatus, now); err != nil {
++			return fmt.Errorf("record phone spam observation: %w", err)
++		}
++	}
++	return tx.Commit()
+ }
+ 
+ // GetConversation fetches a single row. Returns sql.ErrNoRows on miss.
+ func (s *Store) GetConversation(ctx context.Context, id string) (Conversation, error) {
+ 	row := s.db.QueryRowContext(ctx, `
+ 		SELECT c.conversation_id, c.source_platform, c.name, c.is_group, c.participants_json,
+-		       c.last_message_ts, c.unread, c.pinned, c.archived, c.updated_at,
++		       c.last_message_ts, c.unread, c.pinned, c.archived, c.updated_at, c.phone_status,
+ 		       COALESCE(al.alias, '')
+ 		  FROM conversations c
+ 		  LEFT JOIN aliases al ON al.target_type = 'conversation' AND al.target_id = c.conversation_id
+@@ -94,7 +111,7 @@ func (s *Store) ListConversations(ctx context.Context, opts ListConversationOpts
+ 	}
+ 	q := `
+ 		SELECT c.conversation_id, c.source_platform, c.name, c.is_group, c.participants_json,
+-		       c.last_message_ts, c.unread, c.pinned, c.archived, c.updated_at,
++		       c.last_message_ts, c.unread, c.pinned, c.archived, c.updated_at, c.phone_status,
+ 		       COALESCE(al.alias, '')
+ 		  FROM conversations c
+ 		  LEFT JOIN aliases al ON al.target_type = 'conversation' AND al.target_id = c.conversation_id`
+@@ -134,7 +151,7 @@ func scanConversation(r interface {
+ 	var lastMsg, updated, isGroup, unread, pinned, archived int64
+ 	if err := r.Scan(
+ 		&c.ID, &c.SourcePlatform, &c.Name, &isGroup, &c.ParticipantsJSON,
+-		&lastMsg, &unread, &pinned, &archived, &updated, &c.Alias,
++		&lastMsg, &unread, &pinned, &archived, &updated, &c.PhoneStatus, &c.Alias,
+ 	); err != nil {
+ 		return Conversation{}, err
+ 	}
 diff --git c/internal/store/messages.go i/internal/store/messages.go
 index 2e51139..d74a29e 100644
 --- c/internal/store/messages.go
@@ -963,10 +1360,116 @@ index 2e51139..d74a29e 100644
  			updated_at      = excluded.updated_at
  	`,
  		m.ID, m.ConversationID, platform, m.SenderID,
+diff --git c/internal/store/phone_spam_test.go i/internal/store/phone_spam_test.go
+new file mode 100644
+index 0000000..0a2421d
+--- /dev/null
++++ i/internal/store/phone_spam_test.go
+@@ -0,0 +1,45 @@
++package store
++
++import (
++	"context"
++	"path/filepath"
++	"testing"
++)
++
++func TestPhoneSpamMigrationPreservesExistingArchive(t *testing.T) {
++	ctx := context.Background()
++	path := filepath.Join(t.TempDir(), "archive.db")
++	st, err := Open(ctx, path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err := st.UpsertConversation(ctx, Conversation{ID: "prior", Name: "Existing archive"}); err != nil {
++		t.Fatal(err)
++	}
++	// Restore the actual v3 schema and reopen as an existing installation.
++	for _, sql := range []string{"DROP TABLE phone_spam_conversations", "DROP TABLE phone_spam_scan_state", "ALTER TABLE conversations DROP COLUMN phone_status", "DELETE FROM schema_version WHERE version=4"} {
++		if _, err := st.DB().ExecContext(ctx, sql); err != nil {
++			t.Fatal(err)
++		}
++	}
++	st.Close()
++	st, err = Open(ctx, path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer st.Close()
++	row, err := st.GetConversation(ctx, "prior")
++	if err != nil || row.Name != "Existing archive" || row.PhoneStatus != 0 {
++		t.Fatalf("migration changed prior row: %+v %v", row, err)
++	}
++	if err := st.UpsertConversation(ctx, Conversation{ID: "prior", Name: row.Name, PhoneStatus: 5}); err != nil {
++		t.Fatal(err)
++	}
++	if err := st.UpsertConversation(ctx, Conversation{ID: "prior", Name: row.Name, PhoneStatus: 3}); err != nil {
++		t.Fatal(err)
++	}
++	var status int64
++	if err := st.DB().QueryRowContext(ctx, "SELECT status FROM phone_spam_conversations WHERE conversation_id='prior'").Scan(&status); err != nil || status != 5 {
++		t.Fatalf("deletion cleared observation: %d %v", status, err)
++	}
++}
+diff --git c/internal/store/schema.go i/internal/store/schema.go
+index 064bd78..ce0d04e 100644
+--- c/internal/store/schema.go
++++ i/internal/store/schema.go
+@@ -153,4 +153,26 @@ var migrations = []string{
+ 
+ 	INSERT INTO schema_version (version) VALUES (3);
+ 	`,
++	// v4: exact phone folder status and durable positive spam/blocked evidence.
++	// Never remove evidence on an ACTIVE update or an incomplete folder scan.
++	`
++	ALTER TABLE conversations ADD COLUMN phone_status INTEGER NOT NULL DEFAULT 0;
++	CREATE TABLE phone_spam_conversations (
++		conversation_id TEXT PRIMARY KEY,
++		status INTEGER NOT NULL CHECK (status IN (5, 6)),
++		observed_at INTEGER NOT NULL
++	) STRICT;
++	CREATE TABLE phone_spam_scan_state (
++		id INTEGER PRIMARY KEY CHECK (id = 1),
++		attempted_at INTEGER NOT NULL DEFAULT 0,
++		succeeded_at INTEGER NOT NULL DEFAULT 0,
++		coverage TEXT NOT NULL DEFAULT 'never',
++		conversation_limit INTEGER NOT NULL DEFAULT 500,
++		returned_count INTEGER NOT NULL DEFAULT 0,
++		has_cursor INTEGER NOT NULL DEFAULT 0,
++		error TEXT NOT NULL DEFAULT ''
++	) STRICT;
++	INSERT INTO phone_spam_scan_state (id) VALUES (1);
++	INSERT INTO schema_version (version) VALUES (4);
++	`,
+ }
+diff --git c/internal/store/search.go i/internal/store/search.go
+index e55b772..b70a0bb 100644
+--- c/internal/store/search.go
++++ i/internal/store/search.go
+@@ -246,7 +246,7 @@ func (s *Store) FindConversations(ctx context.Context, query string, limit int)
+ 
+ 	q := `
+ 		SELECT c.conversation_id, c.source_platform, c.name, c.is_group, c.participants_json,
+-		       c.last_message_ts, c.unread, c.pinned, c.archived, c.updated_at,
++		       c.last_message_ts, c.unread, c.pinned, c.archived, c.updated_at, c.phone_status,
+ 		       COALESCE(a.alias, '')
+ 		  FROM conversations c
+ 		  LEFT JOIN aliases a ON a.target_type = 'conversation' AND a.target_id = c.conversation_id
 diff --git c/internal/store/store_test.go i/internal/store/store_test.go
-index 44c8fb2..da8e528 100644
+index 44c8fb2..a89db75 100644
 --- c/internal/store/store_test.go
 +++ i/internal/store/store_test.go
+@@ -33,8 +33,8 @@ func TestOpenMigratesFreshDB(t *testing.T) {
+ 	if state.LastEventTime.UnixMilli() != 0 || state.LastConnectTime.UnixMilli() != 0 {
+ 		t.Fatalf("expected unset (epoch) sync timestamps, got %+v", state)
+ 	}
+-	if v, err := st.SchemaVersion(ctx); err != nil || v != 3 {
+-		t.Fatalf("schema version: got %d err=%v, want 3", v, err)
++	if v, err := st.SchemaVersion(ctx); err != nil || v != 4 {
++		t.Fatalf("schema version: got %d err=%v, want 4", v, err)
+ 	}
+ }
+ 
 @@ -215,3 +215,35 @@ func TestTouchSyncUpdatesActivityOnly(t *testing.T) {
  		t.Fatalf("last_connect_ts changed: %v", after.LastConnectTime)
  	}
@@ -1053,8 +1556,88 @@ index 0000000..2d8d040
 +		t.Fatal("history erased richer media")
 +	}
 +}
+diff --git c/internal/sync/phone_spam_test.go i/internal/sync/phone_spam_test.go
+new file mode 100644
+index 0000000..2aaf74b
+--- /dev/null
++++ i/internal/sync/phone_spam_test.go
+@@ -0,0 +1,74 @@
++package sync
++
++import (
++	"context"
++	"path/filepath"
++	"testing"
++
++	"github.com/johnlindquist/gmkit/internal/store"
++	"github.com/rs/zerolog"
++	"go.mau.fi/mautrix-gmessages/pkg/libgm/gmproto"
++)
++
++func TestPhoneSpamStatusDistinguishesArchiveDeleteUnknownAndStaysSticky(t *testing.T) {
++	ctx := context.Background()
++	st, err := store.Open(ctx, filepath.Join(t.TempDir(), "archive.db"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer st.Close()
++	pump := New(st, zerolog.Nop())
++	for _, status := range []gmproto.ConversationStatus{0, 1, 2, 3, 4, 5, 6, 7, 99} {
++		id := status.String()
++		pump.Handle(&gmproto.Conversation{ConversationID: id, Status: status})
++		row, err := st.GetConversation(ctx, id)
++		if err != nil || row.PhoneStatus != int64(status) {
++			t.Fatalf("status %d lost: %+v %v", status, row, err)
++		}
++		if row.Archived != (status == 2 || status == 4) {
++			t.Fatalf("incorrect archive status %d", status)
++		}
++		var count int
++		if err := st.DB().QueryRowContext(ctx, "SELECT COUNT(*) FROM phone_spam_conversations WHERE conversation_id=?", id).Scan(&count); err != nil {
++			t.Fatal(err)
++		}
++		want := 0
++		if status == 5 || status == 6 {
++			want = 1
++		}
++		if count != want {
++			t.Fatalf("status %d produced %d observations, want %d", status, count, want)
++		}
++	}
++	for _, initial := range []gmproto.ConversationStatus{5, 6} {
++		id := initial.String()
++		pump.Handle(&gmproto.Conversation{ConversationID: id, Status: 1})
++		var positive int64
++		var observed int64
++		if err := st.DB().QueryRowContext(ctx, "SELECT status, observed_at FROM phone_spam_conversations WHERE conversation_id=?", id).Scan(&positive, &observed); err != nil {
++			t.Fatal(err)
++		}
++		if positive != int64(initial) || observed <= 0 {
++			t.Fatal("ACTIVE cleared positive evidence")
++		}
++	}
++	// The durable ledger survives reopening the collector.
++	path := filepath.Join(t.TempDir(), "reopen.db")
++	other, err := store.Open(ctx, path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err := other.UpsertConversation(ctx, store.Conversation{ID: "retained", PhoneStatus: 5}); err != nil {
++		t.Fatal(err)
++	}
++	other.Close()
++	other, err = store.Open(ctx, path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer other.Close()
++	var count int
++	if err := other.DB().QueryRowContext(ctx, "SELECT COUNT(*) FROM phone_spam_conversations WHERE conversation_id='retained'").Scan(&count); err != nil || count != 1 {
++		t.Fatalf("durability: %d %v", count, err)
++	}
++}
 diff --git c/internal/sync/sync.go i/internal/sync/sync.go
-index 48a510d..a4677e0 100644
+index 48a510d..94abda1 100644
 --- c/internal/sync/sync.go
 +++ i/internal/sync/sync.go
 @@ -15,6 +15,7 @@ import (
@@ -1082,3 +1665,12 @@ index 48a510d..a4677e0 100644
  		imported++
  	}
  	return imported
+@@ -161,6 +170,8 @@ func ConversationRow(c *gmproto.Conversation, platform string) (store.Conversati
+ 		LastMessageTimeMS: normalizeTimestampMS(c.GetLastMessageTimestamp()),
+ 		Unread:            c.GetUnread(),
+ 		Pinned:            c.GetPinned(),
++		PhoneStatus:       int64(c.GetStatus()),
++		Archived:          c.GetStatus() == gmproto.ConversationStatus_ARCHIVED || c.GetStatus() == gmproto.ConversationStatus_KEEP_ARCHIVED,
+ 	}, true
+ }
+ 
