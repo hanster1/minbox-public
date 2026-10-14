@@ -346,13 +346,39 @@ class AttachmentDrive:
                      size_bytes=len(data), mime_type=item['mime_type'], md5=hashlib.md5(data).hexdigest())
         folder = self.folder()
         saved = self.docs.manifest['attachments'].get(identity)
-        file_id = saved['drive_file_id'] if saved else self.find(folder, 'familyArchiveImage', identity)
-        if not file_id:
-            generated = self.docs.call('GET', 'files/generateIds?count=1&space=drive&type=files')['ids'][0]
-            file_id = _identifier(generated)
-            pending = dict(entry, drive_file_id=file_id)
-            self.docs.manifest['attachments_pending_uploads'][identity] = pending
+        pending = self.docs.manifest['attachments_pending_uploads'].get(identity)
+        create = False
+        if saved:
+            file_id = saved['drive_file_id']
+        elif pending is not None:
+            # Search visibility can lag an uncertain POST. The persisted generated
+            # ID is authoritative; never replace it with a second generated ID.
+            file_id = _identifier(pending['drive_file_id'])
+            if pending != dict(entry, drive_file_id=file_id):
+                raise ValueError('attachment saved metadata differs')
+            self._validate_deletion(identity, dict(entry=pending, allow_empty=True), folder)
+            self._metadata.pop(file_id, None)
+            try:
+                self.metadata(file_id)
+            except Exception as error:
+                if not self._missing(error):
+                    raise
+                create = True
+        else:
+            file_id = self.find(folder, 'familyArchiveImage', identity)
+            if not file_id:
+                generated = self.docs.call('GET', 'files/generateIds?count=1&space=drive&type=files')['ids'][0]
+                file_id = _identifier(generated)
+                pending = dict(entry, drive_file_id=file_id)
+                self.docs.manifest['attachments_pending_uploads'][identity] = pending
+                self._validate_deletion(identity, dict(entry=pending, allow_empty=True), folder)
+                create = True
+        if create:
+            # Repeat persistence even for an in-memory pending entry whose first
+            # write failed. Creation always requires a durable exact-ID journal.
             write_json(self.docs.path, self.docs.manifest)
+            # OwnerDocs.call applies the publisher's write guard on every create,
+            # including retries of this exact generated ID after a confirmed 404.
             label = str(message.get('friendly_id') or 'Image')[:100]
             filename = label + ' ' + message['timestamp'][:10] + ' ' + identity[:12] + '.' + FORMATS[item['mime_type']]
             self.docs.call('POST', 'files?fields=id', {'id': file_id, 'name': filename,
