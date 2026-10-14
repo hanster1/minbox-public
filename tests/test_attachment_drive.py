@@ -269,6 +269,57 @@ class Images(unittest.TestCase):
         self.assertEqual(self.client().publish_attachments([self.message])['published_images'], 1)
         self.assertEqual((self.posts, self.uploads), (2, 1))
 
+    def test_pending_generated_id_reused_when_search_lags_uncertain_creation(self):
+        self.fail_creation = True
+        client = self.client()
+        self.assertEqual(client.publish_attachments([self.message])['pending_images'], 1)
+        pending = copy.deepcopy(next(iter(client.manifest['attachments_pending_uploads'].values())))
+        resumed = self.client()
+        with patch.object(resumed.attachments, 'find', return_value=None) as search, \
+                patch.object(resumed, 'call', wraps=resumed.call) as called:
+            self.assertEqual(resumed.publish_attachments([self.message])['published_images'], 1)
+        search.assert_not_called()
+        self.assertFalse(any('generateIds' in call.args[1] for call in called.call_args_list))
+        self.assertEqual(self.item['drive_file_id'], pending['drive_file_id'])
+        self.assertEqual((self.posts, self.uploads), (2, 1))
+
+    def test_pending_generated_id_recreated_after_failed_create_before_remote_write(self):
+        client = self.client()
+        original = client.call
+        def fail_before_post(method, suffix, body=None):
+            if method == 'POST' and body and 'familyArchiveImage' in body.get('appProperties', {}):
+                raise AdapterError('HTTP request failed; private details withheld')
+            return original(method, suffix, body)
+        with patch.object(client, 'call', side_effect=fail_before_post):
+            self.assertEqual(client.publish_attachments([self.message])['pending_images'], 1)
+        pending = copy.deepcopy(next(iter(client.manifest['attachments_pending_uploads'].values())))
+        self.assertNotIn(pending['drive_file_id'], self.files)
+        resumed = self.client()
+        with patch.object(resumed, 'call', wraps=resumed.call) as called:
+            self.assertEqual(resumed.publish_attachments([self.message])['published_images'], 1)
+        self.assertFalse(any('generateIds' in call.args[1] for call in called.call_args_list))
+        posts = [call.args[2] for call in called.call_args_list if call.args[0] == 'POST']
+        self.assertEqual([body['id'] for body in posts], [pending['drive_file_id']])
+        self.assertEqual(self.item['drive_file_id'], pending['drive_file_id'])
+
+    def test_pending_upload_metadata_mutation_or_permission_denial_fails_closed(self):
+        self.fail_creation = True
+        client = self.client()
+        client.publish_attachments([self.message])
+        identity, pending = next(iter(client.manifest['attachments_pending_uploads'].items()))
+        original = copy.deepcopy(pending)
+        pending['md5'] = '0' * 32
+        with self.assertRaises(ValueError):
+            client.publish_attachments([self.message])
+        self.assertEqual(client.manifest['attachments_pending_uploads'][identity]['drive_file_id'], original['drive_file_id'])
+        pending.update(original)
+        remote = self.files.pop(pending['drive_file_id'])
+        self.missing_status = 403
+        with self.assertRaises(HTTPError):
+            client.publish_attachments([self.message])
+        self.assertEqual((self.posts, self.uploads), (2, 0))
+        self.files[pending['drive_file_id']] = remote
+
     def test_upload_timeout_reconciles_without_reupload(self):
         self.fail_upload = True
         self.assertEqual(self.client().publish_attachments([self.message])['pending_images'], 1)
