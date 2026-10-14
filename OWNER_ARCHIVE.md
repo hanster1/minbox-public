@@ -63,6 +63,16 @@ systemctl --user enable --now minbox-owner-archive@OWNER.timer
 It checks sources and corrections every two minutes. Outputs use guarded writes
 and readback; status acknowledges only after outputs and input revision are
 verified. Unchanged evidence produces zero Drive writes and zero AI calls.
+Private document verification caches keep content hashes and Google revision IDs,
+not message bodies. After a full verification, unchanged outputs need only a small
+revision check for up to 24 hours. Changed revisions, changed output, expired
+proofs and first runs require full reads; changed content uses guarded writes and
+readback. Corrections and destination permissions are checked afresh on every run.
+Cache state is bound to the owner, Google account and configured folders outside
+Git. Removing it safely returns publication to full verification.
+Spam-image cleanup resolves old image references against a fresh paged listing
+of the managed image folder, avoiding separate searches for images already gone.
+Deletion identity checks and pending-deletion reconciliation remain mandatory.
 Files remain private, editable and bound to the owner/account/folder on every run.
 The mirror normalizes line endings and visibly escapes characters Google strips;
 original archive evidence stays unchanged. Native reads omit bulky formatting

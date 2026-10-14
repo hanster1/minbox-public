@@ -132,10 +132,12 @@ Publisher status distinguishes `started_at`, heartbeat/phase, completed-attempt
 updates freshness and a fixed failure category but retains the last verified
 source generation and counts. Active full-owner publication has a bounded
 600-second service deadline; work publication retains 360 seconds. Large Docs
-reads get 45 seconds per HTTP attempt; reads retry at most three times. Writes
+reads get 90 seconds per HTTP attempt; reads retry at most three times. Writes
 remain single-attempt and reconcile by fresh revision-guarded reads on the next run.
 One verified output readback is consumed once rather than redundantly downloading
 the same output again. Account, folder, privacy and correction checks remain fresh.
+Unchanged managed Docs use persistent, account/folder-bound revision proofs to
+avoid full body downloads between full verifications, which expire after 24 hours.
 
 Optional work analysis retains its two-failure circuit breaker. Retryable failures
 can make three durable half-open probes on cooldown, at most one per publisher
@@ -144,6 +146,11 @@ breaker. Explicit analysis holds and zero-call budgets remain paused. Exhaustion
 unrecognized failures and oversized inputs stay in local maintenance status,
 without bypassing classification or including unresolved sources in work exports.
 The owner-wide primary mirror does not depend on analysis.
+Messages and Loom transcripts share the configured per-run model-call limit;
+failed attempts consume that limit too. Explicit spam, personal and mixed
+corrections exclude their source bodies and context before model requests. Undo
+can reuse matching historical analysis. Approved overlapping context appears once
+per batch; unchanged evidence keeps its existing analysis cache.
 
 Private config may include:
 

@@ -1,105 +1,69 @@
-# Public source checkpoint
+# Minbox public source checkpoint
 
-Prepared as a separate sanitized source project with fresh history. Application
-source and synthetic fixtures come through an explicit inventory; private operator
-documents, account bindings, runtime data and private Git history are excluded.
-The source manifest tracks exported file hashes; it is not proof of authenticity.
+This is the canonical project for application code, client onboarding/repair and
+information-site source. It has fresh sanitized history and is public at
+https://github.com/hanster1/minbox-public. Minbox code uses MIT; collector changes
+retain upstream AGPL and complete corresponding-source distribution requirements.
+MAINTENANCE.md maps source, private hosting procedures and runtime state to their
+separate homes. The retained private historical repository is reference only;
+never merge its private history or replace current fixes with old source.
 
-Validation: 382 synthetic Python tests pass, with five optional skips. The release
-checker verifies 84 shared source hashes, the explicit public-file inventory,
-credential-shaped content, private Drive links and relative guide links. It passed
-for 109 files and correctly rejected unexpected-source and modified-source probes.
-An independent review checked known private identifiers with zero matches.
-A separate fresh local clone passed all 382 tests (five optional skips) and the
-109-file release check. Its only history is the new public preparation commits,
-with a GitHub noreply author address; private history was not copied.
+## Current implementation
 
-Minbox's original code is MIT-licensed; the collector patch retains upstream AGPL
-and complete-source distribution instructions. GitHub CI passed on Python 3.11 and 3.13 for the first published checkpoint
-`92dac0c`, including regression and release hygiene checks. Run:
-https://github.com/hanster1/minbox-public/actions/runs/38471975891.
-Live Mac/iPhone acceptance, independent Linux client setup, natural next-day
-Android renewal, host reboot and phone-offline catch-up remain unverified.
-Historical media capture is bounded and incomplete; external host heartbeat and
-independent encrypted backup remain separate work.
+Android phone-folder synchronization is opt-in `spam_and_blocked` and covers
+whole conversations, including automatic spam and block-only entries. Both
+publishers exclude these sources before AI/image input. Current Drive text and
+managed images are withdrawn; local originals remain. Fresh, explicit normal
+conversation status can restore eligible content. Missing/stale/async responses
+cannot clear exclusions. Text Doc IDs stay stable; restored images may receive
+new IDs. Native Docs version history is not erased by current-content rewrites.
+See PHONE_SPAM.md for consent, propagation and bounded restoration checks.
 
-The owner authorized public GitHub publication and selected this repository as
-the default for all future Minbox work. Canonical development now happens here;
-legacy private source/history stays retained until remaining tools, operational
-context and deployment dependencies are accounted for. It must not overwrite
-new public fixes or contribute its private history.
+Publishing now maintains private account/owner/root/parent-bound document proofs.
+Matching desired hashes use revision-only probes for up to 24 hours after full
+verification. Changed, expired, future or cold proofs require structural body
+reads and guarded writes/readback. Corrections, privacy checks and image deletion
+journals remain fresh. Partial successful document proofs survive interrupted
+passes without acknowledging the whole generation prematurely.
+Spam-image withdrawal resolves historical identities with one fresh, bounded
+managed-folder listing instead of individual searches for already absent images.
+Incomplete listings fall back to exact searches; deletion still requires fresh
+identity/checksum checks, a durable journal and independent absence confirmation.
 
-Publication verified: https://github.com/hanster1/minbox-public is public,
-default branch main, and remote main matched local checkpoint `92dac0c`.
-The retained private repository's checkpoint was also pushed and verified;
-its visibility remains private. Next: address live client acceptance gaps.
-Client-specific checkpoints stay private outside Git.
+Optional work analysis shares overlapping approved context once per batch.
+Explicit spam/personal/mixed corrections gate source bodies and context before
+AI calls; undo can reuse matching historical analysis. Messages and Looms share
+one per-run call budget, including failed attempts. Existing analysis fingerprints
+remain compatible for ordinary unchanged sources. Full-owner publication uses no
+model. Recovery preserves manual holds and configured budgets.
 
-## Useful-material relocation
+## Validation and operational limits
 
-Canonical website source now lives in information-site/ with updated current
-platform, image, permission and optional-AI wording. Existing OAuth branding and
-URLs were preserved. MAINTENANCE.md maps each kind of future change to one home.
-Hosted tools/operating procedures moved to the private infrastructure notebook;
-exact pilot notes, original operating notes and an inactive Vercel session receipt
-were preserved outside Git. Ignored local site linkage was moved byte-for-byte.
-No live runtime, consent, pairing, site deployment or old-project deletion occurred.
-The historical repository and unique validation branch/worktree remain retained.
+459 Python tests pass with five optional skips. Release checks pass for 122 files
+and 87 inventoried source/test files. Reviewed tests cover cache restart reuse,
+selective rewrites, external edits, slow-probe expiry, unsupported structures,
+uncertain writes/persistence failure, exclusion restoration and shared call limits.
+A synthetic overlapping-context fixture shrank serialized input by about 70%;
+this is an input-byte measurement, not measured billed-token savings.
 
-Relocation validation passed: 382 Python tests (five optional skips), the
-118-file release check, static HTML/navigation/upload-boundary checks and byte-
-exact local linkage verification. Private original notes were hash-verified.
-Hosted helper tests used synthetic clipboard/SSH commands only. Source changes
-are checkpointed locally; website publication is a separate future operation.
+Reviewed Android activation has verified capture, full Drive readback and managed
+image withdrawal on a consenting hosted installation, preserving private bindings.
+Real phone-to-Drive unspam restoration still needs a benign acceptance check.
+Incremental publishing and compact analysis inputs are installed on that hosted
+installation with reviewed module hashes and private rollback receipts. Live cold
+and cached publication passes succeeded; unchanged Docs used revision probes and
+spam-image withdrawal used a complete folder scan. Existing schedules and health
+pauses were restored, with collection uninterrupted. Historical image uploads
+are still draining; changed large Docs and daily full verification can remain
+slow. Exact client bindings, timings and request counts stay in private receipts.
+Live Mac/iPhone acceptance, independent Linux setup, next-day Android renewal,
+host reboot and phone-offline catch-up remain unverified. Historical media capture
+is bounded and incomplete. External heartbeat and independent encrypted backup
+remain separate work. Private rollout/rollback receipts belong outside Git.
 
-## Android phone-folder exclusions and restoration
+Current source changes are checkpointed locally; this task does not push or deploy
+the information site. The original public preparation CI passed Python 3.11/3.13;
+that earlier CI run does not verify these later local commits.
 
-Implemented opt-in `phone_spam_policy: spam_and_blocked`: reviewed numeric phone
-folder observations create current owner/conversation exclusions. Both publishers
-filter before model/image inputs under a shared owner operation lock. Current
-Drive text/derived views are rebuilt and stale chunks blanked; matching managed
-images use guarded permanent deletion and crash-safe reconciliation. Historical
-source-ID moves remain excluded while the conversation is excluded. Local
-originals and revisions remain, as requested.
-
-Moving a conversation out of Spam & blocked restores eligible content only after
-an explicit matching, fresh GetConversation response reports normal status 1/2/4.
-The request must begin at least a minute after the latest positive observation;
-newer spam wins. Missing threads, nil/error responses, normal asynchronous events,
-caps and stale replay cannot clear exclusions. Targeted lookups rotate through
-20 known exclusions per five-minute cycle within one shared 30-second budget and
-one pending SDK request. Startup and recurring metadata reconciliation run before
-and independently of history import; connection/fatal-event gates prevent requests
-after logout. Lifecycle and request races pass Go race tests. Historical evidence and restoration state remain durable.
-Work-analysis cache scope includes relevant selected exclusions, even when empty,
-including excluded historical threads contributing moved selected source IDs.
-Unselected spam and its backfill do not invalidate unrelated work analysis.
-Restored images may get new Drive IDs; text Doc IDs remain stable.
-
-420 full Python tests pass (five optional skips); seven focused Docs tests pass,
-including slow reads and uncertain-write reconciliation. pinned Go tests and both binaries
-build with locked dependencies. Complete AGPL source/provenance bundles are
-prepared outside Git. Release checks pass for 121 files and 86 manifested source
-files. Synthetic restoration tests cover text across years, retained images,
-pending-deletion recovery, Loom origins, stale replay and reblocking.
-
-The owner explicitly approved all Spam & blocked, including automatic spam and
-block-only conversations, and requested restoration on removal from that folder.
-That scope decision is resolved. Runtime rollout and real phone/Drive acceptance
-must be recorded separately; fixtures do not prove live propagation. Enable only
-for explicitly consenting owners, preserve their private account/root/Doc bindings,
-pauses and budgets. Native Docs history is not erased by current-content rewrites.
-Scheduled jobs skip owner contention before starting an attempt or touching
-publication status; direct library operations still serialize. Native Docs GETs
-have a 90-second bound, POSTs remain 45 seconds and writes are never blindly
-replayed. The existing whole-service limit still bounds a publication pass.
-See PHONE_SPAM.md. Private installation receipts and exact bindings stay outside Git.
-
-Reviewed Linux activation completed on one consenting installation: live paired
-collection remained read-only, an uncapped folder snapshot and import were
-verified, full Drive publication completed with current-content readback and
-managed-image withdrawal, and a separate guide/status/manifest readback found no
-pending deletions or registered excluded images. Existing root and Doc bindings
-were preserved. Exact owner/counts/runtime receipts remain private outside Git.
-Real phone-to-Drive unspam restoration has synthetic coverage but still needs a
-benign phone acceptance test. Source checkpoints remain local; no push in this task.
+Next: observe image-backlog completion and scheduled cache reuse; perform the
+remaining client acceptance checks when their required devices are available.
