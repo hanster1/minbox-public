@@ -120,6 +120,8 @@ An explicitly enabled `phone_spam_policy: "spam_and_blocked"` excludes whole
 Google Messages conversations observed in the phone's Spam & blocked folder.
 See PHONE_SPAM.md for the signal, setup and limits. Local originals and revisions
 remain; the publisher removes current Drive text and dependent outputs and
-permanently deletes matching managed image files. Sticky exclusions prevent
-ordinary history/backfill or stale updates from republishing them. This is separate
+permanently deletes matching managed image files. Exclusions prevent ordinary
+history/backfill or stale updates from republishing them. Moving a conversation
+out of the phone folder restores eligible content only after a fresh, guarded
+status confirmation; retained originals supply its texts and images. This is separate
 from a Corrections Doc spam label, which remains a publication filter.

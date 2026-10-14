@@ -144,7 +144,9 @@ The protocol cannot reliably distinguish manual reports from automatic spam or
 block-only actions. After the owner chooses the all-Spam-&-blocked policy and the
 updated collector/import signal is verified, set the private owner publishers'
 `phone_spam_policy` to `spam_and_blocked`. This removes whole conversations from
-current Drive views and managed images, while local originals remain. Default
+current Drive views and managed images, while local originals remain. Moving
+the conversation out of that phone folder restores eligible content after a fresh
+status confirmation and archive sync. Explain this reversal and test both directions. Default
 is off; never enable this Android policy for iPhone or bypass missing metadata.
 Perform a benign disposable phone-conversation acceptance check if the owner
 agrees, and record unverified event propagation honestly.
