@@ -133,7 +133,7 @@ def message_text(source):
     return '\n'.join(parts)
 
 
-def run(config, snapshot, client):
+def run(config, snapshot, client, *, progress=None):
     owner, docs, sources = _validated(config, snapshot)
     name = config.get('archive_name', owner + ' Text Archive')
     if not isinstance(name, str) or not name.startswith(owner + ' Text Archive'):
@@ -141,6 +141,12 @@ def run(config, snapshot, client):
     limit = config.get('max_document_bytes', MAX_DOCUMENT_BYTES)
     if not isinstance(limit, int) or not 1024 <= limit <= MAX_DOCUMENT_BYTES:
         raise ValueError('invalid document byte limit')
+    def phase(name):
+        # Fixed stage labels only; no source or destination identities leave this run.
+        if progress is not None:
+            progress(name)
+
+    phase('corrections_read')
     correction_doc = client.read(docs['corrections'])
     records = parse_corrections(correction_doc['text'].split('Corrections begin below.', 1)[-1])
     ledger = CorrectionLedger(config['correction_path'])
@@ -169,6 +175,7 @@ def run(config, snapshot, client):
                     filtered[reason] += 1
                 continue
             (messages if source['kind'] == 'message' else looms).append(source)
+        phase('image_publication')
         attachment_counts = {'verified_images': 0, 'unavailable_images': 0, 'published_images': 0, 'pending_images': 0, 'attachment_writes': 0}
         publish_attachments = getattr(client, 'publish_attachments', None)
         if publish_attachments is not None:
@@ -183,6 +190,7 @@ def run(config, snapshot, client):
         visible = {s['source_id']: s for s in messages}
         looms = [s for s in looms if any(origin in visible for origin in s['origin_ids'])]
         gaps = [g for g in snapshot.get('loom_gaps', []) if any(x in visible for x in g.get('origin_ids', []))]
+        phase('rendering')
         outputs = {}
         index = []
         grouped = defaultdict(list)
@@ -209,6 +217,7 @@ def run(config, snapshot, client):
         previous = list(previous)
         if any(not isinstance(k, str) or not k.startswith(('messages:', 'looms:')) for k in previous):
             raise ValueError('invalid previous chunk key')
+        phase('documents')
         document_ids = {}
         for key in sorted(set(previous) | outputs.keys()):
             title = outputs.get(key, (name + ' — Withdrawn ' + key, ''))[0]
@@ -243,6 +252,7 @@ def run(config, snapshot, client):
 
         # Withdraw stale chunks before the final status acknowledges this generation.
         for key in sorted(document_ids):
+            phase('output_verification')
             verified_write(document_ids[key], outputs.get(key, ('', ''))[1])
         guide = [name + ' — Start Here',
                  'This is your private, searchable text archive, ' + owner + '. It keeps captured personal and work messages in Google Docs so you can find past conversations and ask your AI about them.',
@@ -283,15 +293,18 @@ def run(config, snapshot, client):
             guide.extend(['', 'Phone Spam & blocked',
                 'Whole conversations observed in Google Messages Spam & blocked are removed from the current Drive archive, including their managed images. This includes automatic spam filtering and blocking without a spam report.',
                 'Local originals remain. Moving a conversation out of Spam & blocked restores eligible text and images after a fresh phone-status confirmation and the next archive sync. Other archive corrections and filters still apply. Earlier Google Docs versions can remain.'])
+        phase('guide_verification')
         verified_write(docs['guide'], '\n'.join(guide))
         withdrawal = {'withdrawn_images': 0, 'pending_image_deletions': 0}
         if snapshot.get('phone_spam_source_ids'):
             withdraw = getattr(client, 'withdraw_phone_spam', None)
             if withdraw is None:
                 raise ValueError('publisher lacks phone-spam image withdrawal')
+            phase('phone_spam_withdrawal')
             withdrawal = withdraw(snapshot['phone_spam_source_ids'], snapshot.get('phone_spam_images', []))
             if withdrawal.get('pending_image_deletions'):
                 raise RuntimeError('phone-spam image deletion remains pending')
+        phase('corrections_check')
         if client.read(docs['corrections'])['revision'] != correction_doc['revision']:
             raise RuntimeError('corrections changed during publication; latest state will be reconciled next run')
         status = [name + ' — Publisher Status', 'Owner: ' + owner,
@@ -302,6 +315,7 @@ def run(config, snapshot, client):
                   'Model calls: 0', 'Filtered counts: ' + json.dumps(dict(filtered), sort_keys=True),
                   'Capture coverage remains partial; import freshness does not prove full phone capture.']
         status.extend(f"{c['correction_id']} revision {c['revision']}: {c['status']} {c['reason']}" for c in corrections['statuses'])
+        phase('final_status')
         verified_write(docs['status'], '\n'.join(status))
         return {'writes': writes, 'published_messages': len(messages), 'excluded_messages': sum(filtered.values()),
                 'work_messages': len(messages), 'work_looms': len(looms), 'model_calls': 0,

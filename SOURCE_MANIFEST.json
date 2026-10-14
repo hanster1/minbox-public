@@ -93,13 +93,13 @@
       "sha256": "9ff9cb76a111932fc8f9a4f28da61b952c89b0c8d0a6f8e109a60de212c7f636"
     },
     "owner_archive_publisher.py": {
-      "sha256": "2c1028d1d5a7023babf14d9085995d4374e59ab993474d6d0ab01d195f6b66ac"
+      "sha256": "04a81db74dbcb31328caaed6320ca38bee185e75167fc1179bd9a620037b6ad4"
     },
     "owner_onboarding.py": {
       "sha256": "ac712284d7eabb07b2691f9ed5c06f6aa50d7630d2d9882c04afacb2e9d96b15"
     },
     "owner_publish_cli.py": {
-      "sha256": "149101b0f8a557008a467fa4b7caf235d631f6adab30e5af1d090db07b47be11"
+      "sha256": "e1a01310702041acc8183bfd30b4cd36ba308aacb8334651e489a120769f083d"
     },
     "publisher_status.py": {
       "sha256": "25e6e493807a8da91238450b2ba7b49382d20c03f5b153288f724e575f98d27e"
@@ -234,7 +234,7 @@
       "sha256": "40a2247cf129ce34d1ae824a2b71b32007374438e15441778f786ca93527f5c6"
     },
     "tests/test_owner_archive_publisher.py": {
-      "sha256": "f75795a03e13b9dc1e2ae1b2a3972e9aeee58c0a4a6ee2dd8b6ecae63b85379e"
+      "sha256": "96bd1d913958da15d6af5a7ec4c033f9a2805b33d5e94763c6978e7acab2db47"
     },
     "tests/test_owner_onboarding.py": {
       "sha256": "1f0a5f89c1c9175936ac23cd5e10fc69c53b25e90498c3cfd3b1a0d64d3d1fbe"

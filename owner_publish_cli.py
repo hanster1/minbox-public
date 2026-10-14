@@ -164,7 +164,7 @@ def main(argv=None):
                                    phone_spam_policy=config.get('phone_spam_policy'))
                 status.phase('publishing', current['latest_import'])
                 from owner_archive_publisher import run
-                result = run(config, current, client)
+                result = run(config, current, client, progress=status.phase)
                 safe = {k: result[k] for k in ('writes', 'published_messages', 'excluded_messages', 'model_calls',
                                                 'verified_images', 'published_images', 'pending_images', 'unavailable_images', 'attachment_writes',
                                                 'withdrawn_images', 'phone_spam_conversations')}

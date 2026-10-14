@@ -60,6 +60,52 @@ def config(root):
 
 
 class OwnerPublisherTests(unittest.TestCase):
+    def test_private_progress_uses_fixed_stages_before_operations(self):
+        phases = []
+        class ProgressClient(Client):
+            def read(self, document):
+                if document == 'corrections':
+                    self_stage = 'corrections_check' if self.writes else 'corrections_read'
+                    self_test.assertEqual(phases[-1], self_stage)
+                return super().read(document)
+            def ensure_document(self, key, title):
+                self_test.assertEqual(phases[-1], 'documents')
+                return super().ensure_document(key, title)
+            def replace(self, document, text):
+                expected = {'guide': 'guide_verification', 'status': 'final_status'}
+                self_test.assertEqual(phases[-1], expected.get(document, 'output_verification'))
+                return super().replace(document, text)
+            def publish_attachments(self, messages):
+                self_test.assertEqual(phases[-1], 'image_publication')
+                return dict(verified_images=0, unavailable_images=0, published_images=0,
+                            pending_images=0, attachment_writes=0)
+            def withdraw_phone_spam(self, source_ids, images):
+                self_test.assertEqual(phases[-1], 'phone_spam_withdrawal')
+                return dict(withdrawn_images=0, pending_image_deletions=0)
+        self_test = self
+        with tempfile.TemporaryDirectory() as root:
+            current = {'sources': [message(), message(2, timestamp='2021-01-01T12:00:00Z')],
+                       'phone_spam_source_ids': ['private-source-identity']}
+            client = ProgressClient()
+            run(config(root), current, client, progress=phases.append)
+            self.assertEqual(phases, ['corrections_read', 'image_publication', 'rendering',
+                'documents', 'output_verification', 'output_verification', 'guide_verification',
+                'phone_spam_withdrawal', 'corrections_check', 'final_status'])
+            self.assertNotIn('private-source-identity', str(phases))
+            self.assertNotIn('archive://', str(phases))
+            self.assertNotIn('doc-', str(phases))
+
+    def test_progress_failure_stops_before_publication(self):
+        def fail(stage):
+            if stage == 'output_verification':
+                raise OSError('synthetic private status write failure')
+        with tempfile.TemporaryDirectory() as root:
+            client = Client()
+            with self.assertRaisesRegex(OSError, 'status write failure'):
+                run(config(root), {'sources': [message()]}, client, progress=fail)
+            self.assertEqual(client.writes, [])
+            self.assertEqual(client.bodies['status'], '')
+
     def test_explicit_verification_avoids_output_reads_and_keeps_corrections_fresh(self):
         class VerifiedClient(Client):
             def __init__(self):
@@ -100,8 +146,11 @@ class OwnerPublisherTests(unittest.TestCase):
             with self.subTest(invalid=invalid), tempfile.TemporaryDirectory() as root:
                 client = InvalidClient()
                 client.invalid = invalid
+                phases = []
                 with self.assertRaisesRegex(RuntimeError, 'proof mismatch'):
-                    run(config(root), {'sources': [message()]}, client)
+                    run(config(root), {'sources': [message()]}, client, progress=phases.append)
+                self.assertEqual(phases[-1], 'output_verification')
+                self.assertNotIn('final_status', phases)
                 self.assertEqual(client.bodies['status'], '')
 
     def test_phone_spam_withdraws_all_years_before_image_deletion_and_stays_absent(self):
