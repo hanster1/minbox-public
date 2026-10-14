@@ -39,7 +39,12 @@ class GmkitMediaPatchTests(unittest.TestCase):
                      'internal/gm/media_request_test.go', 'internal/sync/media_test.go',
                      'TestMediaDownloadRequiresExistingDaemonWithoutAutoStart',
                      'cmd/minbox-refresh-session/main.go',
-                     'TestStrippedHistoryPreservesFullMediaWithoutMixingChangedKeys']:
+                     'TestStrippedHistoryPreservesFullMediaWithoutMixingChangedKeys',
+                     'internal/cmd/phone_spam.go', 'internal/cmd/phone_spam_test.go',
+                     'TestPhoneSpamMetadataOnlyReconciliationReportsCoverage',
+                     'TestPhoneSpamPendingRequestIsBoundedWithoutConcurrentRetry',
+                     'TestPhoneSpamMigrationPreservesExistingArchive',
+                     'TestPhoneSpamStatusDistinguishesArchiveDeleteUnknownAndStaysSticky']:
             self.assertIn(name, source)
         self.assertIn('GNU Affero General Public License', builder.NOTICE)
         self.assertIn(builder.COMMIT, builder.NOTICE)
