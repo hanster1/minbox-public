@@ -114,7 +114,7 @@
       "sha256": "0a9af7df18fe042e764947abd701c2c7bb64382fe5824aad2c0f9a256316e293"
     },
     "scripts/gmkit-media.patch": {
-      "sha256": "49f48d714fa17bd00544e4a7a06726c1e1d92808e4f0b55270dc1b222cbed722"
+      "sha256": "5a8fa8e14d1c2d7c14f1c83d295715dc66cd361e8d25bb29a86f4aa8cac941ef"
     },
     "services/minbox-archive-publisher@.service": {
       "sha256": "4e6de97a9eef7dceadb9ad969fea2d1b97a4eae927de49d13db2337556c7c951"

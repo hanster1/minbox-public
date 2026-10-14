@@ -459,10 +459,10 @@ index 0000000..696bc11
 +}
 diff --git c/internal/cmd/phone_spam.go i/internal/cmd/phone_spam.go
 new file mode 100644
-index 0000000..5d3073b
+index 0000000..abf375f
 --- /dev/null
 +++ i/internal/cmd/phone_spam.go
-@@ -0,0 +1,273 @@
+@@ -0,0 +1,323 @@
 +package cmd
 +
 +import (
@@ -470,9 +470,11 @@ index 0000000..5d3073b
 +	"fmt"
 +	"time"
 +
++	"github.com/johnlindquist/gmkit/internal/gm"
 +	"github.com/johnlindquist/gmkit/internal/store"
 +	gmsync "github.com/johnlindquist/gmkit/internal/sync"
 +	"github.com/rs/zerolog"
++	"go.mau.fi/mautrix-gmessages/pkg/libgm/events"
 +	"go.mau.fi/mautrix-gmessages/pkg/libgm/gmproto"
 +)
 +
@@ -502,6 +504,8 @@ index 0000000..5d3073b
 +	logger           zerolog.Logger
 +	inFlight         <-chan phoneSpamResult
 +	timeout          time.Duration
++	interval         time.Duration
++	canScan          func() bool
 +	requestID        string // empty for folder discovery, otherwise targeted lookup
 +	requestStartedAt int64
 +	cursorLoaded     bool
@@ -736,12 +740,58 @@ index 0000000..5d3073b
 +		s.logger.Warn().Str("coverage", coverage).Int("limit", phoneSpamLimit).Int("returned", count).Bool("has_cursor", cursor).Msg(fmt.Sprintf("Phone spam metadata reconciliation: %s", failure))
 +	}
 +}
++
++// run transfers scanner ownership to one loop after the bounded initial scan.
++// History import can run concurrently without postponing folder reconciliation.
++// Stop waits for the loop, before the paired client and store are closed.
++func (s *phoneSpamScanner) run(ctx context.Context) func() {
++	scanCtx, cancel := context.WithCancel(ctx)
++	if scanCtx.Err() == nil && (s.canScan == nil || s.canScan()) {
++		s.scan(scanCtx)
++	}
++	done := make(chan struct{})
++	go func() {
++		defer close(done)
++		interval := s.interval
++		if interval <= 0 {
++			interval = phoneSpamInterval
++		}
++		ticker := time.NewTicker(interval)
++		defer ticker.Stop()
++		for {
++			select {
++			case <-scanCtx.Done():
++				return
++			case <-ticker.C:
++				if scanCtx.Err() != nil {
++					return
++				}
++				if s.canScan == nil || s.canScan() {
++					s.scan(scanCtx)
++				}
++			}
++		}
++	}()
++	return func() { cancel(); <-done }
++}
++
++// Event callbacks only cancel; joining is owned by foreground cleanup.
++func phoneMetadataContext(ctx context.Context, subscribe func(gm.EventHandler)) (context.Context, context.CancelFunc) {
++	metadataCtx, cancel := context.WithCancel(ctx)
++	subscribe(func(evt any) {
++		switch evt.(type) {
++		case *events.GaiaLoggedOut, *events.ListenFatalError:
++			cancel()
++		}
++	})
++	return metadataCtx, cancel
++}
 diff --git c/internal/cmd/phone_spam_test.go i/internal/cmd/phone_spam_test.go
 new file mode 100644
-index 0000000..4f1e8c6
+index 0000000..97bba2d
 --- /dev/null
 +++ i/internal/cmd/phone_spam_test.go
-@@ -0,0 +1,261 @@
+@@ -0,0 +1,359 @@
 +package cmd
 +
 +import (
@@ -753,8 +803,10 @@ index 0000000..4f1e8c6
 +	"testing"
 +	"time"
 +
++	"github.com/johnlindquist/gmkit/internal/gm"
 +	"github.com/johnlindquist/gmkit/internal/store"
 +	"github.com/rs/zerolog"
++	"go.mau.fi/mautrix-gmessages/pkg/libgm/events"
 +	"go.mau.fi/mautrix-gmessages/pkg/libgm/gmproto"
 +)
 +
@@ -1003,79 +1055,159 @@ index 0000000..4f1e8c6
 +		t.Fatalf("coverage:%s %d %v", coverage, count, err)
 +	}
 +}
++
++func TestPhoneFolderScannerContinuesDuringHistoryAndStops(t *testing.T) {
++	ctx := context.Background()
++	st, err := store.Open(ctx, filepath.Join(t.TempDir(), "archive.db"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer st.Close()
++	fixture := &spamListFixture{response: &gmproto.ListConversationsResponse{}}
++	scanner := &phoneSpamScanner{client: fixture, store: st, logger: zerolog.Nop(), interval: 5 * time.Millisecond}
++	stop := scanner.run(ctx)
++	if fixture.calls.Load() != 1 {
++		t.Fatal("initial metadata did not complete before history")
++	}
++	// The foreground may remain in history import; metadata has its own owner.
++	deadline := time.Now().Add(time.Second)
++	for fixture.calls.Load() < 2 && time.Now().Before(deadline) {
++		time.Sleep(time.Millisecond)
++	}
++	if fixture.calls.Load() < 2 {
++		t.Fatal("foreground history postponed recurring metadata")
++	}
++	stop()
++	stop() // logout and deferred cleanup are both safe.
++	calls := fixture.calls.Load()
++	time.Sleep(15 * time.Millisecond)
++	if fixture.calls.Load() != calls {
++		t.Fatal("scanner continued after stop")
++	}
++}
++
++func TestPhoneFolderScannerStopWithPendingRequestIsBounded(t *testing.T) {
++	ctx := context.Background()
++	st, err := store.Open(ctx, filepath.Join(t.TempDir(), "archive.db"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer st.Close()
++	release := make(chan struct{})
++	defer close(release)
++	fixture := &spamListFixture{release: release}
++	scanner := &phoneSpamScanner{client: fixture, store: st, logger: zerolog.Nop(), timeout: 5 * time.Millisecond, interval: 5 * time.Millisecond}
++	stop := scanner.run(ctx)
++	time.Sleep(20 * time.Millisecond)
++	done := make(chan struct{})
++	go func() { stop(); close(done) }()
++	select {
++	case <-done:
++	case <-time.After(time.Second):
++		t.Fatal("stop waited for uncancellable SDK request")
++	}
++	if fixture.calls.Load() != 1 {
++		t.Fatal("pending metadata spawned concurrent requests")
++	}
++}
++
++func TestPhoneFolderScannerConnectionAndFatalEventsGateRequests(t *testing.T) {
++	ctx := context.Background()
++	st, err := store.Open(ctx, filepath.Join(t.TempDir(), "archive.db"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer st.Close()
++	fixture := &spamListFixture{response: &gmproto.ListConversationsResponse{}}
++	var connected atomic.Bool
++	scanner := &phoneSpamScanner{client: fixture, store: st, logger: zerolog.Nop(), interval: 5 * time.Millisecond, canScan: connected.Load}
++	var handler gm.EventHandler
++	metadataCtx, cancel := phoneMetadataContext(ctx, func(h gm.EventHandler) { handler = h })
++	defer cancel()
++	stop := scanner.run(metadataCtx)
++	time.Sleep(15 * time.Millisecond)
++	if fixture.calls.Load() != 0 {
++		t.Fatal("disconnected scanner made requests")
++	}
++	connected.Store(true)
++	deadline := time.Now().Add(time.Second)
++	for fixture.calls.Load() == 0 && time.Now().Before(deadline) {
++		time.Sleep(time.Millisecond)
++	}
++	if fixture.calls.Load() == 0 {
++		t.Fatal("connected scanner failed to resume")
++	}
++	handler(&events.GaiaLoggedOut{})
++	stop()
++	calls := fixture.calls.Load()
++	time.Sleep(15 * time.Millisecond)
++	if fixture.calls.Load() != calls {
++		t.Fatal("logout continued metadata while foreground busy")
++	}
++	fatalCtx, fatalCancel := phoneMetadataContext(ctx, func(h gm.EventHandler) { handler = h })
++	defer fatalCancel()
++	handler(&events.ListenFatalError{})
++	if fatalCtx.Err() == nil {
++		t.Fatal("fatal relay error did not cancel metadata")
++	}
++}
 diff --git c/internal/cmd/serve.go i/internal/cmd/serve.go
-index 7776778..e4dab0d 100644
+index 7776778..f577309 100644
 --- c/internal/cmd/serve.go
 +++ i/internal/cmd/serve.go
-@@ -123,7 +123,9 @@ func serveCmd() *cobra.Command {
+@@ -123,13 +123,20 @@ func serveCmd() *cobra.Command {
  			go func() { serveErr <- server.Serve(ctx, ln) }()
  			fmt.Fprintf(os.Stderr, "Daemon ready. RPC socket: %s (send mode: %s). Ctrl-C to stop.\n", sock, mode)
  
 +			var spamScanner *phoneSpamScanner
++			var stopSpamScanner func()
  			if client != nil {
-+				spamScanner = &phoneSpamScanner{client: client.Underlying(), store: st, logger: logger}
++				spamScanner = &phoneSpamScanner{client: client.Underlying(), store: st, logger: logger, canScan: client.IsConnected}
++				metadataCtx, cancelMetadata := phoneMetadataContext(ctx, client.Subscribe)
++				defer cancelMetadata()
  				fmt.Fprintln(os.Stderr, "Connecting to Google Messages relay...")
  				if err := client.Connect(); err != nil {
  					return fmt.Errorf("connect: %w", err)
-@@ -132,6 +134,7 @@ func serveCmd() *cobra.Command {
+ 				}
+ 				defer client.Disconnect()
  
++				stopSpamScanner = spamScanner.run(metadataCtx)
++				defer stopSpamScanner()
  				if !noImport {
  					runInitialImport(ctx, client, pump, logger)
-+					spamScanner.scan(ctx)
  					// The import writes through the pump directly, which
- 					// bypasses the event broadcaster: tell clients that
- 					// connected early to refetch.
-@@ -145,6 +148,8 @@ func serveCmd() *cobra.Command {
- 			}
- 			heartbeat := time.NewTicker(syncHeartbeatInterval)
- 			defer heartbeat.Stop()
-+			spamTicker := time.NewTicker(phoneSpamInterval)
-+			defer spamTicker.Stop()
- 			for {
- 				select {
- 				case <-ctx.Done():
-@@ -176,6 +181,10 @@ func serveCmd() *cobra.Command {
- 				case <-server.Idle():
- 					fmt.Fprintf(os.Stderr, "No clients for %s; exiting (auto mode).\n", idleExit)
- 					return nil
-+				case <-spamTicker.C:
-+					if spamScanner != nil && client.IsConnected() && pumpFatal != nil {
-+						spamScanner.scan(ctx)
-+					}
- 				case <-heartbeat.C:
- 					if err := st.TouchSync(ctx); err != nil {
- 						logger.Debug().Err(err).Msg("sync heartbeat failed")
+@@ -158,6 +165,9 @@ func serveCmd() *cobra.Command {
+ 						// talking to the phone, and serve the archive with
+ 						// an auth_expired status until the user re-pairs.
+ 						logger.Warn().Msg("Pairing expired — phone reports logged out. Serving archive only; run `gmcli auth` to re-pair.")
++						if stopSpamScanner != nil {
++							stopSpamScanner()
++						}
+ 						server.MarkAuthExpired()
+ 						server.Broadcast(rpc.EventSyncStatus, map[string]any{"state": "logged_out"})
+ 						client.Disconnect()
 diff --git c/internal/cmd/sync.go i/internal/cmd/sync.go
-index e6166b0..54842e3 100644
+index e6166b0..21c8a23 100644
 --- c/internal/cmd/sync.go
 +++ i/internal/cmd/sync.go
-@@ -57,6 +57,8 @@ func syncCmd() *cobra.Command {
+@@ -50,12 +50,17 @@ func syncCmd() *cobra.Command {
+ 			pump := gmsync.New(st, logger)
+ 			client.Subscribe(pump.Handle)
+ 
++			metadataCtx, cancelMetadata := phoneMetadataContext(ctx, client.Subscribe)
++			defer cancelMetadata()
+ 			fmt.Fprintln(os.Stderr, "Connecting to Google Messages relay...")
+ 			if err := client.Connect(); err != nil {
+ 				return fmt.Errorf("connect: %w", err)
+ 			}
  			defer client.Disconnect()
  
++			spamScanner := &phoneSpamScanner{client: client.Underlying(), store: st, logger: logger, canScan: client.IsConnected}
++			stopSpamScanner := spamScanner.run(metadataCtx)
++			defer stopSpamScanner()
  			runInitialImport(ctx, client, pump, logger)
-+			spamScanner := &phoneSpamScanner{client: client.Underlying(), store: st, logger: logger}
-+			spamScanner.scan(ctx)
  
  			if !follow {
- 				select {
-@@ -71,6 +73,8 @@ func syncCmd() *cobra.Command {
- 			fmt.Fprintln(os.Stderr, "Connected. Streaming events. Ctrl-C to stop.")
- 			heartbeat := time.NewTicker(syncHeartbeatInterval)
- 			defer heartbeat.Stop()
-+			spamTicker := time.NewTicker(phoneSpamInterval)
-+			defer spamTicker.Stop()
- 			for {
- 				select {
- 				case <-ctx.Done():
-@@ -78,6 +82,8 @@ func syncCmd() *cobra.Command {
- 					return nil
- 				case err := <-pump.Fatal():
- 					return err
-+				case <-spamTicker.C:
-+					spamScanner.scan(ctx)
- 				case <-heartbeat.C:
- 					if err := st.TouchSync(ctx); err != nil {
- 						logger.Debug().Err(err).Msg("sync heartbeat failed")
 diff --git c/internal/gm/gm.go i/internal/gm/gm.go
 index d3f396e..15be658 100644
 --- c/internal/gm/gm.go

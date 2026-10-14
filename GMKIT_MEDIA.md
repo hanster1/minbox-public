@@ -95,7 +95,11 @@ phone collection. Tests use fixture JSON and make no account/network calls.
 The patched collector preserves exact numeric conversation status and records
 positive SPAM_FOLDER (5) and BLOCKED_FOLDER (6) observations in an owner-store
 `phone_spam_conversations` ledger. Incoming conversation events and a five-minute
-metadata-only scan use the existing paired connection; no phone folder changes,
+metadata-only scan use the existing paired connection. Metadata reconciliation
+starts before ordinary history import and continues independently during it.
+One scanner owns the bounded request slot; disconnected/logout/fatal sessions
+stop new requests and cleanup cancels and joins the loop before closing resources.
+No phone folder changes,
 message sending or second collector are introduced. Archived, deleted, unknown
 and missing conversations never become spam by inference. Positive observations
 remain excluded despite later stale normal-folder events. A bounded rotating

@@ -68,7 +68,9 @@ The request must begin at least a minute after the latest positive observation;
 newer spam wins. Missing threads, nil/error responses, normal asynchronous events,
 caps and stale replay cannot clear exclusions. Targeted lookups rotate through
 20 known exclusions per five-minute cycle within one shared 30-second budget and
-one pending SDK request. Historical evidence and restoration state remain durable.
+one pending SDK request. Startup and recurring metadata reconciliation run before
+and independently of history import; connection/fatal-event gates prevent requests
+after logout. Lifecycle and request races pass Go race tests. Historical evidence and restoration state remain durable.
 Work-analysis cache scope includes the active set even when it becomes empty.
 Restored images may get new Drive IDs; text Doc IDs remain stable.
 
