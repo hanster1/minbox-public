@@ -1,5 +1,12 @@
 # Client onboarding
 
+This is a concrete recipe for the supplied implementation. For architectural
+choices, alternative approaches and lessons, start with
+[REFERENCE_GUIDE.md](REFERENCE_GUIDE.md). Adapt example paths and operating choices
+to the client; account bindings, privacy checks and script prerequisites describe
+actual code constraints. A different platform needs its own implementation and
+acceptance work.
+
 The agent does the technical work on the client's own always-on computer. Read
 AGENTS.md, inspect existing state and choose the supported phone/host combination.
 Use the actual owner namespace, email and paths; Casey below is fictional.

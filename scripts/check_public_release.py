@@ -23,7 +23,7 @@ def check(verify_hashes=True):
     public_files = {
         '.gitignore', '.gitattributes', 'README.md', 'AGENTS.md', 'CLAUDE.md', 'WORKFLOW.md', 'HANDOFF.md',
         'MAC_SETUP.md', 'MAC_RECOVERY.md', 'MAC_ONBOARDING_AGENT.md', 'ONBOARDING.md',
-        'GOOGLE_SETUP.md', 'ANDROID_RECOVERY.md', 'DRIVE_MIGRATION.md', 'OWNER_ARCHIVE.md',
+        'REFERENCE_GUIDE.md', 'GOOGLE_SETUP.md', 'ANDROID_RECOVERY.md', 'DRIVE_MIGRATION.md', 'OWNER_ARCHIVE.md',
         'HEALTH_ALERTS.md', 'GMKIT_MEDIA.md', 'LOOM_CAPTURE.md', 'CONTRIBUTING.md',
         'LICENSE', 'THIRD_PARTY_NOTICES.md', 'licenses/AGPL-3.0.txt',
         'SOURCE_MANIFEST.json', 'scripts/check_public_release.py',

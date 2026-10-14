@@ -1,5 +1,10 @@
 # Shared Mac onboarding instructions for local coding agents
 
+Use [REFERENCE_GUIDE.md](REFERENCE_GUIDE.md) for adaptable design considerations.
+This document is the concrete workflow for the supplied Mac implementation;
+its safety checks and binding/update procedures reflect actual code behavior.
+Example paths and operating choices can be adapted with appropriate verification.
+
 Apply this workflow when the user asks for Minbox setup or repair on a Mac.
 For other work, follow the current task without starting an installation.
 

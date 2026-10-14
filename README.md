@@ -1,8 +1,14 @@
 # Minbox text archive
 
-Minbox keeps captured texts and available images in your private Google Drive
-folder. Your preferred AI app can then search the archive through its own Drive
-connection. Collection and full archive publication do not require an AI model.
+Minbox is an adaptable reference for coding agents setting up private text
+collection, filtering and Google Drive sync on a client's computer. It includes
+a working implementation, concrete setup recipes and documented operating lessons.
+Start with [the reference guide](REFERENCE_GUIDE.md) for design choices, health
+checks and efficient AI use; tailor the approach to the client's environment.
+
+The included implementation keeps captured texts and available images in a
+private Google Drive folder. A preferred AI app can search it through its own
+Drive connection. Collection and full archive publication require no AI model.
 
 ## Get started
 
@@ -11,11 +17,12 @@ commands, such as Codex or Claude Code, and give it this prompt:
 
 > Use https://github.com/hanster1/minbox-public to set up this computer to sync
 > my text messages to my private Google Drive archive. Read the project's
-> AGENTS.md, inspect any existing setup, and do the technical work. Explain
+> AGENTS.md and REFERENCE_GUIDE.md, inspect any existing setup, adapt the
+> approach to my computer and preferences, and do the technical work. Explain
 > clearly when I need to act on this computer versus my phone.
 
-The agent clones the project, checks your platform, prepares private runtime
-storage, guides account consent and verifies scheduled collection/publication.
+For a supported implementation path, the agent clones the project, checks your
+platform, prepares private runtime storage, guides account consent and verifies scheduled collection/publication.
 You choose the archive folder's name and may rename it later.
 
 This is the primary Minbox project. No ZIP or pre-created source directory is
@@ -64,6 +71,7 @@ A local monitor cannot notify during complete host/network failure.
 
 ## Guides and development
 
+- [Adaptation, design choices and lessons](REFERENCE_GUIDE.md), including health signals and AI/token budgets.
 - [Agent setup entry](AGENTS.md), [onboarding](ONBOARDING.md) and [Google application setup](GOOGLE_SETUP.md).
 - [Mac setup](MAC_SETUP.md), [Mac repair](MAC_RECOVERY.md) and [Android recovery](ANDROID_RECOVERY.md).
 - [Phone spam exclusions](PHONE_SPAM.md), [archive behavior](OWNER_ARCHIVE.md), [health policy](HEALTH_ALERTS.md), [collector source](GMKIT_MEDIA.md).

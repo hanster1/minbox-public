@@ -7,23 +7,29 @@ history. Minbox code is MIT; collector changes retain upstream AGPL obligations.
 
 ## Latest result
 
-Portable publication guidance now lives in
-[OWNER_ARCHIVE.md](OWNER_ARCHIVE.md#publication-performance), discovered through
-AGENTS.md, README and both platform setup/recovery paths. It covers defaults and
-bounds, cold/warm measurements, retry-aware comparisons, opt-in concurrent reads,
-part/image budgets, preserved identities, rollback and completed-run acceptance.
-Mac guidance distinguishes checkout updates from installed code and requires
-reviewed config-digest rebinds with exact saved settings after active jobs finish.
-Android recovery links the common procedure rather than duplicating it.
+Minbox is now positioned as an adaptable reference with a working implementation
+and documented lessons. REFERENCE_GUIDE.md covers collection, filtering, Drive,
+health/recovery, efficient setup-agent context and optional runtime AI budgets.
+README, AGENTS and WORKFLOW distinguish client outcomes, actual code constraints
+and adaptable operating choices. Linux/Mac setup and health entries explain their
+role as concrete implementation recipes. GOOGLE_SETUP describes shared-app and
+bring-your-own-app options without claiming a verified app or public credential
+download. No runtime, account, OAuth client, grant or website settings changed.
 
-The code supports at most three unchanged-output revision reads, paced to one
-logical launch per second; the default remains sequential. Proof/hash/age checks,
-privacy checks, correction reads, guarded writes and full readback remain.
-Warm changed outputs can reuse verified structure; uncertain writes are never
-blindly replayed. Full publication is model-free; work analysis stays optional.
-Phone spam exclusions retain originals and stable source/Doc identities.
+Publication guidance remains in
+[OWNER_ARCHIVE.md](OWNER_ARCHIVE.md#publication-performance), linked from entry
+and platform guides. The code supports at most three unchanged-output revision
+reads, paced to one logical launch per second; default remains sequential.
+Proof/hash/age, privacy, correction and full readback checks remain. Full
+publication is model-free; work analysis stays optional.
 
 ## Verification and limits
+
+Reference revision: 491 synthetic tests ran, five optional skips and no failures.
+Release checks cover 123 files and 87 inventoried source/test files. Local guide
+links, Markdown anchors and diff whitespace passed; independent documentation
+review found no material contradictions. No inventoried application/test source
+changed. This revision has not been deployed or submitted for Google review.
 
 Fresh-clone verification: 491 tests ran, five optional skips and no failures.
 Release/link checks cover 122 files and 87 inventoried source/test files;
@@ -38,5 +44,10 @@ renewal, reboot/offline catch-up and independent backup need further acceptance.
 Private bindings and rollback/timing receipts stay outside Git. No website or
 new runtime deployment is part of this documentation checkpoint.
 
-Next: observe scheduled/cold latency and perform independent client/device
-acceptance when available.
+Next: resume Google verification readiness against the revised reference and
+public site. Confirm actual Cloud audience, branding, declared scopes and
+Verification Center requirements with the owner; no application has been
+submitted by this documentation update. Verify site/consent branding parity,
+domain ownership and applicable Google user-data policy before submission.
+Continue scheduled/cold latency observations and independent device acceptance
+when available.

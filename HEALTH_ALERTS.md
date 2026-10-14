@@ -1,5 +1,12 @@
 # Archive recovery and emergency notifications
 
+For choosing health signals and alert/recovery tradeoffs, see
+[the reference guide](REFERENCE_GUIDE.md#health-that-tells-the-owner-something-useful).
+This document describes the supplied Linux controller's implemented policy,
+including fixed thresholds and delivery behavior. Treat it as a working example
+for other designs; changing prose does not change controller behavior. Mac has a
+separate monitor documented in MAC_SETUP.md.
+
 `health_monitor.py` observes the Linux archive computer; `health_recovery.py` runs bounded, allowlisted
 recovery actions. Both use the Python standard library.
 The supplied user timer runs once a minute. Install the script alongside

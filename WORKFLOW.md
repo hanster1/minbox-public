@@ -1,25 +1,31 @@
 # Minbox public project brief
 
-Provide a portable source repository that a client's CLI-capable coding agent can
-use to install and maintain a private phone-to-Google-Drive text archive. Users
-retain their own accounts, archive folder and always-on collection computer.
-Setup is repository-first, provider-neutral and resumable; no recurring ZIP step.
+Provide an adaptable reference that a client's CLI-capable coding agent can use
+to get private text collection, filtering and Drive sync working with little
+avoidable friction. Include a working implementation, useful considerations and
+lessons with evidence and limits. REFERENCE_GUIDE.md explains design choices;
+platform guides are concrete recipes for the supplied code. Methods, paths,
+schedules and optional features can change with the client's needs. Preserve
+privacy, consent, integrity and existing data through adaptation.
 
-Android uses the pinned read-only Google Messages collector on Linux. iPhone uses
-Messages on the owner's Mac. Both feed the same owner-wide publisher, original
-image storage/Drive links, corrections and recovery-first health policy. Read
-README.md for supported paths and current verification limits. Optional work
-analysis and Loom capture are extensions, not onboarding prerequisites.
+The included Android/Linux path uses a pinned read-only Google Messages
+collector; the iPhone path reads Messages on the owner's Mac. Both feed the
+owner-wide publisher, image handling, corrections and health mechanisms. README
+states current support and verification limits. New platforms need implementation
+and acceptance work. Optional work analysis and Loom capture are extensions.
 
-The owner chooses/names a private root and can safely rename it by stable ID.
-Use exactly drive.file, verify account/root/privacy/parent bindings and preserve
-existing Docs and source identity. Owner-managed AI connections have separate
-permissions; retrieval confidence testing is explained and optional.
+The current Google implementation requires exactly drive.file and verifies
+account/root/privacy/parent bindings. Preserve existing Docs and source identity.
+Each user owns their grants; AI retrieval has separate permissions. Full
+publication needs no runtime model. Discuss token-efficient optional analysis,
+meaningful health signals and bounded recovery rather than assuming a background
+agent or one fixed operating policy is necessary.
 
-Success means verified read-only phone capture, private native Docs readback,
-schedules and local health, with honest coverage limits. Only human-action
-emergencies qualify for external notifications. Source changes require tests and
-review; recovery executes fixed bounded actions and preserves explicit pauses.
+Assess success through verified capture, filtering, private native Docs readback,
+scheduled operation and useful health, with honest coverage limits. The shipped
+monitor uses emergency-only external notifications and fixed bounded recovery;
+an adapted design should explain its alert policy and preserve explicit pauses.
+Source changes require appropriate checks and review.
 
 Keep credentials, messages, images, databases, provider logs and machine-specific
 notes outside Git. This repository has fresh sanitized history. Do not import a
