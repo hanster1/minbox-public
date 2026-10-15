@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 import hashlib
+import html
 import json
 import os
 from pathlib import Path
@@ -16,6 +17,7 @@ import sqlite3
 import subprocess
 import time
 import urllib.error
+from urllib.parse import unquote
 
 LABELS = {'work', 'personal', 'uncertain', 'mixed', 'spam'}
 SOURCE_FIELDS = {'source_id', 'revision', 'owner', 'conversation_id', 'timestamp',
@@ -87,8 +89,42 @@ def _hash(value):
     return hashlib.sha256(_json(value).encode('utf-8')).hexdigest()
 
 
+def password_reset_link(text):
+    """Detect reset links without fetching URLs or retaining their credentials.
+
+    Exclude the whole source, including its attachments, rather than leaving
+    token fragments or a second copy of a link in the published message.
+    Opaque shortened links require surrounding reset/recovery language.
+    """
+    normalized = html.unescape(text)
+    for _ in range(3):
+        normalized = unquote(normalized)
+    urls = re.findall(r'(?:[a-z][a-z0-9+.-]*://|www\.|\b[a-z0-9-]+(?:\.[a-z0-9-]+)+/)[^\s<>"\']+',
+                      normalized, re.I)
+    if not urls:
+        return False
+    # Do not depend on a numeric OTP: reset tokens are commonly opaque strings.
+    for url in urls:
+        compact = re.sub(r'[^a-z]', '', url.lower())
+        if re.search(r'(?<![a-z])reset(?![a-z])', url, re.I) or any(marker in compact for marker in
+               ('resetpassword', 'passwordreset', 'forgotpassword', 'forgottenpassword', 'recoverpassword',
+                'passwordrecover', 'recoveraccount', 'accountrecover',
+                'changepassword', 'passwordchange', 'setpassword', 'passwordset')):
+            return True
+    if re.search(r'\b(?:reset(?:ting)?|recover(?:ing)?|forgot(?:ten)?|chang(?:e|ing)|set(?:ting)?)\b'
+                 r'[\s\S]{0,80}\b(?:password|passphrase|credentials)\b|'
+                 r'\b(?:password|passphrase)\b[\s\S]{0,60}\b(?:reset|recovery|change)\b', normalized, re.I):
+        return True
+    compact = re.sub(r'[^a-z]', '', normalized.lower())
+    return any(marker in compact for marker in
+               ('resetpassword', 'resetyourpassword', 'passwordreset',
+                'forgotpassword', 'forgotyourpassword', 'forgottenpassword',
+                'recoverpassword', 'recoveryourpassword', 'passwordrecovery',
+                'recoveraccount', 'recoveryouraccount', 'accountrecovery'))
+
+
 def hard_excluded(text):
-    """Conservative local exclusion of authentication codes and clear opt-out ads."""
+    """Conservative exclusion of security codes/reset links and opt-out ads."""
     if not isinstance(text, str):
         raise ValueError('source text must be a string')
     auth = re.search(r'\b(?:verification|authentication|security|login|log[ -]?in|sign[ -]?in|one[ -]?time|otp|password|verify|2fa|two[ -]?factor)\b', text, re.I)
@@ -99,7 +135,7 @@ def hard_excluded(text):
         r'\b(?:your\s+(?:[\w-]+\s+){0,3}(?:code|pin)\s*(?:is|:)?\s*\d{4,8}\b|'
         r'(?:use|enter)\s+\d{4,8}\s+(?:as\s+your\s+(?:code|pin)|to\s+(?:verify|sign[ -]?in|log[ -]?in))\b|'
         r'\d{4,8}\s+is\s+your\s+(?:[\w-]+\s+){0,3}(?:code|pin)\b)', text, re.I)
-    return bool((auth and code) or direct_code or (optout and promo))
+    return bool(password_reset_link(text) or (auth and code) or direct_code or (optout and promo))
 
 
 def _validate_sources(owner, sources):

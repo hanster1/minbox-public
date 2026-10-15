@@ -123,6 +123,35 @@ class LocalExportTests(unittest.TestCase):
     def generation(self):
         return {p.name: p.read_bytes() for p in self.destination.iterdir()}
 
+    def test_reset_links_withdrawn_from_local_and_drive_even_when_labeled_work(self):
+        self.load([self.record(1, 'Retained synthetic message'),
+                   self.record(2, 'Initially harmless synthetic message'),
+                   self.record(3, 'Initially harmless attachment')])
+        self.export()
+        self.load([self.record(2, 'Reset your password: https://example.invalid/t/opaqueletters'),
+                   self.record(3, 'Screenshot', attachments=[{'ocr_text':
+                       'https://example.invalid/account/password_reset/opaqueletters'}]),
+                   self.record(4, 'Reset your password using the link in this image.', attachments=[
+                       {'ocr_text': 'https://short.invalid/opaqueletters'}])])
+        self.correct([self.correction('work', 'work', 'M2')])
+        self.loom('unsafe-phrases', [1], 'Harmless transcript text', [{'ts': 0, 'value':
+            'Reset your password: https://example.invalid/t/loomsecret'}])
+        before = (self.root / 'archive.sqlite3').read_bytes()
+        result = self.export()
+        self.assertEqual(result['published_messages'], 1)
+        self.assertEqual(result['published_looms'], 0)
+        self.assertNotIn('opaqueletters', self.text())
+        self.assertNotIn('Initially harmless', self.text())
+        client = MemoryClient()
+        reference = publish({'owner': 'Casey', 'documents': {k: k for k in ('guide', 'corrections', 'status')},
+            'correction_path': str(self.ledger), 'phone_spam_policy': 'spam_and_blocked'},
+            snapshot(self.root, 'Casey', None, '1970-01-01', phone_spam_policy='spam_and_blocked'), client)
+        self.assertEqual(reference['published_messages'], 1)
+        self.assertEqual(reference['work_looms'], 0)
+        self.assertNotIn('opaqueletters', str(client.bodies))
+        self.assertNotIn('loomsecret', str(client.bodies))
+        self.assertEqual((self.root / 'archive.sqlite3').read_bytes(), before)
+
     def test_reference_filter_parity_including_ocr_phone_spam_and_bound_looms(self):
         self.load([
             self.record(1, 'Retained synthetic message'),

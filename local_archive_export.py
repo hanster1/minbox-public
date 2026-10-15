@@ -324,7 +324,7 @@ def _render(owner, current, effective_labels, active_spam, policy, generated_at,
             # Defensive parity: also check the text actually rendered if stored
             # transcript text and phrase values ever disagree.
             filter_texts.append('\n'.join(p['value'] for p in source.get('phrases', [])))
-        reason = ('hard_excluded' if any(hard_excluded(text) for text in filter_texts) else
+        reason = ('hard_excluded' if hard_excluded('\n'.join(filter_texts)) else
                   'explicit_spam' if source['friendly_id'] in active_spam or labels[source['source_id']] == 'spam' else
                   'empty' if not source['text'].strip() and not source.get('attachments') else None)
         if reason:

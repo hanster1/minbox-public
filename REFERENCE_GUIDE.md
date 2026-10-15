@@ -51,7 +51,7 @@ offline catch-up and competing device sessions; record what remains untested.
 
 Keep captured evidence separate from published views so a mistaken exclusion can
 be reversed. The current full view uses deterministic rules for authentication
-codes and obvious promotional spam; it does not need an AI classifier. The
+codes, recognizable password-reset links and obvious promotional spam; it does not need an AI classifier. The
 optional work view has separate classification and correction rules. Review
 [archive behavior](OWNER_ARCHIVE.md) before changing either view.
 
@@ -60,6 +60,57 @@ but leaves some unwanted content. Broader filters need representative checks and
 an understandable undo path. Phone Spam & blocked synchronization is an optional
 whole-folder policy, with protocol limits explained in [PHONE_SPAM](PHONE_SPAM.md).
 Do not infer consent to that policy from a general request to collect texts.
+
+### Who sees the originals?
+
+Distinguish three data boundaries before setup:
+
+| Stage | Data it may see | Current implementation or option |
+| --- | --- | --- |
+| Setup and debugging agent | Any originals its tools and account can read, if inspected or returned in tool output | A cloud coding agent can receive private text during diagnosis even when the resulting filter runs locally. Prefer synthetic fixtures and content-free counts; agree on access before inspecting originals. |
+| Routine archive filtering | Original text and available OCR on the collection computer | The supplied full publisher/export uses Python rules, explicit corrections and optional phone spam status, with no model calls. |
+| Retrieval and answers | The filtered output, plus anything else the chosen app is permitted to access | Give the answering app only the intended output through a confined connection if an enforced boundary is needed. A prompt or folder selection alone may not restrict broader computer access. |
+
+“Runs locally” describes where a program executes; it does not establish where
+model inference happens. A local coding CLI using a hosted model can send tool
+results to its provider. Filtering later does not undo that earlier disclosure.
+
+### Optional local-model privacy filtering
+
+A client can use a model running on their own computer to apply more nuanced
+rules before giving a filtered text archive to Claude, ChatGPT or another cloud
+assistant. For example, it could identify sensitive health discussions, account
+recovery messages or client-specific confidential topics that keyword rules miss.
+This is an adaptation option; the shipped exporter does not include a local-model
+filtering backend, and the optional Codex analyzer is not such a backend.
+The local model could help develop reusable Python rules from private examples,
+or classify/redact individual messages at runtime. Those are separate choices:
+reviewed Python rules can then run without inference; model-based filtering needs
+local compute and its own repeatability, failure and quality checks.
+
+One possible flow is: private originals → deterministic security exclusions →
+local-model classification/redaction → validated filtered folder → cloud AI
+retrieval. For clients requiring local-only processing of originals, verify the
+model runner actually performs inference locally and has no hosted fallback,
+content telemetry or remote embedding calls. Keep prompts, caches, debug logs
+and review queues private too. Use synthetic examples for a cloud setup agent;
+return aggregate results rather than raw messages or sensitive model explanations.
+
+Agree on the client's exclusion/redaction policy and test it against representative
+private examples locally. Preserve originals separately, bind decisions to content
+revisions and policy/model versions, and review uncertain cases before release.
+A failed or uncertain classification should not silently publish raw text. Apply
+the checks to OCR, transcripts and attachments as well as message bodies; exporting
+a screenshot can bypass text redaction. Check retained useful context and leakage,
+not just how many messages were removed. No classifier guarantees perfect privacy.
+
+Recognizable password-reset links are a hard exclusion in the supplied code:
+the containing source is withheld, including its attachments, regardless of a
+work label. Explicit reset/recovery language also catches opaque shortened links.
+An opaque link with no identifying context cannot reliably be recognized by
+these rules. Refresh existing outputs after filter changes; local replacement or
+Drive updates do not retract previous document revisions, provider copies or
+cached answers. Previously uploaded images need a separate withdrawal check.
 
 ## Google connection and publication
 

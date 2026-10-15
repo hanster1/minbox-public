@@ -143,6 +143,31 @@ class IncrementalTests(unittest.TestCase):
             self.assertTrue(hard_excluded(text))
         self.assertFalse(hard_excluded('The budget is 123456 dollars.'))
 
+    def test_password_reset_links_without_numeric_codes(self):
+        for text in (
+            'Reset your password: https://example.invalid/t/opaqueletters',
+            'https://example.invalid/account/password_reset/opaqueletters',
+            'https://example.invalid/password/reset?token=opaqueletters',
+            'https://example.invalid/?flow=reset%2Dpassword',
+            'https://example.invalid/%2572eset?token=opaqueletters',
+            'You requested a password reset: https://short.invalid/opaqueletters',
+            'Recover your account: https://short.invalid/opaqueletters',
+            'HTTPS://EXAMPLE.INVALID/PasswordReset?token=opaqueletters',
+            'example.invalid/password-reset/opaqueletters',
+            'https://example.invalid/forgot_password?key=opaqueletters',
+            'https://example.invalid/change-password?key=opaqueletters',
+            'To reset the password, go to https://short.invalid/opaqueletters',
+        ):
+            with self.subTest(text=text):
+                self.assertTrue(hard_excluded(text))
+        for text in ('Review https://example.invalid/project/notes',
+                     'Review https://example.invalid/presets?token=presets',
+                     'Review https://presets.example.invalid/preset-library',
+                     'We should improve the password reset screen.',
+                     'Please discuss our password manager at https://example.invalid/meeting'):
+            with self.subTest(text=text):
+                self.assertFalse(hard_excluded(text))
+
     def test_owner_isolation_and_exact_scope(self):
         self.archive.seed('Owner A', [source()], [decision()])
         other = [source(owner='Owner B')]

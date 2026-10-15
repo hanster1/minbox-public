@@ -8,6 +8,12 @@ def _url(doc):
     return 'https://docs.google.com/document/d/' + doc
 
 
+def _security_excluded(source):
+    return hard_excluded('\n'.join([source['text'],
+        *(a.get('ocr_text', '') for a in source.get('attachments', [])),
+        *(p['value'] for p in source.get('phrases', []))]))
+
+
 def run(config, snapshot, client, analyzer):
     owner, docs = config['owner'], config['documents']
     policy = config.get('analysis_policy','archive-work-v1')
@@ -74,7 +80,7 @@ def run(config, snapshot, client, analyzer):
         corrections = ledger.ingest(owner, correction_records, registry)
         labels = {s['source_id']: corrections['effective_labels'][s['friendly_id']] for s in sources}
         for s in sources:
-            if hard_excluded(s['text']) or s['friendly_id'] in spam_targets:
+            if _security_excluded(s) or s['friendly_id'] in spam_targets:
                 labels[s['source_id']] = 'spam'
         loom_overrides = {s['source_id']: labels[s['source_id']] for s in looms
                           if s['friendly_id'] in active_targets}
@@ -98,7 +104,7 @@ def run(config, snapshot, client, analyzer):
         corrections = final_corrections
         labels = {s['source_id']: corrections['effective_labels'][s['friendly_id']] for s in sources}
         for source in sources:
-            if hard_excluded(source['text']) or source['friendly_id'] in spam_targets:
+            if _security_excluded(source) or source['friendly_id'] in spam_targets:
                 labels[source['source_id']] = 'spam'
         records = {**message_records, **loom_records}
         visible_messages = [s for s in messages if labels[s['source_id']] == 'work']

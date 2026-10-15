@@ -4,6 +4,14 @@ Choose the combination of convenience, access and upkeep that fits the client. M
 
 For direct access to an always-on computer without cloud storage, start with the [local filtered export](LOCAL_EXPORT.md), then choose a native-app computer connection or a compatible authenticated search connector. A passing Drive test does not establish direct local access.
 
+Decide which data may reach a cloud AI before granting access. Routine Python
+filtering uses no model, but a cloud setup agent can receive originals through
+its tools, and broad computer access can let an answering app read beyond the
+filtered folder. Clients can instead prepare their release folder using local
+model inference and expose only that folder through an enforced boundary. This
+is an optional architecture, not an included local-model integration; see
+[data boundaries and filtering options](REFERENCE_GUIDE.md#who-sees-the-originals).
+
 ## Compare the options
 
 | Route | Convenience and upkeep | Access considerations | What to verify |
@@ -61,6 +69,6 @@ Use small searches and selected source reads to limit tokens. Reading every arch
 - Cloud-shell requests to a loopback service and a separate LAN fixed-marker service timed out. The LAN service passed local checks before/after and observed no remote request. These results do not identify the routing/firewall cause or rule out every supported route.
 - Ordinary Grok chat retrieved the real archive entry document through Google Drive on the web; returned counts/headings and a source link matched an independent read. The owner then confirmed a fresh-read check passed in the Grok Android app. This establishes entry-document retrieval on both surfaces, not changed-source freshness, message-level answers or project-specific behavior.
 - A local filtered-only export and separate refresh timer now run on the always-on archive host without Google retrieval. Native ChatGPT/Grok Bot run in a private remote graphical session. Grok Bot registered the host and passed its first synthetic local read with owner approval. After the owner selected broad local convenience access plus scoped Auto Review rules, an Android-initiated read returned the changed synthetic value matching the private receipt, without desktop approval. Grok Bot also freshly read the actual local export entry file and listed its text parts; facts matched the local manifest. This is not yet message-level question-answering or reboot acceptance.
-- ChatGPT computer-access consent completed and its profile shows the archive host Connected. After owner confirmation, its dot created a local task and returned the exact synthetic Version 1 value from that host. The fixture was then changed to Version 2; Android fresh-read and actual filtered archive/project acceptance remain pending. Isolated desktop operation is a separate untested option. A connected coding-agent Drive read does not substitute for ChatGPT app acceptance. Documentation availability is not a completed client trial.
+- ChatGPT computer-access consent completed and its profile shows the archive host Connected. After owner confirmation, its dot created a local task and returned the exact synthetic Version 1 value from that host. After the fixture changed to Version 2, an Android-initiated fresh read returned the exact new private value without desktop approval. Actual filtered archive/project acceptance remains pending while security-link filtering is reviewed. Isolated desktop operation is a separate untested option. A connected coding-agent Drive read does not substitute for ChatGPT app acceptance. Documentation availability is not a completed client trial.
 
 Keep exact account bindings, folder IDs, message contents and test receipts private. Record portable lessons and verified limitations here. Recheck vendor documentation and actual account availability when adapting these options.

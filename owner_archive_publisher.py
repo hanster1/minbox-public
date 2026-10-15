@@ -170,7 +170,10 @@ def run(config, snapshot, client, *, progress=None):
         messages, looms = [], []
         for source in sources:
             filter_texts = [source['text'], *(a.get('ocr_text', '') for a in source.get('attachments', []))]
-            reason = ('hard_excluded' if any(hard_excluded(text) for text in filter_texts) else
+            if source['kind'] == 'loom':
+                # Inspect the actual rendered phrases as well as stored text.
+                filter_texts.append('\n'.join(p['value'] for p in source.get('phrases', [])))
+            reason = ('hard_excluded' if hard_excluded('\n'.join(filter_texts)) else
                       'explicit_spam' if source['friendly_id'] in active_spam or labels[source['source_id']] == 'spam' else
                       'empty' if not source['text'].strip() and not source.get('attachments') else None)
             if reason:

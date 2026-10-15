@@ -10,6 +10,11 @@ The included implementation keeps captured texts and available images in a
 private Google Drive folder. A preferred AI app can search it through its own
 Drive connection. Collection and full archive publication require no AI model.
 
+That does not restrict what the setup agent or a broadly authorized AI app can
+read. Review [data boundaries and optional local-model filtering](REFERENCE_GUIDE.md#who-sees-the-originals)
+before exposing originals. A client can adapt the pipeline to filter locally
+and release only the resulting text folder to a cloud assistant.
+
 ## Get started
 
 On the computer you will leave running, open a coding agent that can run local

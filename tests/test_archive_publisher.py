@@ -51,6 +51,17 @@ def setup(root):
 
 
 class PublisherTests(unittest.TestCase):
+    def test_reset_links_in_rendered_phrases_override_seeded_work(self):
+        with tempfile.TemporaryDirectory() as root:
+            config, snapshot = setup(root)
+            client, analyzer = Client(), Analyzer()
+            snapshot['sources'][1]['phrases'][0]['value'] = (
+                'Reset your password: https://example.invalid/t/opaqueletters')
+            result = run(config, snapshot, client, analyzer)
+            self.assertEqual((result['work_messages'], result['work_looms']), (1, 0))
+            self.assertNotIn('opaqueletters', str(client.bodies))
+            self.assertEqual(analyzer.calls, 0)
+
     def test_seed_idle_withdrawal_dependencies_and_undo(self):
         with tempfile.TemporaryDirectory() as root:
             config,snapshot=setup(root);client=Client();analyzer=Analyzer()

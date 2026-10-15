@@ -2,6 +2,16 @@
 
 `local_archive_export.py` builds a real folder of filtered UTF-8 text files from an existing local Minbox archive. It makes no Google, AI or network calls. This is an optional output for direct computer access or the [read-only search adapter](READ_ONLY_SEARCH.md); it does not replace existing Drive publication.
 
+This describes routine export, not what a setup/debugging agent can access.
+A cloud-backed coding agent may see originals returned by its tools. Clients
+who want originals kept away from cloud models can adapt the pipeline to use
+local-model filtering before releasing an output folder; that backend is not
+included here. See [data boundaries and local-model filtering](REFERENCE_GUIDE.md#who-sees-the-originals).
+The supplied security rules exclude sources containing recognizable password-reset
+links, including OCR/transcript matches. They are useful safeguards, not a complete
+secret detector. Limit the answering app's actual permissions to the released
+folder when enforcing this boundary matters.
+
 ## Inputs and invocation
 
 Use an existing archive database, the owner's committed local correction ledger, and an explicit phone-folder policy. The correction ledger is mandatory: failure to read it does not fall back to an uncorrected export. This trial implements an existing-installation export, not a complete standalone collector/onboarding path.
@@ -49,6 +59,12 @@ On the tested Omarchy installation, the official ChatGPT installer's direct full
 
 ## Evidence
 
-Twenty synthetic export tests cover filtering/publisher counts, correction undo, phone observations, source/ledger change refusal, safe atomic replacement, stale removal, path refusals, failed-write preservation and standalone operation. The combined repository suite ran 527 tests with five optional skips and no failures.
+Twenty-one synthetic export tests cover filtering/publisher counts, correction undo, phone observations, source/ledger change refusal, safe atomic replacement, stale removal, path refusals, failed-write preservation and standalone operation. The combined repository suite ran 527 tests with five optional skips and no failures.
 
-A live Linux export produced a private folder with counts matching the current filtered publication, and a scheduled refresh completed successfully. Native ChatGPT/Grok Bot and the remote virtual display were installed/started on the archive host. Grok Bot's first synthetic local read matched the expected value with owner approval; an Android-initiated read then matched a changed value without desktop approval under the owner's chosen convenience permissions. A subsequent actual local entry-file read matched local manifest facts. ChatGPT also passed its first synthetic local read after owner confirmation; a changed-value Android read remains pending. Message-level answers and reboot checks remain pending. No Google retrieval was used to generate the local folder.
+A live Linux export produced a private folder with counts matching the current filtered publication, and a scheduled refresh completed successfully. Native ChatGPT/Grok Bot and the remote virtual display were installed/started on the archive host. Grok Bot's first synthetic local read matched the expected value with owner approval; an Android-initiated read then matched a changed value without desktop approval under the owner's chosen convenience permissions. A subsequent actual local entry-file read matched local manifest facts. ChatGPT also passed its first synthetic local read after owner confirmation; its changed-value Android read also matched the new private value without desktop approval. Message-level answers and reboot checks remain pending. No Google retrieval was used to generate the local folder.
+
+A later security regression pass verified reset-link exclusion in bodies, OCR and
+rendered phrases, including cross-field context. After the live repair, all detected
+reset-link sources were absent from the refreshed local output; originals remained
+private and unchanged. This does not establish that every possible secret or
+context-free opaque link is detected.

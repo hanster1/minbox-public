@@ -18,7 +18,7 @@
       "sha256": "877e9b360d9830d0926e05709e21eeec96bcc599c9f62fc50a0b366a98dbab99"
     },
     "archive_incremental.py": {
-      "sha256": "dd541438a414b6aef58e0a8fe0dad18eab13b3e8250cbb7b726cfe58faf9e7b4"
+      "sha256": "17a3cc5c2d1e6a4aafb47a32f865c0d6d33da7bee0e1746a65f1114bfa1f775c"
     },
     "archive_io.py": {
       "sha256": "70edbc992ffcc684e255598368ff467ecfb1cd43b564957aafffd09907a0463d"
@@ -27,7 +27,7 @@
       "sha256": "11450526d75bed2814d98be024b9851cb11bd4315d7fec21b6bd64832bcc3cd9"
     },
     "archive_publisher.py": {
-      "sha256": "0c9732f616e2961f3997bcde906a446fbc811ef447b65b47f4ec7c0f03f5822a"
+      "sha256": "560107de1117895fd010fc4e0767e5d7b8f34d06a8392bd0b5c6cfe7372d7a72"
     },
     "archive_snapshot.py": {
       "sha256": "42f3111155fcd941426edd7f64049e8f8d0b8e7f100533cef01a3cd480695744"
@@ -93,7 +93,7 @@
       "sha256": "9ff9cb76a111932fc8f9a4f28da61b952c89b0c8d0a6f8e109a60de212c7f636"
     },
     "owner_archive_publisher.py": {
-      "sha256": "243181bb893db4bc2e90baf53e17fc136bbea5aa1848d56cef4246c61aaf8933"
+      "sha256": "80d66f2e76a18205a47e3f6240d98d82af352cbaf62697a048eed43444ae0850"
     },
     "owner_onboarding.py": {
       "sha256": "ac712284d7eabb07b2691f9ed5c06f6aa50d7630d2d9882c04afacb2e9d96b15"
@@ -168,13 +168,13 @@
       "sha256": "729da7dcd927fbadff2d52da3303ac6e9a96aa8de5b2d96e47fb62acd00e6741"
     },
     "tests/test_archive_incremental.py": {
-      "sha256": "35d5469cf005124324f91681e92989c9d45fa6d4f7e34adaa68603cc90e7676b"
+      "sha256": "63a35838f6ce87b1a8225d6b0fd7cc4b868d6d6da6fcd162a5d4baac3f385ab5"
     },
     "tests/test_archive_io.py": {
       "sha256": "7bd0067677e3c8e23e1f16caf93f55c09d3e143cfc415744bca81e44c5dfe682"
     },
     "tests/test_archive_publisher.py": {
-      "sha256": "0c9b3478be8538654ed95c8946a0dbdeecc96a047889b5f3c2a2b5266ce440a1"
+      "sha256": "8e31c0ff835c521c1ddbeca8f689e48be642eb6161b18ba65797b55f83219bdd"
     },
     "tests/test_archive_snapshot.py": {
       "sha256": "692b11d8762fa9e00f6aba6155a447b8410a6a57dd0961abee94810d85c2344a"
@@ -279,10 +279,10 @@
       "sha256": "8bee7d55ba00cbc8fc78584099858202d548a3bc69b0fa1fdf0a776e9a2ed6c1"
     },
     "local_archive_export.py": {
-      "sha256": "c9d31578e3a6ab5a46cf6472a172a82ba022a5efcede8f8ec790dacb2a953fc5"
+      "sha256": "100c7c005057f327d073511eee7bcf9a000d2bec5814e07b3ea3548d88e38909"
     },
     "tests/test_local_archive_export.py": {
-      "sha256": "9a95fc3d54ac781b4c898b16c6cce78908b7a8f6cc2e695c7ee708b9990d846e"
+      "sha256": "9f1099683664357dca4e49b9562d04bd2e9f6d57c9ef5e955d87d3bd87d3117e"
     }
   }
 }
