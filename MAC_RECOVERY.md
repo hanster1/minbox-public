@@ -1,12 +1,26 @@
 # Mac recovery and continuation
 
-Use this when setup stops, a scheduled job fails, or the owner opens a later local coding-agent session in his Minbox source folder. Recovery preserves the existing
-owner **Casey**, archive, account/folder/Doc bindings, correction history, selected
-Python and pauses. It does not restart onboarding from empty defaults.
+Use this agent recipe to restore the existing iPhone/Mac collector and filtered
+archive. Then check fresh access from the owner's phone AI app.
+[README](README.md) gives the full path. [PHONE_ACCESS](PHONE_ACCESS.md) gives
+final phone acceptance. [REFERENCE_GUIDE](REFERENCE_GUIDE.md) explains choices
+and privacy. Drive repair applies only to the selected Drive path.
+
+**Prerequisites:** the owner's working coding agent CLI with a capable reasoning
+model, the actual source checkout and access to the existing private runtime.
+The diagnostic launcher needs standard-library Python 3.9+; application repair
+needs the Python version in MAC_SETUP.md. **Agent:** perform technical repair.
+**Owner:** handle account consent, Apple permission prompts and phone checks.
+
+Use this when setup stops, a scheduled job fails or the owner resumes a later
+agent session in the Minbox source folder. Preserve the existing owner **Casey**,
+archive, account/folder/Doc bindings, correction history, selected Python and
+pauses. Resume the existing installation. Do not start from empty defaults.
 
 ## Open the agent and resume
 
-Open the available usable coding agent in `~/Projects/minbox-text-archive` and say:
+Open the usable coding agent in the actual source checkout. For a new checkout,
+MAC_SETUP.md uses `~/Projects/minbox-public`. Say:
 
 > Resume or repair Casey's existing Minbox installation. Read AGENTS.md,
 > MAC_ONBOARDING_AGENT.md and MAC_RECOVERY.md. Start with the content-free report,
@@ -92,20 +106,23 @@ archive_python="$archive_support/venv/bin/python"
 "$archive_python" mac_setup.py update --owner Casey --archive-root "$archive_data"
 ```
 
-Use actual customized paths when present. Saved Python, Messages source, bounds,
-publisher binding and enabled state must survive. Review inconsistencies and
-modified tracked files; do not reset Git, delete manifests, change hashes blindly,
-replace credentials, or overwrite pauses. Git updates require reviewed clean or
-preserved local state and deliberate reconciliation; fetch and reconcile reviewed source revisions while runtime paths remain unchanged.
+Use the actual customized paths when present. Preserve saved Python, Messages
+source, bounds, publisher binding and enabled state. Review inconsistencies and
+modified tracked files. Do not reset Git or delete manifests. Do not change
+hashes without review. Do not replace credentials or overwrite pauses.
+Before Git updates, review the working tree and preserve local edits.
+Fetch and reconcile reviewed source revisions. Keep runtime paths unchanged.
 
 For performance configuration changes, use the shared guide's Mac digest/rebind
 procedure. A reviewed publisher JSON edit must be rebound with an `install`
 that preserves all actual settings and pauses; do not change recorded hashes to
 bypass the saved-settings update check.
 
-Verify a benign scheduled fresh capture and native Doc readback/status afterward,
-plus relevant repeat/idle behavior. Record what actually passed; successful
-launchctl or source tests alone do not establish live Mac acceptance.
+Verify a harmless new message through scheduled capture. For Drive, verify
+native Doc readback and status. Check repeat and idle behavior as relevant.
+Use [PHONE_ACCESS](PHONE_ACCESS.md) to test fresh content in the phone AI app.
+Record the actual results. Passing launchctl or source tests alone does not prove
+live Mac acceptance.
 
 ## Local health and human escalation
 
@@ -120,12 +137,13 @@ State/report are under `health/Casey`. The per-user health label is
 `com.minbox-text-archive.health.Casey`, checked every 60 seconds after explicit
 `--enable-monitor` activation. Preserve optional delivery and paused settings.
 
-The controller retries only enabled, loaded, stopped jobs with `kickstart`
-without `-k`; it never kills busy workers, resumes pauses, auto-enables jobs or
-invents missing job settings. Three safe attempts and thirty minutes of unresolved
-essential capture/import/full-publication outage trigger one human emergency per
-episode. Auth/TCC/privacy/integrity require immediate human attention. Optional
-Loom/work analysis stays local; no routine, reminder or recovery emails are sent.
+The controller retries only enabled, loaded, stopped jobs. It uses `kickstart`
+without `-k`. It never kills busy workers or resumes pauses. It does not enable
+jobs automatically or invent missing settings. Three safe attempts and thirty
+minutes of unresolved essential capture/import/full-publication outage trigger
+one human emergency per episode. Auth, TCC, privacy and integrity failures need
+immediate human attention. Optional Loom and work-analysis issues stay local.
+No routine, reminder or recovery emails are sent.
 
 Default delivery is none with a local emergency queue. If Casey wants emergency
 SMTP/ntfy delivery, configure his chosen destination/credentials privately and

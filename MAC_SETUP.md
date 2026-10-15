@@ -1,5 +1,24 @@
 # Mac / iPhone setup with a local coding agent
 
+Use this technical recipe to collect iPhone texts on an always-on Mac and build
+a filtered archive. The owner can then ask a preferred phone AI app questions
+about it. Start with [README](README.md). Finish with the phone checks in
+[PHONE_ACCESS](PHONE_ACCESS.md). Use [REFERENCE_GUIDE](REFERENCE_GUIDE.md) for
+storage choices, access choices and privacy boundaries.
+
+**Prerequisites:** an installed coding agent CLI with a capable reasoning model
+and working model access; the owner's ordinary Mac login; Python 3.11+ with
+sqlite3; Git; private runtime storage; and iPhone messages synced to Messages on
+this Mac. The Mac needs an available logged-in session for scheduled collection.
+The support report alone can use standard-library Python 3.9+.
+For the Drive recipe in section 6, also prepare the application in GOOGLE_SETUP.md.
+Drive is one publication option. A different phone access path needs its own
+implementation and acceptance checks.
+
+**Agent:** run the commands and inspect the results. **Owner:** handle sign-in,
+account consent, macOS permission prompts and phone checks. Commands below are
+references for the agent, not a command checklist for the owner.
+
 The read-only adapter, images and per-user installer are fixture-tested on Linux.
 Live Mac/iPhone permissions, synchronization, attachment access and launchd remain
 unverified. Do not call this a complete phone backup. This independent installation
@@ -12,9 +31,10 @@ run local commands. The agent performs technical setup; the owner handles accoun
 consent, Apple permissions and phone checks. No ZIP or prepared source folder is
 required. Ask your agent to use this repository:
 
-> Use https://github.com/hanster1/minbox-public to set up this Mac to sync my
-> iPhone text messages to my private Google Drive archive. Read AGENTS.md,
-> inspect existing state, do the technical work and explain each approval.
+> Use https://github.com/hanster1/minbox-public to collect my iPhone texts on
+> this Mac and build a filtered archive that my preferred phone AI app can use.
+> Read AGENTS.md and the platform guides. Inspect existing state, help choose
+> an access path, do the technical work and explain each required approval.
 
 **Mac coding agent:** clone into `~/Projects/minbox-public` if no checkout exists.
 Inspect the origin, branch and edits before updating an existing checkout. Use
@@ -40,12 +60,13 @@ installs must reuse their saved paths, source, limits, publisher and pauses.
 
 ## 1. Confirm iPhone messages reach Messages on this Mac
 
-**Mac owner and iPhone owner:** verify the Mac and iPhone use the intended Apple Account, that Messages
-on the Mac has the expected conversations, and that Messages in iCloud / text
-message forwarding is configured as appropriate for his devices. Wait for initial
-synchronization. Verify a benign incoming and outgoing message on **both** devices.
-Mac database counts alone cannot establish iPhone coverage. Do not request Apple
-passwords, copy another user's database, or change his account automatically.
+**Mac owner and iPhone owner:** confirm the intended Apple Account on both devices.
+Check that Messages on the Mac shows the expected conversations. Check Messages
+in iCloud and text message forwarding as needed for these devices. Wait for the
+initial sync. Compare a harmless incoming and outgoing message on **both** devices.
+Mac database counts alone do not prove iPhone coverage.
+**Agent:** do not request Apple passwords. Do not copy another user's database.
+Do not change the owner's Apple account automatically.
 
 Apple references: [Messages in iCloud on Mac](https://support.apple.com/en-gb/guide/messages/-ichte16154fb/mac)
 and [iCloud Messages setup](https://support.apple.com/en-ca/guide/icloud/mm0de0d4528d/1.0/icloud/1.0).
@@ -104,13 +125,14 @@ without its WAL or assume a bare file copy is consistent. The reader opens the
 source read-only with a transaction; it never sends messages or writes chat.db.
 Check-only reports schema/health and makes no archive import.
 
-**Mac owner:** if permission is denied, use **System Settings → Privacy & Security →
-Full Disk Access** for the actual interpreter/application responsible for this
-reader, as required by his macOS version. Restart the relevant process after a
-permission change. Terminal permission may allow an interactive test while the
-LaunchAgent's interpreter still fails. Test the installed scheduled job separately.
-Do not bypass TCC, edit its database, disable protections or grant unrelated tools
-broad access. macOS may require an additional user-visible Messages-data approval.
+**Mac owner:** if permission is denied, open **System Settings → Privacy & Security →
+Full Disk Access**. Approve the actual interpreter or application responsible for
+this reader as required by your macOS version. Restart the affected process after
+a permission change. Terminal permission can pass an interactive test while the
+LaunchAgent interpreter still fails. Test the installed scheduled job separately.
+Do not bypass TCC. Do not edit its database or disable protections.
+Do not grant unrelated tools broad access. macOS can require an additional
+user-visible Messages-data approval.
 [Apple privacy settings](https://support.apple.com/en-au/guide/mac-help/mchl211c911f/mac).
 
 `doctor` does not verify Apple identity, sync completeness, Google permissions or
@@ -127,28 +149,32 @@ than guessing fields. Never paste message bodies or database dumps into chat/log
 "$archive_python" "$archive_checkout/archive_cli.py" --root "$archive_data" status
 ```
 
-The collector preserves stable message/thread identity, original normalized imports
-and content revisions. It reconciles bounded available history, including older
-edited rows, and imports only new/changed records. An unchanged poll creates no
-new raw import or artificial import freshness. Collector status records liveness
-separately. Receipts alone do not cause another AI analysis. Previously verified binary-body
-decodes are reused by content hash and decoder-policy version on later polls.
+The collector preserves stable message and thread identity. It retains original
+normalized imports and content revisions. It reconciles available history within
+its bounds, including older edited rows. It imports only new or changed records.
+An unchanged poll creates no new raw import or artificial import freshness.
+Collector status records liveness separately. Receipts alone do not cause another
+AI analysis. Later polls reuse verified binary-body decodes by content hash and
+decoder-policy version.
 
-Inspect the content-free collector report for limits and body/schema gaps before
-publishing. Default limits are 100,000 message rows and 64 MiB of normalized records.
-`--max-messages` and `--max-bytes` can adjust bounded collection and installer
-LaunchAgent plans (use the same limits on later reinstalls); exceeding
-a bound aborts the whole import. Large histories are not silently declared complete. Current
-bodies can be decoded; previous edit history is not reconstructed. Opaque original
-attributed-body/edit-history blobs up to 512 KiB each are retained privately in
-immutable normalized imports for future decoder repairs, never supplied to AI.
-Oversized blobs are not backed up; recovering those requires the original Messages
-database. This remains a bounded archive, not a complete Apple database backup. Reaction/system
-events, recognized unsent messages and undecodable bodies stay out of AI work
-notes even if someone marks them work. Available image file bytes are captured; non-image attachment bytes
-are not included in this path. Source row disappearance is not proof of deletion and does not silently
-erase retained evidence. Unsupported/unknown retraction behavior needs a fixture
-and explicit handling before claiming it works.
+Before publication, inspect the content-free collector report for limits and
+body/schema gaps. Default limits are 100,000 message rows and 64 MiB of normalized
+records. Use `--max-messages` and `--max-bytes` to adjust collection and installer
+LaunchAgent plans. Keep the same limits on later reinstalls. Exceeding a bound
+aborts the whole import. Do not describe a bounded import as complete history.
+
+The reader can decode current bodies. It does not reconstruct previous edit
+history. It privately retains opaque original attributed-body and edit-history
+blobs up to 512 KiB each in immutable normalized imports. These support later
+decoder repairs and are never supplied to AI. Oversized blobs are not backed up.
+Their recovery needs the original Messages database. This is a bounded archive,
+not a complete Apple database backup.
+
+Reaction and system events, recognized unsent messages and undecodable bodies
+stay out of AI work notes. A work label cannot override this rule. This path
+captures available image bytes. It does not capture non-image attachment bytes.
+A missing source row does not prove deletion and does not erase retained evidence.
+Unknown retraction behavior needs a fixture and explicit handling before acceptance.
 
 Privately inspect one incoming, outgoing, group and attributed-body record, plus
 an edit and unsend if available. Match benign test messages to what Messages shows;
@@ -213,15 +239,18 @@ into the same private environment, then connect/provision locally:
   --runtime-dir "$archive_support/publisher"
 ```
 
-Replace email/client path with Casey's actual values locally. Omit --host: this
-keeps Casey's credentials and archive on his Mac. Casey creates and names one private folder in his own My Drive, confirms its link,
-then selects only that folder through the constrained Google Picker. The name is
-his choice and can change later: the binding uses the stable folder ID. The helper
-creates/reuses three native Docs (Start Here, Corrections, Status) inside that
-selected root and an owner_all publisher configuration. Yearly message/Loom Docs are
-created dynamically by the publisher. No manual Doc IDs or Codex login are needed
-for this full private mirror. This preparation command does not publish or start
-jobs. Stable config/Doc identities survive retries; existing Corrections are kept.
+**Agent:** replace the email and client path with the owner's actual values locally.
+Omit `--host` to keep credentials and the archive on this Mac.
+**Owner:** create and name one private folder in your My Drive. Confirm its link.
+Select only that folder through the constrained Google Picker. You can rename
+it later. The binding uses its stable folder ID.
+
+The helper creates or reuses three native Docs in that root: Start Here,
+Corrections and Status. It prepares an owner_all publisher configuration.
+The publisher creates yearly message and Loom Docs as needed. This full private
+mirror needs no manual Doc IDs or Codex login. The preparation command does not
+publish or start jobs. Retries preserve config and Doc identities. They retain
+existing Corrections.
 
 A Desktop OAuth client and enabled Google Drive, Docs and Picker APIs are prerequisites.
 Fresh authorization must grant exactly `drive.file`, with no Sheets permission.
@@ -235,15 +264,16 @@ unattended authorization is durable; the installer does not infer it offline.
 
 Read [publication performance](OWNER_ARCHIVE.md#publication-performance) before
 enabling the schedule. The shared publisher supports optional bounded revision
-reads and part/image budgets; keep defaults until local measurements justify a
-trial. Cold proofs still need full reads. On an existing Mac installation, follow
-the guide's runtime-refresh and publisher-config digest/rebind procedure rather
-than changing JSON and blindly running a saved-settings update. Live Linux
-timings do not establish Mac/iPhone acceptance.
+reads and part/image budgets. Keep defaults until local measurements justify a
+trial. Cold proofs still need full reads. For an existing Mac installation, follow
+that guide's runtime-refresh and publisher-config digest/rebind procedure.
+Do not change JSON and run a saved-settings update without that review.
+Linux timings do not prove Mac/iPhone acceptance.
 
-**Mac owner:** explicitly authorize publishing your all-captured filtered private
-archive. **Mac coding agent:** run once, verify readback/filtering, then verify a
-repeat with zero writes and zero model calls. Then enable its scheduled publisher separately:
+**Mac owner:** explicitly authorize publication of your all-captured filtered
+private archive. **Mac coding agent:** run the publisher once.
+Verify readback and filtering. Verify a repeat with zero writes and zero model
+calls. Then enable the scheduled publisher separately:
 
 ```bash
 "$archive_python" "$archive_checkout/owner_publish_cli.py" \
@@ -259,15 +289,18 @@ analysis requirements are separate. Private account/folder checks always apply.
 The publisher starts only with explicit --enable-publisher. Offline installer
 checks are not a substitute for actual authorized Drive read/write verification.
 
-**Owner, phone or computer:** connect your preferred compatible mobile AI to your own
-Google Drive yourself. Start Here contains archive links and copyable prompts. An
-optional confidence check asks that AI to quote a familiar benign message with
-its date and source Doc link through the authenticated connector. Explain that
-this checks the AI connection separately from phone capture and Drive publication;
-Casey can skip it without blocking onboarding. Ordinary URL fetching cannot read
-private Docs. If trying correction writeback later, verify saved/read-back and
-applied status; saying “recorded” alone proves neither. Personal labels retain
-messages in the full archive. Keep the folder private.
+**Owner, phone or computer:** connect your preferred compatible mobile AI to your
+Google Drive yourself. Start Here contains archive links and copyable prompts.
+Follow [PHONE_ACCESS](PHONE_ACCESS.md) for final phone acceptance. Ask for a
+harmless familiar message with its date and source Doc link. Compare the result
+with the phone. Then test a useful archive question and fresh content.
+This checks AI access separately from capture and publication. Collection can
+run while you defer the check. The phone question-answering goal remains
+unverified until it passes. Ordinary URL fetching cannot read private Docs.
+
+For optional correction writeback, verify saved/read-back and applied status.
+“Recorded” alone proves neither. Personal labels retain messages in the full
+archive. Keep the folder private.
 
 ## 7. Enable and verify local health monitoring
 
@@ -299,15 +332,16 @@ configuration. Do not copy another installation's destinations or credentials.
 Later `update` commands recover and preserve the saved monitor setting; runtime
 enable flags belong to an explicit reviewed `install`, not a source update.
 
-Recovery only retries enabled, loaded, stopped jobs using `kickstart` without
-`-k`. It respects pauses, never kills busy work, auto-enables jobs or guesses a
-missing job's settings. A pending installer journal suppresses health actions.
-Three safe attempts plus thirty minutes of unresolved essential outage lead to
-one human emergency per episode; auth, TCC, privacy and integrity failures require
-human attention immediately. Optional Loom/work-analysis failures remain local.
-There are no routine, reminder or recovery emails. Local monitoring cannot send
-while the Mac sleeps, loses network, or stops running; external heartbeat remains
-unproven. See [MAC_RECOVERY.md](MAC_RECOVERY.md) for triage and continuation.
+Recovery retries only enabled, loaded, stopped jobs. It uses `kickstart` without
+`-k`. It respects pauses and never kills busy work. It does not enable jobs
+automatically or guess missing settings. A pending installer journal suppresses
+health actions. Three safe attempts plus thirty minutes of unresolved essential
+outage trigger one human emergency per episode. Auth, TCC, privacy and integrity
+failures need human attention immediately. Optional Loom and work-analysis
+failures remain local. There are no routine, reminder or recovery emails.
+Local monitoring cannot send while the Mac sleeps, loses network or stops running.
+External heartbeat remains unproven. Use [MAC_RECOVERY.md](MAC_RECOVERY.md) for
+triage and continuation.
 
 ## Troubleshooting and safe updates
 
@@ -332,12 +366,12 @@ export TMPDIR="$archive_support/test-tmp"
 ```
 
 Use the actual existing environment/archive paths if customized. The update
-recovers the saved Python, Messages source, collection limits, publisher config
-and enabled state from verified installed files. It preserves a disabled publisher
-and refuses inconsistent collector/Loom pause states. Edited or untracked files
-and changed publisher configuration need review before updating. Older installs
-without a publisher-config binding need one reviewed `install` with their exact
-original settings first. The helper does not fetch Git, change dependencies,
+recovers saved Python, Messages source, collection limits, publisher config and
+enabled state from verified installed files. It preserves a disabled publisher.
+It refuses inconsistent collector/Loom pause states. Review edited or untracked
+files and changed publisher configuration before updating. For an older install
+without a publisher-config binding, first do one reviewed `install` with its
+exact original settings. The helper does not fetch Git, change dependencies,
 request Google consent or publish messages as a test.
 
 Source compilation and read-only preflight happen before the application refresh.

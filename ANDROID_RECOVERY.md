@@ -1,9 +1,21 @@
 # Android recovery on the collection computer
 
-Start with existing bindings and sanitized status. Inspect the owner's collector
-unit, its existing socket status, import/publisher status and local health report.
-Do not print session JSON, raw logs, copied cookies or message bodies. Confirm
-phone connectivity with the owner before inferring an authentication failure.
+Use this agent recipe to restore Android collection and the existing filtered
+archive. Then verify that the owner's phone AI app can use fresh content.
+[README](README.md) gives the full path. [PHONE_ACCESS](PHONE_ACCESS.md) gives the
+phone acceptance checks. Use [REFERENCE_GUIDE](REFERENCE_GUIDE.md) for access
+choices and privacy boundaries. Drive repair applies only to a selected Drive path.
+
+**Prerequisites:** use the owner's working coding agent CLI and a capable
+reasoning model on the collection computer. Retain access to the existing
+runtime and private configuration. **Agent:** perform technical repair.
+**Owner:** handle account consent, phone pairing and device prompts.
+
+Start with existing bindings and status that contains no private content.
+Inspect the owner's collector unit and existing socket status. Inspect import
+status, publisher status and the local health report. Do not print session JSON,
+raw logs, copied cookies or message bodies. Ask the owner to confirm phone
+connectivity before treating the problem as an authentication failure.
 
 For repeated owner-publication timeouts, follow the shared
 [publication performance](OWNER_ARCHIVE.md#publication-performance) procedure.
@@ -18,10 +30,10 @@ cooldowns; active workers are not killed. Do not open a second collector or norm
 Google Messages web session to diagnose the first one. Media CLI connects only
 to the existing managed daemon and must never auto-start one.
 
-For a broken application environment, preserve the archive/config/sessions, repair
-the checkout/venv and relevant installed modules from reviewed source, run focused
-synthetic checks, then restart only affected owned jobs. Never initialize a new
-archive or substitute credentials to bypass a failure.
+For a broken application environment, preserve the archive, config and sessions.
+Repair the checkout, venv and affected installed modules from reviewed source.
+Run focused synthetic checks. Then restart only affected jobs for this owner.
+Never initialize a new archive or substitute credentials to bypass a failure.
 
 An existing-pairing token refresh can be attempted using the explicit candidate
 helper in GMKIT_MEDIA.md. Stop that owner's collector, preserve the private input,
@@ -36,7 +48,9 @@ Close setup/competing tabs afterward. Drive authorization repair is separate:
 retain account/root/Doc IDs and use limited consent or DRIVE_MIGRATION.md. Never
 make files public or revoke a newly minted grant as a second migration step.
 
-Verify browser closure, collector restart, actual fresh capture/private publication
-and restored prior schedules. Leave private rollback/checkpoint facts and mark
-natural renewal, reboot or offline catch-up unverified until observed. Notifications
-are limited to human-required emergencies under HEALTH_ALERTS.md.
+Confirm that setup browser windows are closed. Verify the restarted collector.
+Verify fresh capture and private publication for the chosen path. Restore only
+the schedules that were active before repair. Test fresh phone access through
+[PHONE_ACCESS](PHONE_ACCESS.md). Keep rollback and checkpoint facts private.
+Mark natural renewal, reboot and offline catch-up unverified until observed.
+HEALTH_ALERTS.md limits notifications to emergencies that need human action.
