@@ -1,5 +1,7 @@
 from contextlib import redirect_stdout
 import io
+import base64
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -113,7 +115,7 @@ class LocalExportTests(unittest.TestCase):
                  '2026-10-14T12:00:00Z', 'https://www.loom.com/share/' + video))
 
     def export(self, **updates):
-        args = dict(phone_spam_policy='spam_and_blocked')
+        args = dict(phone_spam_policy='spam_and_blocked', include_images=False)
         args.update(updates)
         return export_archive(self.root, 'Casey', self.ledger, self.destination, **args)
 
@@ -122,6 +124,156 @@ class LocalExportTests(unittest.TestCase):
 
     def generation(self):
         return {p.name: p.read_bytes() for p in self.destination.iterdir()}
+
+    def image(self, marker=b'', **updates):
+        # Valid one-pixel PNG; unique trailing markers give independent hashes.
+        raw = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jwZkAAAAASUVORK5CYII=') + marker
+        digest = hashlib.sha256(raw).hexdigest()
+        folder = self.root / 'Casey' / 'attachments'
+        folder.mkdir(mode=0o700, parents=True, exist_ok=True)
+        path = folder / (digest + '.png')
+        path.write_bytes(raw)
+        path.chmod(0o600)
+        item = dict(capture_status='captured', mime_type='image/png', sha256=digest,
+                    size_bytes=len(raw), local_path=str(path), ocr_text='Synthetic image caption')
+        item.update(updates)
+        return item
+
+    def test_default_images_and_text_only_remove_images(self):
+        good = self.image()
+        self.load([self.record(1, attachments=[good, {'capture_status': 'unavailable',
+            'ocr_text': 'Unavailable image text'}])])
+        result = export_archive(self.root, 'Casey', self.ledger, self.destination,
+                                phone_spam_policy='spam_and_blocked')
+        self.assertEqual(result['published_images'], 1)
+        self.assertIn('Original image: image-', self.text())
+        self.assertIn('Visual content is not reviewed', self.text())
+        self.assertIn('Unavailable image text', self.text())
+        self.assertEqual(self.export()['published_images'], 0)
+        self.assertFalse(list(self.destination.glob('image-*')))
+        self.assertNotIn('Original image:', self.text())
+    def test_default_image_cli_and_deduplication_with_safe_references(self):
+        image = self.image()
+        self.load([self.record(1, attachments=[image]), self.record(2, attachments=[image])])
+        output = io.StringIO()
+        with redirect_stdout(output):
+            main(['--archive-root', str(self.root), '--owner', 'Casey',
+                  '--correction-ledger', str(self.ledger), '--destination', str(self.destination),
+                  '--phone-spam-policy', 'spam_and_blocked'])
+        result = json.loads(output.getvalue())
+        self.assertEqual(result['published_images'], 1)
+        filename = 'image-' + image['sha256'] + '.png'
+        self.assertEqual((self.destination / filename).read_bytes(), Path(image['local_path']).read_bytes())
+        self.assertEqual(self.text().count('Original image: ' + filename), 2)
+        self.assertIn('Original images: 1', self.text())
+        self.assertIn('OCR filtering does not establish', self.text())
+        self.assertNotIn(image['local_path'], self.text())
+        for content in (output.getvalue(), (self.destination / MANIFEST).read_text()):
+            for private in (str(self.root), 'archive://', 'Casey', 'Synthetic Sender'):
+                self.assertNotIn(private, content)
+        with redirect_stdout(io.StringIO()):
+            main(['--archive-root', str(self.root), '--owner', 'Casey',
+                  '--correction-ledger', str(self.ledger), '--destination', str(self.destination),
+                  '--phone-spam-policy', 'spam_and_blocked', '--text-only'])
+        self.assertFalse((self.destination / filename).exists())
+
+    def test_images_cannot_bypass_message_ocr_spam_or_owner_filters(self):
+        good, body, ocr, spam, phone = [self.image(str(i).encode()) for i in range(5)]
+        ocr['ocr_text'] = 'Your verification code is 123456'
+        self.load([self.record(1, attachments=[good]),
+                   self.record(2, 'Reset your password: https://example.invalid/reset/t', attachments=[body]),
+                   self.record(3, attachments=[ocr]), self.record(4, attachments=[spam]),
+                   self.record(5, attachments=[phone], conversation_id='junk')])
+        self.correct([self.correction('hide', 'spam', 'M4')])
+        self.phone_spam(['junk'])
+        self.load([self.record(1, attachments=[good])], owner='Jordan')
+        # Excluded images are never read: even missing excluded files do not fail export.
+        for image in (body, ocr, spam, phone):
+            Path(image['local_path']).unlink()
+        result = self.export(include_images=True)
+        self.assertEqual(result['published_messages'], 1)
+        self.assertEqual(result['published_images'], 1)
+        self.assertEqual(len(list(self.destination.glob('image-*'))), 1)
+        self.assertNotIn('Jordan', self.text())
+        self.correct([self.correction('hide-good', 'spam', 'M1')])
+        result = self.export(include_images=True)
+        self.assertEqual(result['published_images'], 0)
+        self.assertFalse(list(self.destination.glob('image-*')))
+
+    def test_image_metadata_missing_tampered_and_links_preserve_generation(self):
+        image = self.image()
+        self.load([self.record(1, attachments=[image])])
+        self.export(include_images=True)
+        before = self.generation()
+        original = Path(image['local_path'])
+        raw = original.read_bytes()
+        for failure in ('missing', 'tampered', 'symlink', 'hardlink', 'public', 'wrong-size', 'wrong-mime', 'outside'):
+            with self.subTest(failure=failure):
+                changed = dict(image)
+                extra = self.base / 'extra'
+                if failure == 'missing': original.unlink()
+                if failure == 'tampered': original.write_bytes(b'bad image data')
+                if failure == 'symlink':
+                    original.unlink()
+                    extra.write_bytes(raw)
+                    extra.chmod(0o600)
+                    original.symlink_to(extra)
+                if failure == 'hardlink': os.link(original, extra)
+                if failure == 'public': original.chmod(0o644)
+                if failure == 'wrong-size': changed['size_bytes'] += 1
+                if failure == 'wrong-mime': changed['mime_type'] = 'image/jpeg'
+                if failure == 'outside': changed['local_path'] = str(extra)
+                self.load([self.record(1, attachments=[changed])])
+                with self.assertRaises((ValueError, OSError)):
+                    self.export(include_images=True)
+                self.assertEqual(self.generation(), before)
+                if original.exists() or original.is_symlink(): original.unlink()
+                if extra.exists(): extra.unlink()
+                original.write_bytes(raw)
+                original.chmod(0o600)
+                self.load([self.record(1, attachments=[image])])
+
+    def test_image_change_during_generation_preserves_previous(self):
+        image = self.image()
+        self.load([self.record(1, attachments=[image])])
+        self.export(include_images=True)
+        before = self.generation()
+        original_write = exporter._write_private
+        def tamper_during_write(directory, name, data):
+            original_write(directory, name, data)
+            if name == MANIFEST: Path(image['local_path']).write_bytes(b'tampered')
+        with patch.object(exporter, '_write_private', side_effect=tamper_during_write):
+            with self.assertRaisesRegex(ValueError, 'verification failed'):
+                self.export(include_images=True)
+        self.assertEqual(self.generation(), before)
+
+    def test_image_generation_has_separate_bounded_total_and_can_switch_off(self):
+        image = self.image(b'x' * 4096)
+        self.load([self.record(1, attachments=[image])])
+        text_only_bytes = self.export()['bytes']
+        # A text-sized bound does not restrict opted-in images; image generations
+        # have their own larger bound, including on verification when disabling.
+        with patch.object(exporter, 'MAX_OUTPUT_BYTES', text_only_bytes + 1000):
+            self.assertEqual(self.export(include_images=True)['published_images'], 1)
+            self.export()
+        before = self.generation()
+        with patch.object(exporter, 'MAX_IMAGE_OUTPUT_BYTES', image['size_bytes'] - 1):
+            with self.assertRaises(ValueError): self.export(include_images=True)
+        self.assertEqual(self.generation(), before)
+
+    def test_image_size_bounds_and_export_integrity(self):
+        image = self.image()
+        self.load([self.record(1, attachments=[image])])
+        self.export(include_images=True)
+        before = self.generation()
+        with patch.object(exporter, 'MAX_IMAGE_BYTES', image['size_bytes'] - 1):
+            with self.assertRaises(ValueError): self.export(include_images=True)
+        self.assertEqual(self.generation(), before)
+        selected = next(self.destination.glob('image-*'))
+        selected.write_bytes(b'edited image')
+        with self.assertRaises(ValueError): self.export(include_images=True)
+        selected.write_bytes(before[selected.name])
+        self.assertEqual(self.generation(), before)
 
     def test_reset_links_withdrawn_from_local_and_drive_even_when_labeled_work(self):
         self.load([self.record(1, 'Retained synthetic message'),
