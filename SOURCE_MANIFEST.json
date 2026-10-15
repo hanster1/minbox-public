@@ -289,6 +289,12 @@
     },
     "scripts/gmkit-spam-paging.patch": {
       "sha256": "2d7fa263c10afeb1e482bccc8df8c848e87f2aa298b7242e2349d4724666e433"
+    },
+    "scripts/add-owner": {
+      "sha256": "50076d4cdff2dd01940e9e54d70eab81779a0c4145ded13d083f31f165b23f70"
+    },
+    "tests/test_add_owner.py": {
+      "sha256": "04945cced9515420e2d6642a79e56b2c77cd71f65de92dafec8639d1b24a71f9"
     }
   }
 }

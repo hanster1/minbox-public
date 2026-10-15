@@ -1,0 +1,293 @@
+#!/usr/bin/env python3
+"""Set up a NEW person's Android text collection on a shared Linux collection host.
+
+Phases (each is idempotent and safe to rerun):
+  add-owner Casey                  prepare folders, private config, per-owner export units
+  add-owner Casey --pair           show the Google Messages QR code (human step)
+  add-owner Casey --enable         after pairing: start collector, import, backfill, export
+  add-owner Casey --status         show what exists for this owner
+Add --dry-run to any phase to print the plan without changing anything.
+
+Never touches an owner that already has a paired/running setup unless this
+script created it (owner.json marker with created_by=add-owner). Owners listed
+in MINBOX_PROTECTED_OWNERS (comma-separated) are always refused.
+See ONBOARDING.md.
+"""
+import argparse
+import datetime
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+HOME = Path(os.environ.get('HOME') or Path.home())
+LIB = HOME / '.local/lib/minbox-text-archive'
+EXPORT_LIB = LIB
+GMCLI = LIB / 'bin/gmcli'
+ARCHIVE_ROOT = HOME / '.local/share/minbox-text-archive'
+STORES = HOME / '.local/state/minbox-text-archive-collectors'
+CONFIG = HOME / '.config/minbox-text-archive'
+UNITS = HOME / '.config/systemd/user'
+# Owners set up by hand before this script existed. Always refused.
+PROTECTED = {o.strip() for o in os.environ.get('MINBOX_PROTECTED_OWNERS', '').split(',') if o.strip()}
+REQUIRED_TEMPLATES = ('minbox-text-collector@.service', 'minbox-text-import@.service',
+                      'minbox-text-import@.timer', 'minbox-text-backfill@.service',
+                      'minbox-text-backfill@.timer')
+
+EXPORT_SERVICE = """[Unit]
+Description=Refresh %i filtered archive for AI retrieval (installed by add-owner)
+ConditionPathExists=%h/.config/minbox-text-archive/owners/%i/owner.json
+
+[Service]
+Type=oneshot
+UMask=0077
+NoNewPrivileges=true
+RestrictAddressFamilies=AF_UNIX
+TimeoutStartSec=120
+ExecStart=/usr/bin/python3 -B -S %h/.local/lib/minbox-text-archive/local_archive_export.py --archive-root %h/.local/share/minbox-text-archive --owner %i --correction-ledger %h/.local/share/minbox-text-archive/publishers/%i-full/corrections.sqlite3 --destination %h/Minbox/%i/Filtered --phone-spam-policy spam_and_blocked
+"""
+EXPORT_TIMER = """[Unit]
+Description=Keep %i local filtered text folder current (installed by add-owner)
+
+[Timer]
+OnBootSec=4min
+OnUnitActiveSec=3min
+Persistent=true
+Unit=minbox-owner-filtered-export@%i.service
+
+[Install]
+WantedBy=timers.target
+"""
+OWN_UNITS = {'minbox-owner-filtered-export@.service': EXPORT_SERVICE,
+             'minbox-owner-filtered-export@.timer': EXPORT_TIMER}
+
+
+class Refused(Exception):
+    pass
+
+
+def paths(owner):
+    return {
+        'store': STORES / owner,
+        'owner_config_dir': CONFIG / 'owners' / owner,
+        'marker': CONFIG / 'owners' / owner / 'owner.json',
+        'archive_dir': ARCHIVE_ROOT / owner,
+        'ledger': ARCHIVE_ROOT / 'publishers' / (owner + '-full') / 'corrections.sqlite3',
+        'filtered': HOME / 'Minbox' / owner / 'Filtered',
+        'drive_publisher': CONFIG / 'publishers' / (owner + '-full.json'),
+    }
+
+
+def units(owner):
+    return ['minbox-text-collector@%s.service' % owner, 'minbox-text-import@%s.timer' % owner,
+            'minbox-text-backfill@%s.timer' % owner, 'minbox-owner-filtered-export@%s.timer' % owner]
+
+
+def systemctl(*args, check=False):
+    return subprocess.run(['systemctl', '--user', *args], capture_output=True, text=True, check=check)
+
+
+def unit_in_use(name, use_systemd):
+    if not use_systemd:
+        return False
+    out = systemctl('is-enabled', name).stdout.strip()
+    act = systemctl('is-active', name).stdout.strip()
+    return out in ('enabled', 'enabled-runtime') or act in ('active', 'activating')
+
+
+def ours(p):
+    try:
+        return json.loads(p['marker'].read_text()).get('created_by') == 'add-owner'
+    except (OSError, ValueError):
+        return False
+
+
+def guard(owner, p, use_systemd):
+    if owner in PROTECTED:
+        raise Refused('%s was set up by hand and is running; add-owner never touches it.' % owner)
+    if ours(p):
+        return
+    reasons = []
+    if (p['store'] / 'session.json').exists() or (p['store'] / 'gmcli.db').exists():
+        reasons.append('collector store already paired: %s' % p['store'])
+    if p['drive_publisher'].exists():
+        reasons.append('Drive publisher config exists: %s' % p['drive_publisher'])
+    if p['owner_config_dir'].exists() and any(p['owner_config_dir'].iterdir()):
+        reasons.append('owner config already present: %s' % p['owner_config_dir'])
+    if p['filtered'].exists() and any(p['filtered'].iterdir()):
+        reasons.append('filtered folder not empty: %s' % p['filtered'])
+    if p['ledger'].exists():
+        reasons.append('correction ledger exists: %s' % p['ledger'])
+    for u in units(owner) + ['minbox-owner-archive@%s.timer' % owner]:
+        if unit_in_use(u, use_systemd):
+            reasons.append('unit in use: %s' % u)
+    if reasons:
+        raise Refused('Existing setup for %s not created by add-owner; refusing:\n  - %s'
+                      % (owner, '\n  - '.join(reasons)))
+
+
+def do(plan, dry, msg, fn=None):
+    plan.append(msg)
+    print(('[dry-run] ' if dry else '') + msg)
+    if not dry and fn:
+        fn()
+
+
+def mkdir_private(path):
+    path.mkdir(parents=True, exist_ok=True, mode=0o700)
+    os.chmod(path, 0o700)
+
+
+def prereqs(use_systemd):
+    problems = []
+    if not GMCLI.is_file():
+        problems.append('collector binary missing: %s' % GMCLI)
+    if not (EXPORT_LIB / 'local_archive_export.py').is_file():
+        problems.append('exporter missing: %s' % EXPORT_LIB)
+    for t in REQUIRED_TEMPLATES:
+        if not (UNITS / t).is_file():
+            problems.append('unit template missing: %s' % (UNITS / t))
+    if not (ARCHIVE_ROOT / 'archive.sqlite3').is_file():
+        problems.append('shared archive database missing: %s' % (ARCHIVE_ROOT / 'archive.sqlite3'))
+    if use_systemd:
+        r = subprocess.run(['loginctl', 'show-user', os.environ.get('USER', ''), '-p', 'Linger'],
+                           capture_output=True, text=True)
+        if 'Linger=yes' not in r.stdout:
+            problems.append('user lingering is off; services stop at logout (ask an administrator: loginctl enable-linger $USER)')
+    return problems
+
+
+def prepare(owner, p, dry, use_systemd):
+    plan = []
+    for name, body in OWN_UNITS.items():  # check before changing anything
+        dest = UNITS / name
+        if dest.exists() and dest.read_text() != body:
+            raise Refused('%s exists with different content; review it by hand.' % dest)
+    for label, path in (('collector store', p['store']), ('owner config', p['owner_config_dir']),
+                        ('archive folder', p['archive_dir']), ('ledger folder', p['ledger'].parent),
+                        ('filtered export folder', p['filtered'])):
+        if not path.is_dir():
+            do(plan, dry, 'create %s %s (mode 700)' % (label, path), lambda path=path: mkdir_private(path))
+    if not p['ledger'].exists():
+        def make_ledger():
+            sys.path.insert(0, str(EXPORT_LIB))
+            from archive_corrections import CorrectionLedger
+            CorrectionLedger(p['ledger'])
+        do(plan, dry, 'create empty correction ledger %s' % p['ledger'], make_ledger)
+    installed = False
+    for name, body in OWN_UNITS.items():
+        dest = UNITS / name
+        if dest.exists():
+            if dest.read_text() != body:
+                raise Refused('%s exists with different content; review it by hand.' % dest)
+        else:
+            do(plan, dry, 'install unit template %s' % dest, lambda dest=dest, body=body: (
+                dest.parent.mkdir(parents=True, exist_ok=True), dest.write_text(body)))
+            installed = True
+    if installed and use_systemd:
+        do(plan, dry, 'systemctl --user daemon-reload', lambda: systemctl('daemon-reload', check=True))
+    if not p['marker'].exists():
+        marker = {'owner': owner, 'created_by': 'add-owner',
+                  'created_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                  'drive_sync': False}
+        def write_marker():
+            fd = os.open(p['marker'], os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            with os.fdopen(fd, 'w') as f:
+                json.dump(marker, f, indent=2)
+        do(plan, dry, 'write private marker %s' % p['marker'], write_marker)
+    if not plan:
+        print('Nothing to do: %s is already prepared.' % owner)
+    return plan
+
+
+def pair(owner, p, dry):
+    cmd = [str(GMCLI), '--store', str(p['store']), '--read-only=true', 'auth']
+    if (p['store'] / 'session.json').exists():
+        print('%s is already paired (session.json exists). Skipping.' % owner)
+        return
+    print('Pairing command:\n  ' + ' '.join(cmd))
+    if dry:
+        return
+    if not sys.stdout.isatty():
+        raise Refused('Pairing shows a QR code and needs a real terminal. From the person\'s own computer run:\n'
+                      '  ssh -t COLLECTION_HOST "PATH_TO_CHECKOUT/scripts/add-owner %s --pair"' % owner)
+    os.execv(cmd[0], cmd)
+
+
+def enable(owner, p, dry, use_systemd):
+    if not (p['store'] / 'session.json').exists():
+        raise Refused('Not paired yet: run add-owner %s --pair first.' % owner)
+    if not use_systemd:
+        print('(--no-systemd) would enable: ' + ' '.join(units(owner)))
+        return
+    plan = []
+    do(plan, dry, 'systemctl --user enable --now ' + ' '.join(units(owner)),
+       lambda: systemctl('enable', '--now', *units(owner), check=True))
+
+
+def status(owner, p, use_systemd):
+    for k, v in p.items():
+        print('%-18s %s %s' % (k, 'yes' if v.exists() else 'no ', v))
+    print('paired            %s' % ('yes' if (p['store'] / 'session.json').exists() else 'no'))
+    if use_systemd:
+        for u in units(owner):
+            print('%-44s %s / %s' % (u, systemctl('is-enabled', u).stdout.strip(), systemctl('is-active', u).stdout.strip()))
+
+
+def next_steps(owner):
+    print("""
+Next steps for %(o)s:
+  1. Pair (human step, %(o)s's own phone). In a PowerShell/terminal window on the
+     computer %(o)s is using (any terminal, including Windows PowerShell):
+       ssh -t COLLECTION_HOST "PATH_TO_CHECKOUT/scripts/add-owner %(o)s --pair"
+     A QR code appears. On the phone: Google Messages > profile picture >
+     Device pairing > QR code scanner, then scan it. Wait for "paired".
+  2. Start collection:   scripts/add-owner %(o)s --enable
+  3. Check:              scripts/add-owner %(o)s --status
+     Filtered files appear in ~/Minbox/%(o)s/Filtered within ~10 minutes.
+  Optional later: Drive sync (connect_owner.py, see OWNER_ARCHIVE.md).""" % {'o': owner})
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('owner')
+    g = ap.add_mutually_exclusive_group()
+    g.add_argument('--pair', action='store_true')
+    g.add_argument('--enable', action='store_true')
+    g.add_argument('--status', action='store_true')
+    ap.add_argument('--dry-run', action='store_true')
+    ap.add_argument('--no-systemd', action='store_true', help='skip systemctl (tests with a temp HOME)')
+    a = ap.parse_args(argv)
+    owner = a.owner
+    if not re.fullmatch(r'[A-Z][A-Za-z0-9_-]{0,31}', owner):
+        print('Owner must be a capitalized name like Casey.', file=sys.stderr)
+        return 2
+    use_systemd = not a.no_systemd and shutil.which('systemctl') is not None
+    p = paths(owner)
+    try:
+        if a.status:
+            status(owner, p, use_systemd)
+            return 0
+        guard(owner, p, use_systemd)
+        if a.pair:
+            pair(owner, p, a.dry_run)
+        elif a.enable:
+            enable(owner, p, a.dry_run, use_systemd)
+        else:
+            problems = prereqs(use_systemd)
+            if problems:
+                print('Prerequisites missing:\n  - ' + '\n  - '.join(problems), file=sys.stderr)
+                return 1
+            prepare(owner, p, a.dry_run, use_systemd)
+            next_steps(owner)
+        return 0
+    except Refused as e:
+        print('REFUSED: %s' % e, file=sys.stderr)
+        return 3
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
