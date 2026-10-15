@@ -118,6 +118,81 @@ Inspect counts and coverage gaps without private content. Ask the owner to compa
 one approved captured message on the phone and in the archive.
 Do not print private history.
 
+## Add another person on an existing host
+
+Use this when an Android collection host already runs Minbox for one person and
+another household member wants their own archive. A person can simply tell
+their agent, running on the host: **"get my text messages set up on Minbox"**.
+The agent follows this section. Only one step needs the person: scanning a QR
+code with their own phone.
+
+**Agent checklist before starting**
+
+- You are on the collection host, as the account that already runs Minbox, in a
+  reviewed checkout that includes `scripts/add-owner`.
+- The collector binary, `local_archive_export.py`, the shared archive database
+  and the `minbox-text-collector@`, `minbox-text-import@` and
+  `minbox-text-backfill@` templates are installed (the recipe above).
+- You know the new owner's capitalized name, for example `Casey`.
+- Set `MINBOX_PROTECTED_OWNERS` (comma-separated) to every owner whose setup was
+  built by hand, so the script always refuses them. It also refuses any owner
+  with an existing pairing, publisher, ledger, non-empty folder or running unit
+  that it did not create. Do not work around a refusal; ask the host's administrator.
+- The person has Google Messages as the default SMS app on an online Android
+  phone, and a terminal (PowerShell on Windows works) that can `ssh` to the host.
+
+**1. Prepare (agent).** Safe to rerun; `--dry-run` changes nothing.
+
+```bash
+scripts/add-owner Casey --dry-run
+scripts/add-owner Casey
+```
+
+It creates, only for that owner and with mode 700/600: the collector store
+`~/.local/state/minbox-text-archive-collectors/Casey/`, a marker
+`~/.config/minbox-text-archive/owners/Casey/owner.json`, an empty correction
+ledger, and `~/Minbox/Casey/Filtered/`. Once per host it installs the shared
+`minbox-owner-filtered-export@` service and timer.
+
+**2. Pair the phone (person).** An agent chat window usually cannot show a
+scannable QR code, so give the person this to paste into their own terminal:
+
+```bash
+ssh -t COLLECTION_HOST "PATH_TO_CHECKOUT/scripts/add-owner Casey --pair"
+```
+
+On the phone: Google Messages → profile picture → Device pairing → QR code
+scanner, then scan. When the terminal reports pairing, the person tells the
+agent "done". If the code is garbled, enlarge the window or shrink the font and
+rerun. The cookie-based pairing in the section above is the fallback; never ask
+for cookies in chat.
+
+**3. Start and verify (agent).**
+
+```bash
+scripts/add-owner Casey --enable
+scripts/add-owner Casey --status
+journalctl --user -u minbox-text-import@Casey -n 20 --no-pager
+```
+
+Healthy: the collector is active, imports run without errors, and
+`~/Minbox/Casey/Filtered` has files within about ten minutes. Ask the person to
+send themselves a test text and confirm it appears in the next export. Older
+history fills in gradually and is not guaranteed to be complete.
+
+**Troubleshooting.** `REFUSED … not created by add-owner`: stop and ask.
+`Not paired yet`: repeat step 2. `needs a real terminal`: the pairing command
+ran without `ssh -t` or inside a chat tool. An expired pairing needs a person to
+move the old `session.json` aside first; the script never deletes it. Never use
+`--auto` or turn off `--read-only`.
+
+**Privacy.** Every owner has separate files, but all run under one OS account,
+so separation is by setup, not by permissions. Each person's agent should read
+only that person's folder. See
+[multiple owners](REFERENCE_GUIDE.md#multiple-owners-on-one-computer).
+Health alerts for a new owner need a separate, reviewed change to the shared
+health configuration.
+
 ## Private Drive connection
 
 **Computer, owner:** before connecting Google, create a new empty private Drive
