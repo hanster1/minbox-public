@@ -38,11 +38,14 @@ Keep exact accounts, host paths, receipts and credentials outside public Git.
 
 ## Next acceptance
 
-The synthetic Grok file is Version 2. Owner was asked to initiate a fresh local
-read from Android Grok Bot/Archy; compare its code against the private receipt
-without approving at the desktop. Then test the actual filtered entry file.
-ChatGPT is authenticated; dot onboarding reached local-computer selection.
-Owner computer-access consent, fresh file read and Android use remain pending.
+The Android-initiated Grok Version 2 read matched the new private code without
+desktop approval. Grok also read the real local entry file and listed 60 text
+files; facts matched the local manifest. ChatGPT owner consent completed and
+its profile shows the archive host Connected. After owner confirmation, the dot created a local task and returned the exact
+synthetic Version 1 value. The ChatGPT fixture is now Version 2. Next owner
+action: ask the same dot from Android to freshly read it, verify the new code,
+then test the actual local filtered folder. A cloud project is not itself a
+local-folder connection; intended project behavior needs separate acceptance.
 Ordinary Grok direct local access needs a compatible reachable MCP endpoint;
 its passing Drive web/Android checks are separate evidence. Native reboot
 persistence and changed real-source/cache behavior remain unverified.
