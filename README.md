@@ -237,6 +237,7 @@ The reference guide distinguishes existing implementations from features that ne
 | A separate local text folder | [Local export](LOCAL_EXPORT.md) |
 | A restricted search service | [Read-only search prototype](READ_ONLY_SEARCH.md) |
 | Repair an existing installation | [Android recovery](ANDROID_RECOVERY.md) or [Mac recovery](MAC_RECOVERY.md) |
+| How it fits together and privacy limits | [Architecture](ARCHITECTURE.md) and [privacy model](PRIVACY.md) |
 | Detailed archive and filter behavior | [Archive reference](OWNER_ARCHIVE.md) and [phone spam policy](PHONE_SPAM.md) |
 | Health checks and alerts | [Health reference](HEALTH_ALERTS.md) |
 | Optional Loom transcripts | [Loom capture](LOOM_CAPTURE.md) |
