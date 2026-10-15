@@ -20,7 +20,7 @@ No site deployment or runtime update is included in this documentation pass.
 
 - Android/Linux collection and private Drive output have worked in an existing installation. Mac/iPhone is fixture-tested; live operation remains unverified.
 - Linux local export and scheduled refresh work from an existing archive and correction ledger. Fresh local-only onboarding needs adaptation.
-- Grok Bot and ChatGPT returned changed synthetic values from Android through direct computer access. Grok Bot also read the real entry file. Real message answers, project behavior, and reboot persistence remain unverified.
+- Grok Bot and ChatGPT returned changed synthetic values from Android through direct computer access. Grok Bot also passed owner-reported Android message, Loom, and image retrieval checks. ChatGPT real archive answers, project behavior, and reboot persistence remain unverified.
 - The read-only search prototype passed local tests. Remote phone registration is unverified.
 - The reset-link repair is installed. All 24 detected sources were absent from refreshed local output. Original data stayed intact. Local-model filtering is an option, not an included backend.
 
@@ -89,3 +89,6 @@ Tests: 537 tests run, 8 skipped, no failures; release inventory and whitespace c
 The reviewed exporter is installed on the Linux trial host. A live generation succeeded with images, message links and file hashes verified. Scheduled refresh is active.
 The owner confirmed Android image retrieval/display, message answers, and Loom transcript answers passed.
 These results apply to this Grok Bot installation. Project behavior, reboot persistence, and enforced folder isolation remain unverified.
+
+Pre-publication review added reusable saved archive guidance for natural-language questions and explained image-refresh disk activity.
+No cache optimization, new runtime change, or extra owner test was added.

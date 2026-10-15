@@ -122,6 +122,11 @@ The Linux trial used a separate user timer every three minutes.
 Its service blocked new privileges and internet socket families.
 Those are tested choices, not required settings for every client.
 
+Image export verifies and copies the selected files on each refresh, even when they have not changed.
+For a large archive, consider disk activity and the refresh interval.
+A future optimization could skip unchanged generations after checking source, correction, and output integrity.
+Do not replace verified private copies with links into the raw collection.
+
 The folder contains `START_HERE.txt`, message parts, transcript parts, available image files, and a hidden manifest.
 The manifest records generation time, counts, source fingerprints, correction fingerprints, and file hashes.
 Check the refresh service and manifest age separately from AI app availability.
