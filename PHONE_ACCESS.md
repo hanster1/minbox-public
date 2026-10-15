@@ -13,11 +13,13 @@ Do not repeat our exploratory file-read tests during normal setup.
 
 Start with connected-computer access when the owner accepts its permissions and the account supports it.
 Our first options are **Grok Bot** and **ChatGPT dot**.
+If **Hermes** already runs on the archive computer, consider its **Telegram gateway** too.
 **Claude Cowork** is a conditional candidate; check its desktop access before planning around it.
 
 Grok Bot has the strongest direct-file evidence from our Linux/Android trials.
 ChatGPT dot also passed a changed-file phone read.
-Neither trial yet proves useful answers across the full archive or reboot reliability.
+The owner confirmed Grok Bot answers from messages and Loom transcripts, plus original image delivery, on Android.
+ChatGPT real archive answers and reboot reliability remain unverified.
 See the [evidence table](#observed-evidence-and-limits--october-14-2026).
 
 This route lets the app read the latest generated folder without a Drive publication step.
@@ -38,6 +40,7 @@ No route below works with every service, plan, or phone.
 | Route | Useful when | Main tradeoff | What the agent checks |
 | --- | --- | --- | --- |
 | AI desktop app connected to the archive computer | Your phone conversation can use that computer's files | Access can extend beyond the filtered folder. | Executing host, approvals, unattended access, and startup |
+| Local agent with a messaging gateway | You already run an agent such as Hermes and prefer Telegram on your phone | The gateway, model, and filesystem have separate access controls. | Authorized callers, executing host, filtered-folder access, source citations, and startup |
 | Private cloud archive and built-in connector | Your AI account can already read the chosen storage service | Storage and AI permissions are separate. | Correct account, current source read, phone support, and refresh delay |
 | Restricted read-only search connector | You want a narrow data boundary | More setup and authentication work | Allowed tools, reachable server, access limits, and phone compatibility |
 | Isolated desktop app | You want desktop convenience with OS restrictions | More installation and session maintenance | Actual file restrictions, login, and registration |
@@ -97,6 +100,37 @@ Save only setup guidance, not message contents or credentials.
 Reuse the normal phone question to check that the saved guidance is used.
 For images, a local file path alone does not show the image on the phone.
 Instructions guide behavior; they do not enforce a filesystem access boundary.
+
+## Hermes with Telegram
+
+Hermes can run on the archive computer and receive questions through Telegram.
+Its [Telegram gateway](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/telegram) supports text, images, and file attachments.
+This is a useful candidate when the owner already has Hermes running.
+It needs neither Drive publication nor a desktop AI app.
+A chosen model still answers the questions; running Hermes locally does not make that model local.
+
+Your agent can adapt this setup:
+
+1. Build the owner's separate filtered archive and keep its scheduled refresh running.
+2. Give the Hermes tools read access to that output. Check the actual execution host and any container file mapping.
+3. Save [archive guidance](#save-the-archive-location-for-normal-questions) with the correct computer and folder.
+4. Restrict Telegram access to the owner's numeric user ID through the gateway's caller controls.
+5. Ask one useful question from Telegram and check its sources. Include an image request only if image delivery is wanted.
+
+Configure credentials privately. Do not put bot tokens in this repository or paste them into support reports.
+Check the installed Hermes version against its current documentation before changing gateway settings.
+Use [Hermes security guidance](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/security.md) for caller authorization and tool restrictions.
+An allowed Telegram user can still invoke the tools exposed to that agent.
+Caller authorization does not limit which local files those tools can read.
+
+On a shared computer, keep each owner's archive, credentials, and agent access separate.
+Use OS permissions or a restricted tool connection when another owner's files must be inaccessible.
+Separate profile names or instructions alone do not enforce that boundary.
+Retrieved content and replies pass through Telegram and the configured model service when it is remote.
+Explain this data path before exposing real content.
+
+This route is documented from Hermes capabilities. No Minbox end-to-end phone trial has passed yet.
+Do not infer compatibility or isolation from a running Hermes process alone.
 
 ## Ordinary Grok / SuperGrok
 
@@ -225,6 +259,7 @@ Recheck official guidance and the actual account before setup.
 | Grok Bot with Drive | The real entry document was read correctly. | Full phone question-and-answer workflow through that route |
 | Grok Bot with direct computer access | Android retrieved a changed test value without desktop approval. The real local entry facts matched. The owner confirmed message answers, Loom transcript answers, and original image retrieval/display from the filtered local archive, with Drive and Docs disconnected. | Project behavior and reboot persistence |
 | ChatGPT dot with direct computer access | Android retrieved the changed test value without desktop approval. | Real archive answers, project behavior, and reboot persistence |
+| Hermes with Telegram | Official gateway supports conversations, images, and attachments. No Minbox trial completed. | Filtered archive answers, image delivery, per-owner access controls, and restart behavior |
 | Restricted search prototype | Local protocol, changed-source, authentication, and sandbox tests passed on Linux. | Remote client registration and unattended phone access |
 | Claude Cowork | Official desktop Dispatch route documented, but closed to new users. No Minbox phone trial completed. | Account eligibility, local-file access, answers, and refresh behavior |
 

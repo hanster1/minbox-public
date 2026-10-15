@@ -111,3 +111,10 @@ README, agent guidance and the reference guide now say that client agents can re
 Before installation, agents inspect relevant source and dependencies and explain permissions, known limits and data boundaries.
 Contribution guidance distinguishes tested behavior and release-pattern checks from a security audit.
 Private content and installation settings remain outside public Git. No application or runtime behavior changed.
+
+## Hermes with Telegram option
+
+Added to README, phone route comparisons, agent guidance and the evidence table.
+The route uses a local filtered folder and Hermes gateway, with no Drive or desktop AI app requirement.
+Guide explains saved archive instructions, authorized Telegram callers, model exposure and shared-host file permissions.
+No Minbox Hermes phone trial or runtime setup was performed. No private host or account configuration was published.

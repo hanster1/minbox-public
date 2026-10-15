@@ -103,13 +103,14 @@ Read [privacy and filtering choices](REFERENCE_GUIDE.md#who-sees-the-originals).
 
 Then choose a connection with your agent.
 
-**Our recommended first route is a connected-computer app, when the account supports it.**
+**First consider an app or agent that can read the filtered folder on your always-on computer.**
 Start with these options:
 
-| App | Recommendation and current evidence |
+| Option | Recommendation and current evidence |
 | --- | --- |
-| Grok Bot | First option to try from our Linux/Android trials. Changed-file and real entry-file reads passed. Full archive answers remain unverified. |
+| Grok Bot | Passed owner-reported Android questions about messages and Loom transcripts, plus original image retrieval, without Drive. |
 | ChatGPT dot | Another first option. Changed-file reads from Android passed. Real archive answers remain unverified. |
+| Hermes with Telegram | Useful when Hermes already runs on the archive computer. Can answer through Telegram using local files. No Minbox phone trial has passed. |
 | Claude Cowork | Conditional option to investigate. The local-desktop Dispatch route is closed to new users; existing users can test it. No Minbox trial has passed. |
 
 These are recommendations to test, not guarantees of support or speed.
@@ -124,6 +125,7 @@ Other routes remain useful:
 | Connection | Main advantage | Main tradeoff |
 | --- | --- | --- |
 | AI desktop app connected to your computer | Can read current local files from a phone conversation | Computer access can include more than the filtered folder. |
+| An agent on the archive computer, reached through Telegram or another supported messenger | Can search current local files without a desktop AI app | Needs caller authorization, file access controls, and a chosen model. |
 | Private cloud archive and the AI app's connector | Convenient when your account already supports it | Cloud storage and AI access need separate permissions. |
 | A restricted search connector | Can expose only selected search and read functions | Requires more setup, authentication, and compatibility tests. |
 | Manual file upload | Simple for occasional questions | Files are snapshots. Updates need another upload. |

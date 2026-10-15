@@ -85,6 +85,8 @@ Never make private files public to solve access problems.
 
 Use [PHONE_ACCESS](PHONE_ACCESS.md) to choose and test the final route.
 First consider Grok Bot or ChatGPT dot for connected-computer access when supported.
+If Hermes already runs on the archive host, also consider its Telegram gateway.
+Check caller authorization and actual file permissions separately, especially on shared computers.
 Consider Claude Cowork only after checking desktop access eligibility.
 Recommendations are candidates to test, not verified solutions for every user.
 Preserve a working Drive route if the user prefers it.
