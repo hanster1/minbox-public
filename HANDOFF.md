@@ -44,6 +44,8 @@ README now offers restart/power-return recovery, bounded automatic repair and em
 REFERENCE_GUIDE separates included image/Loom behavior from potential audio, document, video, and link extraction extensions.
 HEALTH_ALERTS explains agent-assisted repair and the missing automatic monitoring of local export and AI connections.
 These are optional choices after basic setup, not added mandatory onboarding steps.
+Loom is grouped with the other optional content types; skip it when not wanted.
+The Mac installer currently bundles Loom with collection via --enable; documentation states that a no-Loom Mac path needs adaptation.
 No runtime, device restart, notification delivery, or new media support changed in this documentation update.
 
 ## Next actions

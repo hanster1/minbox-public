@@ -37,6 +37,8 @@ For iPhone/Mac, use [MAC_ONBOARDING_AGENT](MAC_ONBOARDING_AGENT.md), [MAC_SETUP]
 Example owner Casey is fictional.
 Adapt paths, schedules, connection choices, and optional features to the user.
 Local maintainer accounts, skills, and model preferences are not client dependencies.
+Offer extra content sources only when useful to the owner. Loom is optional, like other media extensions.
+Skip unchosen feature setup and tests; account for installer constraints documented in its guide.
 New platforms and connections need implementation and tests.
 
 ## Preserve data and code constraints

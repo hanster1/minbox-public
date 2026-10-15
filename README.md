@@ -174,8 +174,9 @@ If an issue needs you, open your agent CLI and ask it to diagnose and repair the
 See [recovery and alert options](HEALTH_ALERTS.md#optional-reliability-checks-and-agent-assisted-repair).
 
 For content choices, start with [the optional coverage menu](REFERENCE_GUIDE.md#optional-content-coverage).
-Loom transcripts and image attachments are included paths.
-Voice notes, documents, ordinary videos, and linked-page content can need added collection or extraction support.
+Optional content can include images, Loom transcripts, voice notes, documents, videos, and linked pages.
+Choose only what you use. Loom capture is needed only for users who want answers about Loom videos.
+The reference guide distinguishes existing implementations from features that need added support.
 
 ## Where to go next
 
@@ -188,7 +189,7 @@ Voice notes, documents, ordinary videos, and linked-page content can need added 
 | Repair an existing installation | [Android recovery](ANDROID_RECOVERY.md) or [Mac recovery](MAC_RECOVERY.md) |
 | Detailed archive and filter behavior | [Archive reference](OWNER_ARCHIVE.md) and [phone spam policy](PHONE_SPAM.md) |
 | Health checks and alerts | [Health reference](HEALTH_ALERTS.md) |
-| Optional video transcripts | [Loom capture](LOOM_CAPTURE.md) |
+| Optional Loom transcripts | [Loom capture](LOOM_CAPTURE.md) |
 | Develop or maintain Minbox | [Contribution checks](CONTRIBUTING.md), [maintenance map](MAINTENANCE.md), and [collector source](GMKIT_MEDIA.md) |
 
 ## Terms used in these guides

@@ -142,6 +142,7 @@ Previously uploaded images need a separate withdrawal check.
 ## Optional content coverage
 
 Ask which message types the user actually wants to ask about.
+All items below are optional, including Loom. Skip Loom setup and verification if the user does not need it.
 Choose one representative example for each selected type; do not test the whole menu.
 Use an example in the normal phone question where practical.
 Check the path from capture through filtering to the answer.
@@ -150,7 +151,7 @@ A saved attachment is not necessarily readable by the phone AI.
 | Content | Included behavior or current limit | Optional check or extension |
 | --- | --- | --- |
 | Photos, screenshots, and image-only messages | Available image originals can be captured and published through Drive. Local text export includes available OCR, not image files. | Check whether the chosen AI can read the image or its extracted text. |
-| Loom links | Accessible saved transcripts can be included. Restricted videos remain gaps. | Check transcript retrieval and a source timestamp for a video the user can access. |
+| Loom links, only if wanted | Optional capture can include accessible saved transcripts. Restricted videos remain gaps. | Check transcript retrieval and a source timestamp for a video the user can access. |
 | Voice notes and audio attachments | The supplied image attachment path does not provide general audio capture or speech transcription. | Add capture and transcription if needed. Decide whether transcription stays local. |
 | PDFs and other documents | General document attachment extraction is not included. | Add supported file capture and text extraction, then apply the same privacy filters. |
 | Ordinary video attachments | Loom transcript support does not cover arbitrary video files. | Decide whether audio transcription, captions, or visual content is needed. |

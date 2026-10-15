@@ -3,6 +3,8 @@
 This optional technical guide adds Loom transcripts to the text archive.
 It supports answers about linked videos in the owner's preferred AI phone app.
 It is not required for text collection or phone access.
+Offer it with the other [optional content sources](REFERENCE_GUIDE.md#optional-content-coverage).
+Skip its setup, monitoring, and verification when the owner does not use Loom.
 Start with the [beginner path](README.md#start-with-your-agent).
 Use [phone acceptance](PHONE_ACCESS.md#start-with-a-small-retrieval-check) to test
 answers from the finished archive.
@@ -13,6 +15,12 @@ require sign-in or private access.
 
 **Agent:** Install and check this extension on the always-on archive computer.
 Preserve existing collection, archive data and explicit pauses.
+
+The Linux Loom service is optional and can be omitted.
+The current Mac installer couples Loom startup to collector startup through `--enable`.
+For a Mac without Loom, the agent must adapt that installation path before applying it.
+Do not describe the current Mac command as an independent Loom opt-in.
+See [Mac setup](MAC_SETUP.md#5-install-collection-jobs-then-verify-launchd) for the bundled command.
 
 ## Capture behavior and access limits
 

@@ -199,8 +199,12 @@ Render the exact commands first. Installation copies authored Python modules int
   --owner Casey --archive-root "$archive_data" --python "$archive_python"
 ```
 
-This first installation leaves jobs disabled. After Casey's local capture is
-verified, explicitly enable collection and linked-Loom capture:
+This first installation leaves jobs disabled.
+Loom is an optional content source, not a requirement for message collection.
+The current `--enable` command below starts both collection and Loom capture.
+Use this bundled recipe only when the owner wants Loom too.
+Otherwise, the agent needs to adapt the installer; separate enabled states are not currently supported by its update checks.
+After local capture is verified and the owner chooses Loom, enable the bundled jobs:
 
 ```bash
 "$archive_python" "$archive_checkout/mac_setup.py" install \
