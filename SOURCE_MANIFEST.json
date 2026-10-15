@@ -262,6 +262,27 @@
     },
     "tests/test_archive_analysis.py": {
       "sha256": "bea8bdd59b14acb3ed0f66ead5e1fef320419f53f80a8410691fcfdd9451728a"
+    },
+    "archive_search.py": {
+      "sha256": "18b7286618dba195e3dbbc2159f81bb16114dce56a6e50cefd57d659d156b7fe"
+    },
+    "archive_search_mcp.py": {
+      "sha256": "a895bed015b6664dd6c65cd1ea3ab5bf2d6b484d95bbd4f6446fc715bc069f93"
+    },
+    "tests/test_archive_search.py": {
+      "sha256": "b99915bd22923042716d6693db5182b13b5c97c2f9461631c76fc0378de55b86"
+    },
+    "tests/test_archive_search_mcp.py": {
+      "sha256": "31dac3d889e7c735c03d8717f76dbdb0f1af6a39a8ea7619278ca156410958d0"
+    },
+    "requirements-search.txt": {
+      "sha256": "8bee7d55ba00cbc8fc78584099858202d548a3bc69b0fa1fdf0a776e9a2ed6c1"
+    },
+    "local_archive_export.py": {
+      "sha256": "c9d31578e3a6ab5a46cf6472a172a82ba022a5efcede8f8ec790dacb2a953fc5"
+    },
+    "tests/test_local_archive_export.py": {
+      "sha256": "9a95fc3d54ac781b4c898b16c6cce78908b7a8f6cc2e695c7ee708b9990d846e"
     }
   }
 }

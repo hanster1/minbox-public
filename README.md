@@ -83,3 +83,9 @@ Run `python3 -m unittest discover -s tests -q` for synthetic regression checks.
 Runtime archives, credentials, images and machine-specific checkpoints belong
 outside Git. Read-only support reports help an agent resume without uploading
 message history. Never make archive files public to solve an AI access problem.
+
+For an optional local retrieval alternative, see the [read-only archive search prototype](READ_ONLY_SEARCH.md), including client compatibility and phone acceptance checks.
+
+Compare [phone access options](PHONE_ACCESS.md) for Grok Bot, Grok/SuperGrok and ChatGPT, including convenience, permissions, freshness and actual trial limits.
+
+For direct local-file retrieval without Drive, the [filtered text export](LOCAL_EXPORT.md) provides a separate folder using the existing filtering and correction policy.

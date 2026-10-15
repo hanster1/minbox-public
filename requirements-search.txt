@@ -1,0 +1,2 @@
+# Optional read-only archive connector; isolated environment, not a publisher dependency.
+mcp==1.30.0

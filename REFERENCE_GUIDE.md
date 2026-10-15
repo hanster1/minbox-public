@@ -165,3 +165,7 @@ When an adaptation succeeds, document the trigger, change, evidence, limitations
 and rollback in the relevant guide. Distinguish implemented behavior from ideas
 and retire workarounds when their original cause no longer applies. A useful
 reference explains why a choice worked and when to reconsider it.
+
+## Choosing phone retrieval
+
+Use the [phone access comparison](PHONE_ACCESS.md) to choose among an existing cloud connector, direct desktop access, scoped search, isolation or occasional uploads. These are options for the client, with different convenience and access tradeoffs; isolation and custom MCP are not prerequisites. Verify the actual phone, project and freshness behavior before describing a route as working.
