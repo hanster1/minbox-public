@@ -91,4 +91,15 @@ The owner confirmed Android image retrieval/display, message answers, and Loom t
 These results apply to this Grok Bot installation. Project behavior, reboot persistence, and enforced folder isolation remain unverified.
 
 Pre-publication review added reusable saved archive guidance for natural-language questions and explained image-refresh disk activity.
-No cache optimization, new runtime change, or extra owner test was added.
+No extra owner test was added. The unchanged-output optimization below supersedes the earlier refresh-cost note.
+
+## Unchanged local export optimization
+
+Current filters, rendering, source-image checks, correction checks and destination verification run each time.
+Identical output with unchanged export settings and correction policy skips generation writes and directory replacement.
+Importer observation times alone do not force a rebuild. Changed output, settings or corrections still rebuild atomically.
+An unchanged receipt has a fresh `checked_at`; generation time stays unchanged. Health guidance distinguishes these times.
+Source and image reads and small private policy-backup writes remain.
+Tests: 542 tests run, 8 skipped, no failures; release inventory and whitespace checks passed.
+Installed the reviewed exporter on the Linux trial host. An actual unchanged run preserved the manifest, generation ID, directory inode, and every output file inode and modification time.
+The run returned `unchanged` with a new `checked_at`; its scheduled timer was resumed. No phone retest was needed because output bytes were unchanged.

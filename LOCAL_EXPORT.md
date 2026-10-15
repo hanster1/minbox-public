@@ -73,9 +73,11 @@ An unprocessed remote Corrections Doc change is not yet local policy.
 Phone spam exclusions reflect imported phone observations.
 Make both update limits visible to the owner.
 
-The exporter prepares a complete private generation beside the selected folder.
+The exporter applies the current filters and verifies the existing managed destination.
+If output and settings are unchanged, it keeps the current generation.
+It still checks source images, corrections, and source changes before reporting success.
+When output or settings change, it prepares a complete private generation beside the selected folder.
 It rechecks source and correction fingerprints before replacement.
-It also verifies the existing managed destination.
 Then it exchanges the directories atomically, so readers see a complete generation.
 Stale files disappear from the selected path.
 A failure before exchange preserves the old generation; label that output with its actual age.
@@ -122,14 +124,20 @@ The Linux trial used a separate user timer every three minutes.
 Its service blocked new privileges and internet socket families.
 Those are tested choices, not required settings for every client.
 
-Image export verifies and copies the selected files on each refresh, even when they have not changed.
+Each check still reads and verifies image files and applies the current filters.
+Identical output skips generation and image writes. Small private working files can still be written.
+A changed generation copies its retained images again.
 For a large archive, consider disk activity and the refresh interval.
-A future optimization could skip unchanged generations after checking source, correction, and output integrity.
 Do not replace verified private copies with links into the raw collection.
 
 The folder contains `START_HERE.txt`, message parts, transcript parts, available image files, and a hidden manifest.
 The manifest records generation time, counts, source fingerprints, correction fingerprints, and file hashes.
-Check the refresh service and manifest age separately from AI app availability.
+Generation time records when the output was built, not when it was last checked.
+An unchanged result preserves that time and the generation ID.
+The command returns `status: unchanged` and a fresh `checked_at` after successful checks.
+Use the latest successful refresh run or its receipt to check freshness.
+An old generation time alone does not mean that collection or export has stopped.
+Check AI app availability separately.
 Keep message content out of health reports.
 
 Readers must reopen the absolute folder path for fresh requests.

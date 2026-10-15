@@ -279,10 +279,10 @@
       "sha256": "8bee7d55ba00cbc8fc78584099858202d548a3bc69b0fa1fdf0a776e9a2ed6c1"
     },
     "local_archive_export.py": {
-      "sha256": "a8604184f9c911cda73153191f7a571630a350f06fc4c039983d30f2de31ae4b"
+      "sha256": "388825925cdc697223a6ace72019736d4a28ff2c954527d6ba2799e887f6b934"
     },
     "tests/test_local_archive_export.py": {
-      "sha256": "d8daa310b18329a2f48e7570e12200451522d0fc8c7663954cbfc0e0e930b63b"
+      "sha256": "2e00dfedcdc7247e32b44220590e361bcbc95d20d70acb2bc59e32225189ebc2"
     }
   }
 }

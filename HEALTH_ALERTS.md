@@ -54,7 +54,9 @@ For the selected route, consider these operational checks:
 
 The current Linux controller covers collector, import, and configured publisher jobs.
 The separate local exporter and AI connection are not automatically included.
-An agent can add suitable status or manifest-age checks for those components.
+Local export can report a successful unchanged check without replacing its files.
+Monitor its last completed successful run or `checked_at` receipt, not generation age alone.
+An agent can add suitable completed-run checks for the local exporter and connection checks for the AI app.
 A healthy job status does not prove that every sensitive message was filtered correctly.
 Do not release raw output to work around a filtering failure.
 
