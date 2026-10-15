@@ -57,7 +57,7 @@ Explain image files separately from OCR and distinguish local capture, output, a
 The owner requires actual Grok Bot Android use before any push: useful archive answers, Loom transcripts, and original image retrieval.
 The owner clarified that images from retained messages should be included by default, with text-only as an option.
 No individual image approval list is required.
-This gate is not yet passed. Do not describe OCR-only retrieval as original-image viewing.
+The owner confirmed the Android acceptance gate passed: messages, Loom transcripts, and original image retrieval/display.
 Desktop checks and earlier synthetic file reads do not satisfy this owner-specific publication gate.
 Archy reports a saved archive skill and durable-memory pointer for natural-language questions without host/path details.
 With owner approval, Google Drive and Google Docs plugins were removed account-wide from Grok Bot for this test.
@@ -72,7 +72,7 @@ Guide files, heading links, HTML navigation, and the release inventory pass chec
 Latest generated-guide checks pass: 18 tests, no failures.
 Broader tests were not repeated for these guidance changes.
 Independent review found no remaining material issue after corrections.
-Resume real-archive phone-answer tests and record route-specific limits.
+The owner-specific Grok Bot Android checks are complete. Changes are ready for publication review; do not add routine retrieval tests.
 Keep credentials, exact bindings, and receipts private.
 Google branding retry remains separate: October 15 after 3:20 PM US/Central, Branding → View issues → “I have fixed the issues” → Proceed.
 Ownership verification succeeded; no verification approval or established Drive-policy violation exists.
@@ -87,4 +87,5 @@ Images are linked from their messages and take part in atomic replacement and wi
 Text and OCR rules do not perform visual privacy review.
 Tests: 537 tests run, 8 skipped, no failures; release inventory and whitespace checks passed.
 The reviewed exporter is installed on the Linux trial host. A live generation succeeded with images, message links and file hashes verified. Scheduled refresh is active.
-The owner confirmed Android image retrieval/display passed. Useful message answers and Loom transcript answers remain pending.
+The owner confirmed Android image retrieval/display, message answers, and Loom transcript answers passed.
+These results apply to this Grok Bot installation. Project behavior, reboot persistence, and enforced folder isolation remain unverified.
