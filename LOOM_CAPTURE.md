@@ -1,42 +1,75 @@
 # Automatic Loom transcripts
 
+This optional technical guide adds Loom transcripts to the text archive.
+It supports answers about linked videos in the owner's preferred AI phone app.
+It is not required for text collection or phone access.
+Start with the [beginner path](README.md#get-started).
+Use [phone acceptance](PHONE_ACCESS.md#start-with-a-small-retrieval-check) to test
+answers from the finished archive.
+
+**Owner:** Choose whether to include transcripts from Loom links in captured texts.
+This feature uses public-viewer access. It does not support transcripts that
+require sign-in or private access.
+
+**Agent:** Install and check this extension on the always-on archive computer.
+Preserve existing collection, archive data and explicit pauses.
+
+## Capture behavior and access limits
+
 `archive_cli.py loom-capture` discovers Loom share/embed links in every owner's
-archived messages and attempts at most five due videos per run. The five-minute
-user timer runs this command. `loom-status` (optionally `--owner OWNER`) reports
-safe aggregate counts and worker timestamps, with no content or video URLs.
-Operational retrieval/schema failures return nonzero; permission denial and
-transcripts still processing remain explicit per-video queue statuses.
+archived messages. It attempts at most five due videos per run.
+The five-minute user timer runs this command.
+`loom-status` reports safe aggregate counts and worker timestamps.
+Use optional `--owner OWNER` to select an owner.
+Status output contains no content or video URLs.
+Retrieval and schema failures return nonzero.
+Permission denial and transcripts still processing remain explicit per-video queue
+statuses.
 
-Only canonical HTTPS www.loom.com share pages are requested. Redirects are
-rejected. Capture requires the page's referenced transcript metadata, viewer
-permission and visible transcript, and downloads only referenced HTTPS
-cdn.loom.com assets. It does not log in or bypass passwords. Each request has a
-20-second timeout and 10 MiB response limit. Signed asset URLs and page HTML are
-never saved. A removed/private/restricted video retains previous saved evidence
-but is marked denied/unavailable for the current retrieval attempt.
+Only canonical HTTPS www.loom.com share pages are requested.
+Redirects are rejected. Capture requires referenced transcript metadata, viewer
+permission and a visible transcript. Downloads use only referenced HTTPS
+cdn.loom.com assets. Capture does not log in or bypass passwords.
+Each request has a 20-second timeout and 10 MiB response limit.
+Signed asset URLs and page HTML are never saved.
+A removed, private or restricted video retains previously saved evidence.
+Its current retrieval attempt is marked denied or unavailable.
 
-The dedicated SQLite queue keeps owner/video identity, canonical source URL,
-first discovery, attempts, retry time, current status, failure age and last good
-revision. Separate origins preserve every source message and conversation.
-Successful videos are checked daily; failures retry hourly, network failures in
-15 minutes. A local file lock prevents simultaneous capture writers. Every
-completed run records worker freshness, including runs with no due videos.
+## Evidence, retries and storage
 
-Raw transcript JSON and optional valid VTT captions are immutable, SHA256-named
-files under OWNER/raw/loom with private permissions. Only validated, nonempty
-phrase JSON becomes a capture. Normalized phrases, timestamp seconds, text,
-language/version and provenance are saved in immutable revisions. A semantic
-phrase hash avoids revisions for changes only to JSON formatting. SQLite and raw
-files are included in the existing verified snapshot/restore workflow.
+The dedicated SQLite queue records owner/video identity and the canonical source
+URL. It also records first discovery, attempts, retry time, current status,
+failure age and last good revision.
+Separate origins preserve every source message and conversation.
+Successful videos are checked daily.
+Failures retry hourly. Network failures retry in 15 minutes.
+A local file lock prevents simultaneous capture writers.
+Every completed run records worker freshness, even when no videos are due.
 
-Search remains a JSON list and adds distinct `loom-transcript` matches with
-revision citations and original message references. Evidence previews annotate
-selected source messages with their saved transcripts; topic classification
-remains pending review. Captures do not add synthetic messages or change Google
-Messages import counts or freshness.
+Raw transcript JSON and optional valid VTT captions are immutable SHA256-named
+files under `OWNER/raw/loom`. They have private permissions.
+Only validated, nonempty phrase JSON becomes a capture.
+Immutable revisions contain normalized phrases, timestamp seconds, text,
+language/version and provenance.
+A semantic phrase hash prevents new revisions for JSON formatting changes alone.
+SQLite and raw files use the existing verified snapshot and restore workflow.
 
-Install the two `services/minbox-text-loom.*` files in the user systemd directory
-and place loom_capture.py alongside archive_cli.py/storage.py in the existing
-private application install. Reload systemd and enable/start the timer. Runtime
-archive content remains outside Git. Authentication-only/private Loom transcripts
-are not supported by this public-viewer capture path.
+Search remains a JSON list. It adds distinct `loom-transcript` matches with
+revision citations and original message references.
+Evidence previews annotate selected source messages with their saved transcripts.
+Topic classification remains pending review.
+Captures do not create synthetic messages.
+They do not change Google Messages import counts or freshness.
+
+## Agent installation
+
+1. Install both `services/minbox-text-loom.*` files in the user systemd directory.
+2. Place `loom_capture.py` beside `archive_cli.py` and `storage.py` in the existing private application install.
+3. Reload systemd.
+4. Enable and start the timer, unless the owner has explicitly paused it.
+5. Check a completed capture run and `loom-status`.
+6. Configure optional [Loom monitoring](HEALTH_ALERTS.md#loom-capture-monitoring) after the collector has run.
+
+Keep runtime archive content outside Git.
+A successful capture does not prove retrieval through the AI phone app.
+Test that access separately through [PHONE_ACCESS.md](PHONE_ACCESS.md).

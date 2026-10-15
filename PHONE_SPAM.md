@@ -1,70 +1,104 @@
 # Android phone spam and Drive removal
 
-The available Google Messages protocol exposes Spam & blocked folder state,
-not a reliable receipt of an exact manual Report spam tap. That folder can include
-automatically filtered spam and conversations blocked without reporting.
-The supported policy is therefore **exclude the whole Spam & blocked folder**,
-not a manual-report-only promise. It is opt-in; absence or `off` changes nothing.
+This optional technical guide helps the owner's installed coding agent connect
+Android folder choices to archive filtering. It supports the path from paired
+texts to answers in the owner's preferred AI phone app. Start with the
+[beginner path](README.md#get-started). Use
+[phone acceptance](PHONE_ACCESS.md#start-with-a-small-retrieval-check) for the
+complete phone-answer test.
 
-When `phone_spam_policy` is `spam_and_blocked`, positive reviewed collector
+The Google Messages protocol exposes the phone's Spam & blocked folder state.
+It cannot reliably confirm an exact manual Report spam tap. This folder can
+include automatically filtered spam and conversations blocked without reporting.
+The supported policy excludes the **whole Spam & blocked folder**.
+It does not promise manual-report-only filtering.
+The policy is optional. An absent policy or `off` changes nothing.
+
+With `phone_spam_policy: "spam_and_blocked"`, reviewed positive collector
 observations create durable owner/source/conversation exclusions. Both publishers
-filter those threads before model input or image upload. Full message chunks,
-optional work messages/notes and dependent Loom views reconcile without their
-content. Old message chunks are blanked when withdrawn. Matching managed Drive
-images are permanently deleted with private-account/root/parent/identity/checksum
-checks and a durable retry journal; unrelated messages and images remain intact.
+filter those conversations before model input or image upload. Full message
+chunks, optional work messages/notes and dependent Loom views remove that content.
+Withdrawn old message chunks are blanked.
 
-Local originals, revisions and images are retained. Moving a conversation out of
-Spam & blocked restores eligible content after the collector confirms its normal
-folder status with a fresh, read-only lookup. Ordinary events, missing threads,
-failed scans and old responses cannot restore it. Other explicit archive
-corrections and filters still apply. Restored images may receive new Drive links.
-Earlier independent snapshots and old installations must honor the current
-exclusions before publishing; they are not erased by this feature.
+Matching managed Drive images are permanently deleted. Deletion requires private
+account, root, parent, identity and checksum checks. A durable journal tracks
+retries. Unrelated messages and images remain intact.
+
+Local originals, revisions and images are retained. Eligible content can return
+when the collector confirms normal folder status through a fresh read-only lookup.
+Ordinary events, missing conversations, failed scans and old responses cannot
+restore content. Other archive corrections and filters still apply.
+Restored images can receive new Drive links.
+
+Independent snapshots and old installations must honor current exclusions before
+publishing. This feature does not erase those copies.
 
 ## Enable after owner consent and collector checks
 
-1. Explain the all-Spam-&-blocked scope and obtain the owner's choice. Do not
-   substitute it for an explicit manual-report-only request.
-2. Build/install the reviewed collector using GMKIT_MEDIA.md, preserving its
-   AGPL source/notices. On the actual collection computer, verify connection and
-   sending off; confirm the new SQLite metadata tables and scan coverage.
-3. Run the existing owner import. Its safe `phone_spam` counts report signal support
-   and new exclusions without bodies or IDs. An old collector cannot support this
-   policy. Never manufacture a signal from a missing thread or archive/deletion.
-4. Under reviewed owner configuration, set `phone_spam_policy: "spam_and_blocked"`
-   in every full/work publisher for that owner. Keep configs private and preserve
-   actual account/root/Docs bindings, budgets and pauses. Do not enable on iPhone.
-5. Run and verify publication and image deletion, then restore prior schedules.
-   A failed deletion retains its journal and does not acknowledge successful
-   publication. Normal retries reconcile it; auth/privacy/integrity failures need
-   human attention under HEALTH_ALERTS.md. Background publishing/imports skip a
-   busy owner and retry on their next scheduled run, without changing success
-   status or producing lock-wait failures.
+**Owner:** Choose whether to exclude the whole Spam & blocked folder.
+An explicit manual-report-only request requires a different supported design.
+Do not proceed with this policy as a substitute.
 
-**Phone (owner's Android phone):** for live acceptance, report a benign disposable
-conversation as spam after its archive text/image has been verified. **Computer
-(collection host), agent:** verify that exact observed conversation disappears
-from current Drive text views, its managed image files are gone, unrelated content
-remains, local originals remain and later import/idle cycles cannot republish it.
-Then, on the phone, move that conversation out of Spam & blocked. Verify that a
-fresh normal-status confirmation restores its eligible text and images, without
-duplicates or changes to unrelated content. Fixture tests alone do not prove a particular phone's event propagation.
+**Agent, on the archive computer:**
+
+1. Build and install the reviewed collector through [GMKIT_MEDIA.md](GMKIT_MEDIA.md).
+   Preserve its AGPL source and notices.
+2. Verify connection and sending off.
+   Confirm the new SQLite metadata tables and scan coverage.
+3. Run the existing owner import.
+   Inspect safe `phone_spam` counts for signal support and new exclusions.
+   These counts contain no bodies or IDs.
+   An old collector cannot support this policy.
+   Never infer a signal from a missing conversation, archive action or deletion.
+4. Set `phone_spam_policy: "spam_and_blocked"` in every full/work publisher for that owner.
+   Use the reviewed owner configuration.
+   Keep configs private.
+   Preserve actual account, root and Doc bindings.
+   Preserve budgets and explicit pauses.
+   Do not enable this policy on iPhone.
+5. Run publication.
+   Verify text removal and managed image deletion.
+   Restore prior schedules without removing explicit pauses.
+
+A failed deletion retains its journal and prevents acknowledgment of successful
+publication. Normal retries reconcile it. Authorization, privacy and integrity
+failures require human attention under [HEALTH_ALERTS.md](HEALTH_ALERTS.md).
+Background publishers and imports skip a busy owner until their next scheduled run.
+They do not change success status or produce lock-wait failures.
+
+**Owner, on the Android phone:** For live acceptance, report a benign disposable
+conversation as spam. First have the agent verify its archive text and image.
+
+**Agent, on the archive computer:** Verify removal of that exact observed
+conversation from current Drive text views.
+Verify that its managed image files are gone.
+Check that unrelated content and local originals remain.
+Verify that later import and idle cycles cannot republish the conversation.
+
+**Owner, on the Android phone:** Move that conversation out of Spam & blocked.
+
+**Agent, on the archive computer:** Verify a fresh normal-status confirmation.
+Check that eligible text and images return without duplicates.
+Check that unrelated content remains unchanged.
+Fixture tests alone do not prove event delivery from a particular phone.
 
 ## Practical limits
 
-Incoming updates normally propagate promptly; the collector also scans folder
-metadata every five minutes. Import/publication schedules and ongoing work add
-latency. The SDK scan has a 500-conversation cap and reports incomplete coverage;
-it cannot prove every existing phone spam thread was seen. Restoration uses
-bounded, rotating lookups of known excluded conversations rather than inferring
-normal status from absence or relying on the inbox list cap.
+Incoming updates usually propagate promptly. The collector also scans folder
+metadata every five minutes. Import schedules, publication schedules and ongoing
+work add delay.
 
-Rewriting native Google Docs removes current archive content but does not erase
-Google's prior Doc versions. Google does not allow deleting individual native-Doc
-revisions. Erasing that history would require replacing entire affected Docs and
-deleting their old files, changing links; that is outside this policy. Existing AI
-chat answers/provider caches and independent backups are also separate copies.
+The SDK scan has a 500-conversation cap and reports incomplete coverage.
+It cannot prove that every existing phone spam conversation was seen.
+Restoration uses bounded rotating lookups of known excluded conversations.
+It does not infer normal status from absence or depend on the inbox list cap.
 
-The feature is implemented behind an explicit policy and needs live acceptance
-before claiming unattended phone-to-Drive deletion works for an installation.
+Rewriting native Google Docs removes current archive content.
+It does not erase prior Doc versions. Google does not permit deletion of individual
+native-Doc revisions. Erasing that history requires replacing affected Docs and
+deleting old files. This changes links and is outside this policy.
+AI chat answers, provider caches and independent backups are separate copies.
+
+The feature requires an explicit policy and live acceptance.
+Do not claim unattended phone-to-Drive deletion works before testing the installation.
+A passing deletion test alone does not prove fresh answers in the AI phone app.
