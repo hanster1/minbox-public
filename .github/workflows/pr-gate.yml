@@ -1,7 +1,7 @@
 # PR gate: run checks, classify risk by changed paths, auto-merge low-risk PRs.
 # Rules: agent-workflows v6 RULES (branch + PR, never push to main).
 # High-risk paths live in .github/high-risk-paths.txt. Anything matching them
-# (or anything under .github/) gets the `needs-spencer` label and waits for Spencer.
+# (or anything under .github/) gets the `needs-maintainer` label and waits for the maintainer.
 name: PR gate
 on:
   pull_request:
@@ -59,8 +59,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
         run: |
-          gh label create needs-spencer --color B60205 --description "High-risk change: waits for Spencer's approval" -R "$GITHUB_REPOSITORY" 2>/dev/null || true
-          gh pr edit "$PR" --add-label needs-spencer -R "$GITHUB_REPOSITORY"
+          gh label create needs-maintainer --color B60205 --description "High-risk change: waits for maintainer approval" -R "$GITHUB_REPOSITORY" 2>/dev/null || true
+          gh pr edit "$PR" --add-label needs-maintainer -R "$GITHUB_REPOSITORY"
 
   automerge:
     needs: [checks, risk]
@@ -68,7 +68,7 @@ jobs:
       needs.risk.outputs.level == 'low' &&
       !github.event.pull_request.draft &&
       github.event.pull_request.head.repo.full_name == github.repository &&
-      !contains(github.event.pull_request.labels.*.name, 'needs-spencer') &&
+      !contains(github.event.pull_request.labels.*.name, 'needs-maintainer') &&
       !contains(github.event.pull_request.labels.*.name, 'hold')
     runs-on: ubuntu-latest
     permissions:
