@@ -283,6 +283,9 @@
     },
     "tests/test_local_archive_export.py": {
       "sha256": "2e00dfedcdc7247e32b44220590e361bcbc95d20d70acb2bc59e32225189ebc2"
+    },
+    "tests/test_public_release_check.py": {
+      "sha256": "38435d771a0d2eab29db84995f155c535bcd25376245060ebe307a2d04dbd1b4"
     }
   }
 }
