@@ -139,6 +139,112 @@ class LocalExportTests(unittest.TestCase):
         item.update(updates)
         return item
 
+    def test_unchanged_images_validate_without_output_writes_or_replacement(self):
+        image = self.image()
+        self.load([self.record(1, attachments=[image])])
+        first = self.export(include_images=True)
+        before, inode = self.generation(), self.destination.stat().st_ino
+        file_inodes = {p.name: p.stat().st_ino for p in self.destination.iterdir()}
+        # An import/sync observation alone is not an output change.
+        self.load([self.record(1, attachments=[image])])
+        with self.archive._connect() as db:
+            db.execute('UPDATE phone_spam_sync SET checked_at=?', ('2026-10-15T12:00:00Z',))
+            db.execute('UPDATE imports SET imported_at=?', ('2026-10-15T12:00:00Z',))
+        with (patch.object(exporter, '_write_private', side_effect=AssertionError('output write')),
+              patch.object(exporter, '_rename', side_effect=AssertionError('replacement'))):
+            second = self.export(include_images=True)
+        self.assertEqual(second['status'], 'unchanged')
+        self.assertEqual(first['generation'], second['generation'])
+        self.assertIn('checked_at', second)
+        self.assertEqual(first['bytes'], second['bytes'])
+        self.assertEqual(self.generation(), before)
+        self.assertEqual(self.destination.stat().st_ino, inode)
+        self.assertEqual({p.name: p.stat().st_ino for p in self.destination.iterdir()}, file_inodes)
+
+    def test_settings_corrections_and_current_filter_changes_rebuild(self):
+        self.load([self.record(1)])
+        first = self.export()
+        for settings in ({'include_images': True}, {'max_chunk_bytes': 8192},
+                         {'phone_spam_policy': 'off'}):
+            result = self.export(**settings)
+            self.assertEqual(result['status'], 'complete')
+            self.assertNotEqual(result['generation'], first['generation'])
+            first = result
+        # A correction revision must refresh even when its target is absent.
+        self.correct([self.correction('future', 'spam', 'M99')], registry=False)
+        self.assertEqual(self.export(phone_spam_policy='off')['status'], 'complete')
+        with patch.object(exporter, 'hard_excluded', return_value='new-filter'):
+            result = self.export(phone_spam_policy='off')
+        self.assertEqual(result['status'], 'complete')
+        self.assertEqual(result['published_messages'], 0)
+
+    def test_legacy_or_invalid_skip_metadata_rebuilds(self):
+        self.load([self.record(1)])
+        self.export()
+        for field, value in [('settings', None), ('generated_at', 'invalid'),
+                             ('generated_at', '2026-10-14T12:00:00'), ('generation', 'invalid')]:
+            manifest = json.loads((self.destination / MANIFEST).read_bytes())
+            manifest[field] = value
+            (self.destination / MANIFEST).write_text(json.dumps(manifest))
+            self.assertEqual(self.export()['status'], 'complete')
+
+    def test_noop_validates_current_source_and_destination(self):
+        self.load([self.record(1)])
+        self.export()
+        before = self.generation()
+        with self.archive._connect() as db:
+            payload = db.execute('SELECT payload FROM messages').fetchone()[0]
+            db.execute('UPDATE messages SET payload=?', ('invalid-json',))
+        with self.assertRaises(ValueError):
+            self.export()
+        self.assertEqual(self.generation(), before)
+        with self.archive._connect() as db:
+            db.execute('UPDATE messages SET payload=?', (payload,))
+        original = exporter._render
+        def render_then_edit_destination(*args, **kwargs):
+            result = original(*args, **kwargs)
+            next(self.destination.glob('messages-*.txt')).write_bytes(b'edited output')
+            return result
+        with patch.object(exporter, '_render', side_effect=render_then_edit_destination):
+            with self.assertRaisesRegex(ValueError, 'verification failed'):
+                self.export()
+        # The exporter neither replaced the folder nor acknowledged success.
+        self.assertEqual((self.destination / MANIFEST).read_bytes(), before[MANIFEST])
+        self.assertEqual(next(self.destination.glob('messages-*.txt')).read_bytes(), b'edited output')
+
+    def test_noop_rechecks_source_policy_and_image_races(self):
+        image = self.image()
+        self.load([self.record(1, attachments=[image])])
+        self.export(include_images=True)
+        before = self.generation()
+        original = exporter._render
+        def render_then_change(*args, **kwargs):
+            result = original(*args, **kwargs)
+            self.phone_spam(['chat'])
+            return result
+        with patch.object(exporter, '_render', side_effect=render_then_change):
+            with self.assertRaisesRegex(RuntimeError, 'source snapshot changed'):
+                self.export(include_images=True)
+        self.assertEqual(self.generation(), before)
+        self.phone_spam([])
+        def render_then_correct(*args, **kwargs):
+            result = original(*args, **kwargs)
+            self.correct([self.correction('race', 'work')])
+            return result
+        with patch.object(exporter, '_render', side_effect=render_then_correct):
+            with self.assertRaisesRegex(RuntimeError, 'policy changed'):
+                self.export(include_images=True)
+        self.export(include_images=True)
+        before = self.generation()
+        def render_then_tamper(*args, **kwargs):
+            result = original(*args, **kwargs)
+            Path(image['local_path']).write_bytes(b'tampered')
+            return result
+        with patch.object(exporter, '_render', side_effect=render_then_tamper):
+            with self.assertRaisesRegex(ValueError, 'verification failed'):
+                self.export(include_images=True)
+        self.assertEqual(self.generation(), before)
+
     def test_default_images_and_text_only_remove_images(self):
         good = self.image()
         self.load([self.record(1, attachments=[good, {'capture_status': 'unavailable',
@@ -238,6 +344,7 @@ class LocalExportTests(unittest.TestCase):
         self.load([self.record(1, attachments=[image])])
         self.export(include_images=True)
         before = self.generation()
+        self.load([self.record(1, 'Changed before race', attachments=[image])])
         original_write = exporter._write_private
         def tamper_during_write(directory, name, data):
             original_write(directory, name, data)
@@ -439,6 +546,7 @@ class LocalExportTests(unittest.TestCase):
         self.load([self.record(1, 'Earlier generation')])
         self.export()
         before = self.generation()
+        self.load([self.record(1, 'Changed before policy race')])
         original = exporter._write_private
         def change_policy(directory, name, data):
             original(directory, name, data)
@@ -455,6 +563,7 @@ class LocalExportTests(unittest.TestCase):
         self.load([self.record(1, 'Prior stable source')])
         self.export()
         before = self.generation()
+        self.load([self.record(1, 'Changed before source race')])
         original = exporter._write_private
         def change_source(directory, name, data):
             original(directory, name, data)
@@ -631,7 +740,8 @@ class LocalExportTests(unittest.TestCase):
         second = subprocess.run(command, cwd=self.base, env=environment, capture_output=True, text=True)
         self.assertEqual(second.returncode, 0, second.stderr)
         self.assertEqual(json.loads(second.stdout)['published_messages'], 1)
-        self.assertNotEqual(json.loads(first.stdout)['generation'], json.loads(second.stdout)['generation'])
+        self.assertEqual(json.loads(first.stdout)['generation'], json.loads(second.stdout)['generation'])
+        self.assertEqual(json.loads(second.stdout)['status'], 'unchanged')
 
 
 if __name__ == '__main__':
