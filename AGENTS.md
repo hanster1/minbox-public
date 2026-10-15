@@ -52,6 +52,10 @@ Never make private files public to solve access problems.
 ## Verify the whole result
 
 Use [PHONE_ACCESS](PHONE_ACCESS.md) to choose and test the final route.
+First consider Grok Bot or ChatGPT dot for connected-computer access when supported.
+Consider Claude Cowork only after checking desktop access eligibility.
+Recommendations are candidates to test, not verified solutions for every user.
+Preserve a working Drive route if the user prefers it.
 Check a harmless captured message, filtering, output, scheduled updates, and a useful source-backed answer from the phone.
 Then verify an updated source from the intended conversation or project.
 A running collector or completed Drive publication is only a component result.

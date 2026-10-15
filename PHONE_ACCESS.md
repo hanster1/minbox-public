@@ -8,6 +8,26 @@ The goal is a useful answer from your phone, based on current filtered messages.
 A working collector or desktop chat does not prove that result.
 Start with a harmless test file. Then test the real filtered archive.
 
+## Recommended options to try first
+
+Start with connected-computer access when the owner accepts its permissions and the account supports it.
+Our first options are **Grok Bot** and **ChatGPT dot**.
+**Claude Cowork** is a conditional candidate; check its desktop access before planning around it.
+
+Grok Bot has the strongest direct-file evidence from our Linux/Android trials.
+ChatGPT dot also passed a changed-file phone read.
+Neither trial yet proves useful answers across the full archive or reboot reliability.
+See the [evidence table](#observed-evidence-and-limits--october-14-2026).
+
+This route lets the app read the latest generated folder without a Drive publication step.
+It can remove the publication and connector-refresh delays seen in our Drive trials.
+That is an architectural advantage, not a measured speed guarantee.
+The collector, filter schedule, app response time, and desktop availability still affect results.
+
+Keep Drive as an alternative for clients who prefer cloud retrieval or already have a reliable connection.
+Do not remove a working connection just to follow this recommendation.
+A restricted search connector remains useful when broad computer access is unacceptable.
+
 ## Compare the options
 
 Check the actual account features before installing more software.
@@ -16,8 +36,8 @@ No route below works with every service, plan, or phone.
 
 | Route | Useful when | Main tradeoff | What the agent checks |
 | --- | --- | --- | --- |
-| Private cloud archive and built-in connector | Your AI account can already read the chosen storage service | Storage and AI permissions are separate. | Correct account, current source read, phone support, and refresh delay |
 | AI desktop app connected to the archive computer | Your phone conversation can use that computer's files | Access can extend beyond the filtered folder. | Executing host, approvals, unattended access, and startup |
+| Private cloud archive and built-in connector | Your AI account can already read the chosen storage service | Storage and AI permissions are separate. | Correct account, current source read, phone support, and refresh delay |
 | Restricted read-only search connector | You want a narrow data boundary | More setup and authentication work | Allowed tools, reachable server, access limits, and phone compatibility |
 | Isolated desktop app | You want desktop convenience with OS restrictions | More installation and session maintenance | Actual file restrictions, login, and registration |
 | Manual upload to a chat or project | You ask occasional questions | Uploaded files do not update themselves. | Replacement, removal, and the uploaded version |
@@ -103,6 +123,21 @@ A native app is not required just to read Drive through a cloud connector.
 
 ## Claude and other AI services
 
+### Claude Cowork
+
+Cowork is a conditional candidate for this connected-computer approach.
+The [official Dispatch guide](https://support.claude.com/en/articles/13947068-assign-tasks-from-anywhere-in-claude-cowork) says Dispatch is unavailable to new users.
+Existing Dispatch users can continue for now.
+That route uses the desktop's local files and needs the computer awake with Claude Desktop open.
+Check the actual account before installing or promising phone access.
+
+[Cloud Cowork](https://claude.com/product/cowork) can run tasks from a phone too.
+A cloud task is not proof of access to the archive computer's current files.
+No Minbox Cowork phone trial has passed.
+Verify changed-file reads, useful archive answers, permissions, and restart behavior before recommending it for a specific installation.
+
+### Other routes
+
 Use the same choice and test process with the user's preferred service.
 Have the agent check its current official documentation and actual account controls.
 Check whether a connector works on the phone, in projects, and with updated sources.
@@ -152,7 +187,7 @@ Recheck official guidance and the actual account before setup.
 | Grok Bot with direct computer access | Android retrieved a changed test value without desktop approval. The real local entry facts matched. | Message-level answers, project behavior, and reboot persistence |
 | ChatGPT dot with direct computer access | Android retrieved the changed test value without desktop approval. | Real archive answers, project behavior, and reboot persistence |
 | Restricted search prototype | Local protocol, changed-source, authentication, and sandbox tests passed on Linux. | Remote client registration and unattended phone access |
-| Claude | No phone trial completed. | Account, connector, project, and refresh behavior |
+| Claude Cowork | Official desktop Dispatch route documented, but closed to new users. No Minbox phone trial completed. | Account eligibility, local-file access, answers, and refresh behavior |
 
 The direct Grok Bot trial used owner-approved broad execution and scoped Auto Review rules.
 It did not enforce a folder-only boundary.

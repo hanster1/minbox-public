@@ -23,6 +23,14 @@ No site deployment or runtime update is included in this documentation pass.
 - The read-only search prototype passed local tests. Remote phone registration is unverified.
 - The reset-link repair is installed. All 24 detected sources were absent from refreshed local output. Original data stayed intact. Local-model filtering is an option, not an included backend.
 
+## Recommended direction
+
+Prefer testing connected-computer apps: Grok Bot, ChatGPT dot, and conditionally Claude Cowork.
+This can avoid Drive publication and connector-refresh delays; comparative speed is not measured.
+Official Claude guidance says desktop Dispatch is closed to new users; no Cowork trial has passed.
+README and PHONE_ACCESS now distinguish recommended trials, account limits, and actual evidence.
+No application code, runtime, or website deployment changed in this recommendation update.
+
 ## Next actions
 
 Guide files, heading links, HTML navigation, and the release inventory pass checks.

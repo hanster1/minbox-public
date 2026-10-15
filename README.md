@@ -63,12 +63,30 @@ For stricter privacy, consider local-model filtering before releasing a separate
 That option needs an added model integration; it is not included in the exporter.
 Read [privacy and filtering choices](REFERENCE_GUIDE.md#who-sees-the-originals).
 
-Then choose a connection with your agent:
+Then choose a connection with your agent.
+
+**Our recommended first route is a connected-computer app, when the account supports it.**
+Start with these options:
+
+| App | Recommendation and current evidence |
+| --- | --- |
+| Grok Bot | First option to try from our Linux/Android trials. Changed-file and real entry-file reads passed. Full archive answers remain unverified. |
+| ChatGPT dot | Another first option. Changed-file reads from Android passed. Real archive answers remain unverified. |
+| Claude Cowork | Conditional option to investigate. The local-desktop Dispatch route is closed to new users; existing users can test it. No Minbox trial has passed. |
+
+These are recommendations to test, not guarantees of support or speed.
+Direct reads can avoid Drive publication and connector-refresh delays.
+Collection, filtering, and the AI's own response time still matter.
+This retrieval route needs no separate Drive connection.
+This does not make the AI model local or limit its access to one folder.
+See [current availability and tests](PHONE_ACCESS.md#recommended-options-to-try-first).
+
+Other routes remain useful:
 
 | Connection | Main advantage | Main tradeoff |
 | --- | --- | --- |
-| Private cloud archive and the AI app's connector | Convenient when your account already supports it | Cloud storage and AI access need separate permissions. |
 | AI desktop app connected to your computer | Can read current local files from a phone conversation | Computer access can include more than the filtered folder. |
+| Private cloud archive and the AI app's connector | Convenient when your account already supports it | Cloud storage and AI access need separate permissions. |
 | A restricted search connector | Can expose only selected search and read functions | Requires more setup, authentication, and compatibility tests. |
 | Manual file upload | Simple for occasional questions | Files are snapshots. Updates need another upload. |
 

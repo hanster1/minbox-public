@@ -242,6 +242,10 @@ Use [CONTRIBUTING](CONTRIBUTING.md) for source and release checks.
 ## Choosing phone retrieval
 
 Compare [phone access options](PHONE_ACCESS.md) with the user before choosing a route.
+First consider Grok Bot or ChatGPT dot with connected-computer access.
+Claude Cowork is a conditional candidate; its desktop Dispatch route is closed to new users.
+Check [current recommendations](PHONE_ACCESS.md#recommended-options-to-try-first) and account eligibility.
+Direct reads can avoid Drive publication delays, but full answer quality and reliability still need tests.
 A built-in cloud connector, connected desktop, restricted search service, or manual upload can each be useful.
 Custom MCP and OS isolation are options, not prerequisites for all users.
 The chosen route must support the user's phone, account, and desired project behavior.
