@@ -1,15 +1,16 @@
 # Licensing boundaries and dependencies
 
 LICENSE applies to Minbox's original application code and documentation.
-`scripts/gmkit-media.patch` modifies an AGPL-licensed collector; that patch and the
-resulting collector remain AGPL-3.0-or-later and are excluded from the MIT grant.
+`scripts/gmkit-media.patch` and `scripts/gmkit-spam-paging.patch` modify an AGPL-licensed
+collector; those patches and the resulting collector remain AGPL-3.0-or-later and are excluded from the MIT grant.
 The upstream license is included at licenses/AGPL-3.0.txt.
 
 The collector uses [gmkit](https://github.com/johnlindquist/gmkit), pinned to
 `c714f8ea1602d9c61876a87a44f6984ba3aeb4c4`, and its upstream Go dependencies,
 including mautrix/gmessages. The 2026-10-13 modification adds bounded full image
 capture, phone spam-folder metadata reconciliation and an existing-pairing
-refresh candidate tool. The builder preserves
+refresh candidate tool. The 2026-10-15 spam-paging patch escalates the
+Spam & blocked folder request size while the folder response is capped. The builder preserves
 upstream LICENSE/NOTICE and adds the dated modification notice. Its output includes
 complete modified corresponding source, patch and provenance next to the binaries.
 Retain all these artifacts when distributing binaries, and provide corresponding

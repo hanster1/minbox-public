@@ -1,0 +1,208 @@
+diff --git a/internal/cmd/phone_spam.go b/internal/cmd/phone_spam.go
+index abf375f..102f08d 100644
+--- a/internal/cmd/phone_spam.go
++++ b/internal/cmd/phone_spam.go
+@@ -14,6 +14,11 @@ import (
+ )
+ 
+ const phoneSpamLimit = 500
++
++// phoneSpamMaxLimit bounds escalation. libgm v0.6.4 does not expose a cursor
++// for ListConversations, so full coverage is reached by re-requesting with a
++// larger count until the folder fits in one response.
++const phoneSpamMaxLimit = 8000
+ const phoneRestoreLimit = 20
+ const phoneSpamInterval = 5 * time.Minute
+ const phoneSpamTimeout = 30 * time.Second
+@@ -38,6 +43,7 @@ type phoneSpamScanner struct {
+ 	store            *store.Store
+ 	logger           zerolog.Logger
+ 	inFlight         <-chan phoneSpamResult
++	limit            int // current folder request size; escalates while capped
+ 	timeout          time.Duration
+ 	interval         time.Duration
+ 	canScan          func() bool
+@@ -55,7 +61,7 @@ func (s *phoneSpamScanner) start(id string) {
+ 	s.requestStartedAt = time.Now().UnixMilli()
+ 	go func() {
+ 		if id == "" {
+-			response, err := s.client.ListConversations(phoneSpamLimit, gmproto.ListConversationsRequest_SPAM_BLOCKED)
++			response, err := s.client.ListConversations(s.currentLimit(), gmproto.ListConversationsRequest_SPAM_BLOCKED)
+ 			result <- phoneSpamResult{response: response, err: err}
+ 		} else {
+ 			conversation, err := s.client.GetConversation(id)
+@@ -226,13 +232,15 @@ func (s *phoneSpamScanner) applyDiscovery(ctx, bounded context.Context, result p
+ 	conversations := result.response.GetConversations()
+ 	cursor := result.response.GetCursor() != nil || len(result.response.GetCursorBytes()) > 0
+ 	coverage := "snapshot"
+-	if len(conversations) >= phoneSpamLimit || cursor {
++	limit := s.currentLimit()
++	if len(conversations) >= limit || cursor {
+ 		coverage = "capped"
+ 	}
+ 	rows := conversations
+-	if len(rows) > phoneSpamLimit {
+-		rows = rows[:phoneSpamLimit]
++	if len(rows) > limit {
++		rows = rows[:limit]
+ 	}
++
+ 	for _, conversation := range rows {
+ 		if conversation == nil {
+ 			continue
+@@ -247,6 +255,24 @@ func (s *phoneSpamScanner) applyDiscovery(ctx, bounded context.Context, result p
+ 		}
+ 	}
+ 	s.record(ctx, coverage, len(conversations), cursor, "")
++	// Everything returned is still recorded; escalate so the next cycle
++	// covers the whole folder. Discovery never infers removal either way.
++	if coverage == "capped" && limit < phoneSpamMaxLimit {
++		s.limit = limit * 2
++		if s.limit > phoneSpamMaxLimit {
++			s.limit = phoneSpamMaxLimit
++		}
++	}
++	if coverage == "capped" {
++		_, _ = s.store.DB().ExecContext(ctx, "UPDATE phone_spam_scan_state SET next_limit=? WHERE id=1", s.currentLimit())
++	}
++}
++
++func (s *phoneSpamScanner) currentLimit() int {
++	if s.limit < phoneSpamLimit {
++		return phoneSpamLimit
++	}
++	return s.limit
+ }
+ 
+ func (s *phoneSpamScanner) recordRestore(ctx context.Context, coverage string, count int, failure string) {
+@@ -267,12 +293,12 @@ func (s *phoneSpamScanner) record(ctx context.Context, coverage string, count in
+ 	if coverage == "snapshot" || coverage == "capped" {
+ 		success = now
+ 	}
+-	_, err := s.store.DB().ExecContext(ctx, `UPDATE phone_spam_scan_state SET attempted_at=?,succeeded_at=CASE WHEN ?>0 THEN ? ELSE succeeded_at END,coverage=?,conversation_limit=?,returned_count=?,has_cursor=?,error=? WHERE id=1`, now, success, success, coverage, phoneSpamLimit, count, cursor, failure)
++	_, err := s.store.DB().ExecContext(ctx, `UPDATE phone_spam_scan_state SET attempted_at=?,succeeded_at=CASE WHEN ?>0 THEN ? ELSE succeeded_at END,coverage=?,conversation_limit=?,next_limit=?,returned_count=?,has_cursor=?,error=? WHERE id=1`, now, success, success, coverage, s.currentLimit(), s.currentLimit(), count, cursor, failure)
+ 	if err != nil {
+ 		s.logger.Warn().Err(err).Msg("Phone spam coverage persistence failed")
+ 	}
+ 	if failure != "" || coverage == "capped" {
+-		s.logger.Warn().Str("coverage", coverage).Int("limit", phoneSpamLimit).Int("returned", count).Bool("has_cursor", cursor).Msg(fmt.Sprintf("Phone spam metadata reconciliation: %s", failure))
++		s.logger.Warn().Str("coverage", coverage).Int("limit", s.currentLimit()).Int("returned", count).Bool("has_cursor", cursor).Msg(fmt.Sprintf("Phone spam metadata reconciliation: %s", failure))
+ 	}
+ }
+ 
+diff --git a/internal/cmd/phone_spam_test.go b/internal/cmd/phone_spam_test.go
+index 97bba2d..bdca1a6 100644
+--- a/internal/cmd/phone_spam_test.go
++++ b/internal/cmd/phone_spam_test.go
+@@ -28,11 +28,13 @@ type spamListFixture struct {
+ 	lookupCalls   atomic.Int32
+ 	rotate        bool
+ 	lookupIDs     []string
++	lastCount     atomic.Int32
+ }
+ 
+ func (f *spamListFixture) ListConversations(count int, folder gmproto.ListConversationsRequest_Folder) (*gmproto.ListConversationsResponse, error) {
+ 	f.calls.Add(1)
+-	if count != 500 || (folder != gmproto.ListConversationsRequest_SPAM_BLOCKED && folder != gmproto.ListConversationsRequest_INBOX && folder != gmproto.ListConversationsRequest_ARCHIVE) {
++	f.lastCount.Store(int32(count))
++	if count < 500 || count > phoneSpamMaxLimit || (folder != gmproto.ListConversationsRequest_SPAM_BLOCKED && folder != gmproto.ListConversationsRequest_INBOX && folder != gmproto.ListConversationsRequest_ARCHIVE) {
+ 		f.wrongFolder.Store(true)
+ 	}
+ 	if f.release != nil {
+@@ -357,3 +359,37 @@ func TestPhoneFolderScannerConnectionAndFatalEventsGateRequests(t *testing.T) {
+ 		t.Fatal("fatal relay error did not cancel metadata")
+ 	}
+ }
++
++func TestPhoneSpamCappedFolderEscalatesRequestSize(t *testing.T) {
++	ctx := context.Background()
++	st, err := store.Open(ctx, filepath.Join(t.TempDir(), "archive.db"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer st.Close()
++	// A folder larger than the default request: the phone returns exactly the
++	// requested count, so the scanner must ask for more on the next cycle.
++	fixture := &spamListFixture{response: &gmproto.ListConversationsResponse{Conversations: make([]*gmproto.Conversation, 500)}}
++	scanner := &phoneSpamScanner{client: fixture, store: st, logger: zerolog.Nop()}
++	scanner.scan(ctx)
++	if got := fixture.lastCount.Load(); got != 500 {
++		t.Fatalf("first request size = %d, want 500", got)
++	}
++	var next int
++	if err := st.DB().QueryRowContext(ctx, "SELECT next_limit FROM phone_spam_scan_state").Scan(&next); err != nil || next != 1000 {
++		t.Fatalf("next_limit = %d err=%v, want 1000", next, err)
++	}
++	scanner.scan(ctx)
++	if got := fixture.lastCount.Load(); got != 1000 {
++		t.Fatalf("second request size = %d, want 1000", got)
++	}
++	if fixture.wrongFolder.Load() {
++		t.Fatal("request size or folder out of bounds")
++	}
++	// Escalation is bounded.
++	scanner.limit = phoneSpamMaxLimit
++	scanner.scan(ctx)
++	if got := fixture.lastCount.Load(); int(got) != phoneSpamMaxLimit {
++		t.Fatalf("bounded request size = %d, want %d", got, phoneSpamMaxLimit)
++	}
++}
+diff --git a/internal/store/phone_folder_test.go b/internal/store/phone_folder_test.go
+index a12187c..fe6bc42 100644
+--- a/internal/store/phone_folder_test.go
++++ b/internal/store/phone_folder_test.go
+@@ -108,6 +108,11 @@ func TestPhoneFolderMigrationRetainsV4SpamEvidence(t *testing.T) {
+ 			t.Fatal(err)
+ 		}
+ 	}
++	for _, sql := range []string{"ALTER TABLE phone_spam_scan_state DROP COLUMN next_limit", "DELETE FROM schema_version WHERE version=6"} {
++		if _, err := st.DB().ExecContext(ctx, sql); err != nil {
++			t.Fatal(err)
++		}
++	}
+ 	if _, err := st.DB().ExecContext(ctx, "DROP TABLE phone_restore_scan_state"); err != nil {
+ 		t.Fatal(err)
+ 	}
+diff --git a/internal/store/phone_spam_test.go b/internal/store/phone_spam_test.go
+index 7465303..a95de25 100644
+--- a/internal/store/phone_spam_test.go
++++ b/internal/store/phone_spam_test.go
+@@ -17,7 +17,7 @@ func TestPhoneSpamMigrationPreservesExistingArchive(t *testing.T) {
+ 		t.Fatal(err)
+ 	}
+ 	// Restore the actual v3 schema and reopen as an existing installation.
+-	for _, sql := range []string{"DROP TABLE phone_restore_scan_state", "DELETE FROM schema_version WHERE version=5", "DROP TABLE phone_spam_conversations", "DROP TABLE phone_spam_scan_state", "ALTER TABLE conversations DROP COLUMN phone_status", "DELETE FROM schema_version WHERE version=4"} {
++	for _, sql := range []string{"ALTER TABLE phone_spam_scan_state DROP COLUMN next_limit", "DELETE FROM schema_version WHERE version=6", "DROP TABLE phone_restore_scan_state", "DELETE FROM schema_version WHERE version=5", "DROP TABLE phone_spam_conversations", "DROP TABLE phone_spam_scan_state", "ALTER TABLE conversations DROP COLUMN phone_status", "DELETE FROM schema_version WHERE version=4"} {
+ 		if _, err := st.DB().ExecContext(ctx, sql); err != nil {
+ 			t.Fatal(err)
+ 		}
+diff --git a/internal/store/schema.go b/internal/store/schema.go
+index 6302f17..5e23276 100644
+--- a/internal/store/schema.go
++++ b/internal/store/schema.go
+@@ -196,4 +196,10 @@ var migrations = []string{
+ 	INSERT INTO phone_restore_scan_state (id) VALUES (1);
+ 	INSERT INTO schema_version (version) VALUES (5);
+ 	`,
++	// v6: phone spam-folder scan escalation. When the Spam & blocked folder
++	// returns a capped response, the next request size is persisted here.
++	`
++	ALTER TABLE phone_spam_scan_state ADD COLUMN next_limit INTEGER NOT NULL DEFAULT 0;
++	INSERT INTO schema_version (version) VALUES (6);
++	`,
+ }
+diff --git a/internal/store/store_test.go b/internal/store/store_test.go
+index e07f688..bed5d25 100644
+--- a/internal/store/store_test.go
++++ b/internal/store/store_test.go
+@@ -33,8 +33,8 @@ func TestOpenMigratesFreshDB(t *testing.T) {
+ 	if state.LastEventTime.UnixMilli() != 0 || state.LastConnectTime.UnixMilli() != 0 {
+ 		t.Fatalf("expected unset (epoch) sync timestamps, got %+v", state)
+ 	}
+-	if v, err := st.SchemaVersion(ctx); err != nil || v != 5 {
+-		t.Fatalf("schema version: got %d err=%v, want 5", v, err)
++	if v, err := st.SchemaVersion(ctx); err != nil || v != 6 {
++		t.Fatalf("schema version: got %d err=%v, want 6", v, err)
+ 	}
+ }
+ 

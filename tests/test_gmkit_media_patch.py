@@ -55,6 +55,14 @@ class GmkitMediaPatchTests(unittest.TestCase):
         self.assertIn('GNU Affero General Public License', builder.NOTICE)
         self.assertIn(builder.COMMIT, builder.NOTICE)
 
+    def test_spam_paging_patch_escalates_capped_folder_with_regression(self):
+        self.assertEqual(builder.PATCHES[0], builder.PATCH)
+        source = builder.PATCHES[1].read_text()
+        for name in ['internal/cmd/phone_spam.go', 'phoneSpamMaxLimit', 'next_limit',
+                     'TestPhoneSpamCappedFolderEscalatesRequestSize']:
+            self.assertIn(name, source)
+        self.assertIn('gmkit-spam-paging.patch', builder.NOTICE)
+
     @unittest.skipUnless(os.environ.get('GMKIT_TEST_SOURCE') and os.environ.get('GMKIT_TEST_GO'),
                          'requires clean pinned upstream checkout and local Go toolchain')
     def test_pinned_patch_applies_tests_and_builds_offline_account_free(self):
