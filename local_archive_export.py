@@ -184,7 +184,7 @@ def _read_file(directory, name, limit):
         os.close(fd)
 
 
-def _existing(parent, name, scope):
+def _existing(parent, name, scope, manifest_out=None):
     """Refuse to replace unrelated, edited, linked, or nonprivate directories."""
     try:
         fd = os.open(name, _DIR_FLAGS, dir_fd=parent)
@@ -222,9 +222,28 @@ def _existing(parent, name, scope):
             total += len(raw)
             if len(raw) != proof['bytes'] or _sha(raw) != proof['sha256'] or total > output_limit:
                 raise ValueError('existing export file verification failed')
+        if manifest_out is not None:
+            manifest_out.update(manifest)
         return info.st_dev, info.st_ino
     finally:
         os.close(fd)
+
+
+def _skip_timestamp(manifest):
+    """Optional reuse metadata is a hint; legacy or malformed hints rebuild."""
+    value = manifest.get('generated_at')
+    generation = manifest.get('generation')
+    if (not isinstance(value, str) or not isinstance(generation, str)
+            or not re.fullmatch(r'[0-9a-f]{32}', generation)):
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+        if (parsed.tzinfo is None or parsed.utcoffset() is None
+                or parsed.isoformat() != value):
+            return None
+    except ValueError:
+        return None
+    return value
 
 
 def _write_private(directory, name, data):
@@ -406,6 +425,7 @@ def _render(owner, current, effective_labels, active_spam, policy, generated_at,
         outputs[f'looms-part-{part:04d}.txt'] = body
     dates = [s['timestamp'][:10] for s in messages if _year(s) != 'unknown']
     guide = [name + ' — Start Here', 'Generated: ' + generated_at,
+        'Generated is the last output change, not the last refresh check. Successful refresh receipts report checked_at separately.',
         f'Filtered messages: {len(messages)}; excluded messages: {sum(filtered.values())}; linked Loom transcripts: {len(looms)}.',
         'Message dates: ' + (min(dates) + ' to ' + max(dates) if dates else 'unknown'),
         'Read messages-*.txt and looms-*.txt in this folder. Cite the filename, message date and original message/source ID.',
@@ -457,7 +477,10 @@ def export_archive(archive_root, owner, correction_ledger, destination, *, phone
     _database(ledger_path, bounded=True)
     scope = _sha(_json({'root': str(root), 'owner': owner, 'ledger': str(ledger_path)}))
     with _directory(destination.parent, private=True) as parent, _lock(parent, destination.name):
-        previous = _existing(parent, destination.name, scope)
+        previous_manifest = {}
+        previous = _existing(parent, destination.name, scope, previous_manifest)
+        settings = {'phone_spam_policy': phone_spam_policy,
+                    'include_images': include_images, 'max_chunk_bytes': max_chunk_bytes}
         # Staging is outside the granted folder. It includes a private ledger
         # copy, but only its separately built generation directory is installed.
         with tempfile.TemporaryDirectory(prefix='.minbox-export-work-', dir=destination.parent) as work:
@@ -476,18 +499,33 @@ def export_archive(archive_root, owner, correction_ledger, destination, *, phone
             effective, active_spam, correction = _corrections(ledger_path, owner, sources, work / 'policy.sqlite3')
             generated_at = datetime.now(timezone.utc).isoformat()
             outputs, counts, image_bindings = _render(owner, current, effective, active_spam, phone_spam_policy, generated_at, max_chunk_bytes, root, include_images)
-            generation = uuid.uuid4().hex
-            (work / 'generation').mkdir(mode=0o700)
-            with _directory(work / 'generation', private=True) as staged:
-                proofs = {}
-                for filename, raw in sorted(outputs.items()):
-                    _write_private(staged, filename, raw)
-                    proofs[filename] = {'bytes': len(raw), 'sha256': _sha(raw)}
-                manifest = {'version': 1, 'generation': generation, 'generated_at': generated_at,
-                    'scope_sha256': scope, 'corrections': correction, 'phone_spam_policy': phone_spam_policy,
-                    'source_snapshot_sha256': source_generation, 'files': proofs, 'counts': counts}
-                _write_private(staged, MANIFEST, _json(manifest) + b'\n')
-                os.fsync(staged)
+            proofs = {filename: {'bytes': len(raw), 'sha256': _sha(raw)}
+                      for filename, raw in sorted(outputs.items())}
+            prior_time = _skip_timestamp(previous_manifest)
+            candidate_proofs = dict(proofs)
+            if prior_time is not None:
+                # Only the generated line varies with check time. Render all
+                # current rules first, then compare the prior timestamp's bytes.
+                guide = outputs['START_HERE.txt'].replace(
+                    ('Generated: ' + generated_at + '\n').encode(),
+                    ('Generated: ' + prior_time + '\n').encode(), 1)
+                candidate_proofs['START_HERE.txt'] = {'bytes': len(guide), 'sha256': _sha(guide)}
+            unchanged = (prior_time is not None
+                         and previous_manifest.get('settings') == settings
+                         and previous_manifest.get('corrections') == correction
+                         and previous_manifest.get('files') == candidate_proofs)
+            generation = previous_manifest['generation'] if unchanged else uuid.uuid4().hex
+            if not unchanged:
+                (work / 'generation').mkdir(mode=0o700)
+                with _directory(work / 'generation', private=True) as staged:
+                    for filename, raw in sorted(outputs.items()):
+                        _write_private(staged, filename, raw)
+                    manifest = {'version': 1, 'generation': generation, 'generated_at': generated_at,
+                        'scope_sha256': scope, 'corrections': correction, 'phone_spam_policy': phone_spam_policy,
+                        'settings': settings,
+                        'source_snapshot_sha256': source_generation, 'files': proofs, 'counts': counts}
+                    _write_private(staged, MANIFEST, _json(manifest) + b'\n')
+                    os.fsync(staged)
             if _ledger_policy(ledger_path, owner)[1] != correction['sha256']:
                 raise RuntimeError('correction policy changed during export; regenerate')
             _database(root / 'archive.sqlite3')
@@ -497,13 +535,18 @@ def export_archive(archive_root, owner, correction_ledger, destination, *, phone
                 filename, raw = _image(root, owner, attachment)
                 if raw != outputs[filename]:
                     raise RuntimeError('captured image changed during export; regenerate')
-            if _existing(parent, destination.name, scope) != previous:
+            final_manifest = {}
+            if (_existing(parent, destination.name, scope, final_manifest) != previous
+                    or final_manifest != previous_manifest):
                 raise RuntimeError('export destination changed during generation')
-            with _directory(work, private=True) as work_fd:
-                _rename(work_fd, 'generation', parent, destination.name, 1 if previous is None else 2)
-            os.fsync(parent)
-    return {'status': 'complete', 'generation': generation, 'files': len(outputs),
-            'bytes': sum(map(len, outputs.values())), **counts}
+            checked_at = datetime.now(timezone.utc).isoformat()
+            if not unchanged:
+                with _directory(work, private=True) as work_fd:
+                    _rename(work_fd, 'generation', parent, destination.name, 1 if previous is None else 2)
+                os.fsync(parent)
+    return {'status': 'unchanged' if unchanged else 'complete',
+            'generation': generation, 'checked_at': checked_at, 'files': len(outputs),
+            'bytes': sum(p['bytes'] for p in (candidate_proofs if unchanged else proofs).values()), **counts}
 
 
 def main(argv=None):
