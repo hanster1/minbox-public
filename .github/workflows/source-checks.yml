@@ -20,3 +20,17 @@ jobs:
       - run: python -m pip install -r requirements-google.txt -r requirements-mac.txt
       - run: python -m unittest discover -s tests -q
       - run: python scripts/check_public_release.py
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install gitleaks 8.21.2 (checksum pinned)
+        run: |
+          curl -sSLo gl.tgz https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz
+          echo "5bc41815076e6ed6ef8fbecc9d9b75bcae31f39029ceb55da08086315316e3ba  gl.tgz" | sha256sum -c -
+          tar xzf gl.tgz gitleaks
+      - name: Scan full history
+        run: ./gitleaks detect --no-banner --redact -v
