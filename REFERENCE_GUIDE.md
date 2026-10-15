@@ -13,7 +13,10 @@ First check the prerequisites: an always-on computer and an installed agent CLI 
 Check the user's phone, AI app, account features, and existing installation.
 Preserve existing messages, corrections, account connections, and deliberate pauses.
 
-Explain the few choices that affect the user's result.
+Present [the options menu](README.md#choose-what-is-included) before setup.
+Explain content and service choices in one compact exchange.
+Show what is included in the selected route, what is optional, and what needs adaptation or is unavailable.
+Confirm the owner's choices together; reuse decisions already made.
 Then do the authorized work. Ask the user for missing facts or device and account actions.
 Name the computer or phone for each action.
 
@@ -141,12 +144,15 @@ Previously uploaded images need a separate withdrawal check.
 
 ## Optional content coverage
 
-Ask which message types the user actually wants to ask about.
+Present the content types below, with support limits for the selected route, before asking what the user wants.
+Do not expect a beginner to know that attachments or transcripts may need separate setup.
 All items below are optional, including Loom. Skip Loom setup and verification if the user does not need it.
 Choose one representative example for each selected type; do not test the whole menu.
 Use an example in the normal phone question where practical.
 Check the path from capture through filtering to the answer.
 A saved attachment is not necessarily readable by the phone AI.
+Explain local capture, filtered output, and phone retrieval separately.
+The Drive publisher includes retained captured images; a text-only local export does not include image files.
 
 | Content | Included behavior or current limit | Optional check or extension |
 | --- | --- | --- |

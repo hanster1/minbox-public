@@ -1,5 +1,9 @@
 # Shared Mac onboarding instructions for local coding agents
 
+Before setup, present [the options menu](README.md#choose-what-is-included).
+Explain what this recipe includes and confirm the owner's content and service choices together.
+Do not silently include or omit images, OCR, Loom, or optional notifications.
+
 Use this agent recipe to collect iPhone texts on the owner's always-on Mac and
 build a filtered archive. The end goal is useful answers in the owner's preferred
 phone AI app. Start with [README](README.md). Use [PHONE_ACCESS](PHONE_ACCESS.md)

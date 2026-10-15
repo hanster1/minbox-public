@@ -48,6 +48,18 @@ Loom is grouped with the other optional content types; skip it when not wanted.
 The Mac installer currently bundles Loom with collection via --enable; documentation states that a no-Loom Mac path needs adaptation.
 No runtime, device restart, notification delivery, or new media support changed in this documentation update.
 
+## Options presentation and push gate
+
+Before setup, the agent presents one compact menu of content and service options.
+It confirms selections and labels each as included, optional, needing adaptation, or unavailable for the selected route.
+Explain image files separately from OCR and distinguish local capture, output, and phone AI access.
+
+The owner requires actual Grok Bot Android use before any push: useful answers from the filtered archive, including Loom and images.
+This gate is not yet passed. Distinguish image interpretation from OCR-only retrieval.
+The text-only local export does not contain original image files; verify the actual route rather than claiming otherwise.
+Desktop checks and earlier synthetic file reads do not satisfy this owner-specific publication gate.
+No push is authorized by recording the gate.
+
 ## Next actions
 
 Guide files, heading links, HTML navigation, and the release inventory pass checks.

@@ -22,6 +22,31 @@ A CLI running locally can still use a remote model.
 Explain the separate permissions of the collector, filtering tools, storage service, and answering app.
 See [data boundaries](REFERENCE_GUIDE.md#who-sees-the-originals).
 
+## Present the choices before setup
+
+Show a short options menu before installing or enabling features.
+Do not assume the owner knows which content types and services are included.
+Use [the setup choices](README.md#choose-what-is-included) and [coverage reference](REFERENCE_GUIDE.md#optional-content-coverage).
+Explain the available choices in one compact message and confirm the owner's selections together.
+Reuse preferences already given; do not ask again during every repair.
+
+Include message scope, original images, image text extraction, Loom, audio, documents, video, and linked content.
+Also cover filtering, the phone AI route, health recovery, email alerts, startup behavior, and backup needs.
+Mark each as included in the selected recipe, optional, requiring adaptation, or unavailable.
+Distinguish local capture, filtered output, and actual phone AI access.
+A feature supported somewhere in Minbox is not automatically included in every route.
+
+Original images and OCR are separate capabilities.
+The Drive path publishes retained captured images; the local text exporter includes available OCR but no original image files.
+Do not describe images as always absent or always included.
+Check actual settings and explain bundled features, including the Mac collector/Loom coupling.
+If the user declines a bundled feature, adapt the implementation or choose another suitable route.
+Do not promise a switch that the supplied code does not have.
+
+Summarize the agreed setup and any added work before proceeding.
+Keep the chosen scope in private installation notes.
+At completion, state what is working, excluded, pending, or unsupported.
+
 ## Guide the owner and do the work
 
 Use simple language and short sentences.

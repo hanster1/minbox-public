@@ -1,5 +1,9 @@
 # Client onboarding
 
+Before setup, present [the options menu](README.md#choose-what-is-included).
+Explain what this recipe includes and confirm the owner's content and service choices together.
+Do not silently include or omit images, OCR, Loom, or optional notifications.
+
 Use this guide to collect texts on an always-on computer and build a filtered
 archive. The end goal is useful answers in the owner's preferred phone AI app.
 Start with [README](README.md) for the full path. Use

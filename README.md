@@ -42,7 +42,9 @@ Give it this prompt:
 > Read README.md, AGENTS.md, and the relevant setup guides.
 > Check my phone, computer, model access, existing installation, and AI app.
 > Explain the privacy and connection choices in simple language.
-> Help me choose what to collect and filter before exposing message content.
+> Show me the available content and service options before setup.
+> Explain what my chosen route includes and what needs added work.
+> Confirm my choices together before exposing message content.
 > Do the authorized technical work and preserve existing data.
 > Tell me when I must act on the computer or phone.
 > Use the simplest supported path and reuse completed checks.
@@ -52,6 +54,36 @@ Give it this prompt:
 You do not need to run every command in this repository yourself.
 Your agent can select a supported recipe or adapt it to your needs.
 An adaptation may need new code and tests. These guides do not make every device or AI account compatible.
+
+## Choose what is included
+
+Your agent should show these choices before setup, not assume that you know the defaults.
+It should explain what your selected route includes and confirm your choices in one short exchange.
+You can keep the setup simple or add the options you need.
+
+| Choice | What the agent should make clear |
+| --- | --- |
+| Text messages | Which conversations and available history form the main archive. |
+| Original photos and screenshots | Whether image files are captured, included in the selected output, and readable by your phone AI. |
+| Text inside images | Whether OCR is available. OCR extracts text; it does not provide full image understanding. |
+| Loom transcripts | An optional addition only if you use Loom. |
+| Voice notes, PDFs/documents, ordinary videos, and linked content | Which need added capture or extraction support. They are not automatically included. |
+| Filtering and privacy | Which rules apply, whether phone spam is excluded, and whether any model sees originals. |
+| Phone AI connection | Which app and route you prefer, with its real account and permission limits. |
+| Health and automatic repair | Which stages are monitored and which safe retries are available. |
+| Email alerts | Whether you want notices that need your attention, and where they should go. |
+| Restart recovery and backups | Whether to add a restart check, startup changes, or independent backup and restoration. |
+
+For each choice, the agent should say: **included**, **optional**, **needs adaptation**, or **unavailable** for your setup.
+“Supported by Minbox” does not mean “included in this route.”
+
+For example, the Drive path publishes retained captured image files.
+The local text export includes available OCR text but does not copy original images.
+An AI connection must also be able to read the chosen output.
+You should not have to discover that distinction after setup.
+
+Your agent should finish with a short summary of what you selected and anything that needs added work.
+See [content support and limits](REFERENCE_GUIDE.md#optional-content-coverage) for details.
 
 ## The setup path
 
