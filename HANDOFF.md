@@ -63,7 +63,7 @@ Archy reports a saved archive skill and durable-memory pointer for natural-langu
 With owner approval, Google Drive and Google Docs plugins were removed account-wide from Grok Bot for this test.
 Cloud files, source archives, and publisher jobs remain intact. Reconnection uses the normal plugin setup and owner sign-in if needed.
 Archy reports updated skill and durable memory for default image inclusion, OCR limits, and filtered-folder-only retrieval.
-Archy reports a CopyToBox route from the connected host to a conversation attachment; Android delivery is still unverified.
+The owner confirmed original image retrieval and display worked in Grok Bot on Android with Drive and Docs disconnected.
 No push is authorized by recording the gate.
 
 ## Next actions
@@ -87,4 +87,4 @@ Images are linked from their messages and take part in atomic replacement and wi
 Text and OCR rules do not perform visual privacy review.
 Tests: 537 tests run, 8 skipped, no failures; release inventory and whitespace checks passed.
 The reviewed exporter is installed on the Linux trial host. A live generation succeeded with images, message links and file hashes verified. Scheduled refresh is active.
-Android image display remains pending; do not infer phone acceptance from code or desktop checks.
+The owner confirmed Android image retrieval/display passed. Useful message answers and Loom transcript answers remain pending.

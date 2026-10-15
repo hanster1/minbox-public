@@ -203,7 +203,7 @@ Recheck official guidance and the actual account before setup.
 | --- | --- | --- |
 | Ordinary Grok with Drive | Archive entry facts matched on web and Android. | Changed-source refresh, message-level answers, and project behavior |
 | Grok Bot with Drive | The real entry document was read correctly. | Full phone question-and-answer workflow through that route |
-| Grok Bot with direct computer access | Android retrieved a changed test value without desktop approval. The real local entry facts matched. | Message-level answers, project behavior, and reboot persistence |
+| Grok Bot with direct computer access | Android retrieved a changed test value without desktop approval. The real local entry facts matched. The owner also confirmed original image retrieval and display from the filtered local archive, with Drive and Docs disconnected. | Message-level and Loom transcript answers, project behavior, and reboot persistence |
 | ChatGPT dot with direct computer access | Android retrieved the changed test value without desktop approval. | Real archive answers, project behavior, and reboot persistence |
 | Restricted search prototype | Local protocol, changed-source, authentication, and sandbox tests passed on Linux. | Remote client registration and unattended phone access |
 | Claude Cowork | Official desktop Dispatch route documented, but closed to new users. No Minbox phone trial completed. | Account eligibility, local-file access, answers, and refresh behavior |
