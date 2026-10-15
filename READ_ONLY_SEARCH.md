@@ -97,8 +97,8 @@ Do not remove authentication to make the connection work.
 Verify that only the two intended tools are available.
 Check that writes fail and outside paths cannot be read.
 For HTTP, check that missing and incorrect credentials fail.
-Then run [phone retrieval tests](PHONE_ACCESS.md#start-with-a-small-retrieval-check).
-Verify a changed value without desktop approval and an answer about a known message.
+Then ask one [useful phone question](PHONE_ACCESS.md#start-with-a-small-retrieval-check).
+Use a changed value only when diagnosing freshness or integrating a new client.
 
 Report unavailable or changed sources clearly.
 Do not present a cached answer as a current source read.

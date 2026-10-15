@@ -10,7 +10,8 @@ README is the beginner entry. Technical guides support that journey.
 
 The guides now start with prerequisites and distinguish owner actions from agent tasks.
 Drive is one option, not the goal.
-Completion requires a known-message answer and updated-source retrieval from the intended phone app.
+Normal setup has three checkpoints: collection, agreed filtering, and one useful phone answer with a source.
+Agent tools check schedules and completed-run status. Extra file-change and restart tests are diagnostics, not owner setup steps.
 Writing uses short sentences and consistent terms, with roughly 80% STE alignment as a style target, not a certified score.
 Site source and the generated Drive guide use the same goal.
 No site deployment or runtime update is included in this documentation pass.
@@ -31,10 +32,17 @@ Official Claude guidance says desktop Dispatch is closed to new users; no Cowork
 README and PHONE_ACCESS now distinguish recommended trials, account limits, and actual evidence.
 No application code, runtime, or website deployment changed in this recommendation update.
 
+## Keep normal setup short
+
+The owner clarified that exploratory file-change and repeated retrieval tests should not become client onboarding requirements.
+Reuse passing evidence on established paths. Investigate only new integrations, changed conditions, or concrete failures.
+Essential permission and privacy checks remain. Existing trials still have partial evidence; the shorter checklist does not prove new capabilities.
+
 ## Next actions
 
 Guide files, heading links, HTML navigation, and the release inventory pass checks.
-Generated-guide and local-export tests pass: 39 tests, no failures.
+Latest generated-guide checks pass: 18 tests, no failures.
+Broader tests were not repeated for these guidance changes.
 Independent review found no remaining material issue after corrections.
 Resume real-archive phone-answer tests and record route-specific limits.
 Keep credentials, exact bindings, and receipts private.

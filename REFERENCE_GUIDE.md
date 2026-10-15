@@ -42,12 +42,13 @@ The source connection and AI connection have separate permissions.
 A successful interactive command does not prove that the scheduled job has access.
 
 Keep source IDs and revisions. They support repeat runs, citations, and corrections.
-Test harmless incoming and outgoing messages.
-Check groups, images, edits, and unsent messages where they matter to the user.
+Confirm that one captured message reaches the archive.
+Investigate groups, images, edits, or unsent messages only when relevant to the chosen features or a reported gap.
 Report history limits and unsupported formats.
 
-Check scheduled imports, sleep behavior, restart, expired pairing, and recovery after disconnection.
-Record tests that you cannot complete.
+Check schedules and available completed-run status with local tools.
+Reserve sleep, restart, pairing-expiry, and outage experiments for an actual issue or explicit reliability requirement.
+Record relevant known limits without making the owner run every experiment.
 A running process, recent row, or connected socket does not prove complete phone coverage.
 Do not replace a broken installation with an empty archive.
 
@@ -177,7 +178,7 @@ A process check alone is not enough.
 | Import | Completed import, database integrity, and pending source IDs | The last message is recent. |
 | Filtered output | Completed generation, current policy, and readable files | The previous output still exists. |
 | Cloud publication, if used | Completed verified output and correct permissions | A skipped run returned success. |
-| Phone retrieval | Known-message answer and changed-source read | The desktop app answered. |
+| Phone retrieval | One useful answer from the intended phone app, with a source | The desktop app answered. |
 | Schedule and recovery | Automatic repeat and later healthy observation | A restart was requested. |
 
 Use limited, reviewed retries for ordinary failures.
@@ -223,14 +224,15 @@ Any capable agent CLI can help install Minbox; that does not make it a compatibl
 
 ## Acceptance and lessons to carry forward
 
-Check each stage separately: collection, filtering, output, phone access, and scheduled updates.
-Use a known harmless message for the phone answer test.
-Verify its date and source reference.
-Then test a changed harmless source from the intended phone conversation or project.
+Keep normal setup to three checkpoints: messages arrive, agreed filters apply, and the phone gives a useful source-backed answer.
+Let the agent check output age, permissions, schedules, and available completed-run status with tools.
+Use the same phone question to check the chosen conversation or project.
+Reuse passing evidence; do not ask the owner to reproduce our exploratory tests.
+Use [focused diagnostics](PHONE_ACCESS.md#troubleshooting-and-new-integrations) only when a new integration or a concrete problem needs them.
 Do not call the full user goal complete based only on collector or Drive success.
 
 Record expected update delay, required desktop approvals, coverage limits, and untested restart or recovery behavior.
-A new user must verify their own installation.
+Confirm the essential results on the actual installation; do not repeat unrelated tests.
 Existing Linux trials show that several routes can work; they do not guarantee every account or device.
 Mac collection still needs live iPhone/Mac verification.
 See [current phone evidence](PHONE_ACCESS.md#observed-evidence-and-limits--october-14-2026).

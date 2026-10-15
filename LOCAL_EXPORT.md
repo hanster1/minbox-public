@@ -104,9 +104,9 @@ Directory exchange changes its inode, the filesystem's directory identity.
 Old open handles, working directories, watchers, or uploads can retain an earlier generation.
 A local replacement does not retract content already copied to an AI provider.
 
-Use [phone access checks](PHONE_ACCESS.md#start-with-a-small-retrieval-check) to verify updates.
-Check a changed harmless value and a useful answer about the actual archive.
-A new local generation alone does not prove that the phone AI reads it.
+Use one [useful phone question](PHONE_ACCESS.md#start-with-a-small-retrieval-check) as the normal connection check.
+Let the agent inspect generation time and scheduled-run status.
+Use a changed sample only when diagnosing stale reads or a new integration.
 
 ## Native desktop apps on a headless host
 

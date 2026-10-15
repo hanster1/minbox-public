@@ -56,8 +56,14 @@ First consider Grok Bot or ChatGPT dot for connected-computer access when suppor
 Consider Claude Cowork only after checking desktop access eligibility.
 Recommendations are candidates to test, not verified solutions for every user.
 Preserve a working Drive route if the user prefers it.
-Check a harmless captured message, filtering, output, scheduled updates, and a useful source-backed answer from the phone.
-Then verify an updated source from the intended conversation or project.
+Use three normal checkpoints: a captured message arrives, agreed filters apply, and the phone gives a useful source-backed answer.
+Check schedules and completed-run status with tools; avoid unnecessary owner involvement.
+Reuse the phone answer as the connection check.
+Do not require versioned files, repeated reads, restart drills, or separate desktop checks on an established path.
+Use focused diagnostics for new integrations, changed conditions, or a specific failure.
+Stop checking when the relevant question is resolved. Reuse successful evidence while it remains applicable.
+Another installation of a documented route does not need the full exploratory test sequence.
+Keep built-in privacy and integrity checks; summarize their results instead of asking the owner to repeat them.
 A running collector or completed Drive publication is only a component result.
 Report missing history, unsupported content, required desktop approvals, and untested behavior.
 Do not claim that all AI services work from one successful trial.

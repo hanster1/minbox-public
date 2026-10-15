@@ -45,8 +45,8 @@ The helper finds registered publisher configs in the standard Linux layout.
 Use explicit `--config-dir` when appropriate. A custom Mac layout needs reviewed
 adaptation. Do not assume the default inventory covers arbitrary configurations.
 
-Verify private publication and readback. Then test the owner's intended phone AI
-app with an existing known question and fresh content through
+Verify private publication and readback. Then ask one useful source-backed question
+from the owner's intended phone AI app through
 [PHONE_ACCESS](PHONE_ACCESS.md). Grant migration alone does not prove AI access.
 Keep private files private if retrieval fails.
 

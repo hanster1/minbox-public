@@ -120,7 +120,8 @@ bypass the saved-settings update check.
 
 Verify a harmless new message through scheduled capture. For Drive, verify
 native Doc readback and status. Check repeat and idle behavior as relevant.
-Use [PHONE_ACCESS](PHONE_ACCESS.md) to test fresh content in the phone AI app.
+Use one useful [phone question](PHONE_ACCESS.md#start-with-a-small-retrieval-check) after a repair that affects AI access.
+Investigate stale content only if it remains a problem.
 Record the actual results. Passing launchctl or source tests alone does not prove
 live Mac acceptance.
 

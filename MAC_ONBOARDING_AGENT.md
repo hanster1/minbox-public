@@ -18,9 +18,8 @@ for Minbox setup or repair on a Mac. Do not start an installation for other work
 
 This is the common entry point for local Mac setup/repair from the actual repository
 checkout. Examples use Casey; preserve the agreed existing owner namespace.
-Read AGENTS.md, WORKFLOW.md, HANDOFF.md, MAC_SETUP.md and MAC_RECOVERY.md, plus
-[publication performance](OWNER_ARCHIVE.md#publication-performance) before
-enabling or tuning the full publisher. Preserve defaults unless local completed
+Read AGENTS.md, WORKFLOW.md, HANDOFF.md, MAC_SETUP.md and MAC_RECOVERY.md.
+Use [publication performance](OWNER_ARCHIVE.md#publication-performance) for slow runs or tuning, not as a normal setup benchmark. Preserve defaults unless local completed
 runs justify a change; validate the scheduled repeat and configuration binding.
 Installed Linux workflows/skills are optional; report unavailable ones once and
 continue with these documents. Any usable CLI-capable coding agent may perform
@@ -56,12 +55,12 @@ Continue independent work while that action is blocked.
 | Stage | Evidence required before moving on |
 | --- | --- |
 | Agent available | This session can respond; login status alone proves neither quota nor usable model access. |
-| Phone sync | Casey confirms intended Apple identity and benign incoming/outgoing/group messages on both devices. |
+| Phone sync | Casey confirms the intended Apple identity; the agent checks one available message reaches the archive. |
 | Local reader | Selected Python environment, relevant tests, doctor/check-only, owner-bound capture and content-free gap report. |
 | Scheduled capture | Installed per-user job reads after required approval; a new benign message imports without interactive Terminal. |
 | Private Drive, if chosen | Casey's own account, exact drive.file grant, selected private root, native Docs readback and stable bindings. |
-| Scheduled Drive publisher, if chosen | Verified first filtered publication, unchanged zero-write/zero-model-call repeat, fresh scheduled status. |
-| Phone answers | Known-message answer and changed-source retrieval from the chosen phone app, with dates and source references. |
+| Scheduled Drive publisher, if chosen | Verified first filtered publication and enabled schedule; inspect available completed-run status. |
+| Phone answers | One useful answer from the intended phone app with a recognizable source. |
 | Local health | Explicit --enable-monitor after core checks, paused state respected, local check/report; chosen emergency delivery tested only if configured. |
 | Continuation | Local checkpoint records real results, coverage limits, pending approvals and next action. |
 
@@ -101,9 +100,9 @@ the reviewed migration procedure, not changed scope labels. Never make Docs
 public to solve connector access or replace a different owner's credentials.
 
 **Owner, phone or computer:** connect your preferred mobile AI yourself.
-Follow [PHONE_ACCESS](PHONE_ACCESS.md). For Drive, compare a harmless familiar
-message, its date and its source Doc link with the phone. Then test a useful
-archive question and fresh content. These checks verify the separate AI connection.
+Follow [PHONE_ACCESS](PHONE_ACCESS.md). For Drive, ask one useful question
+about a familiar topic from the phone. Check the answer and its source.
+This is the normal AI connection checkpoint; extra diagnostics depend on an actual problem.
 Collection can run before this check. The phone question-answering goal remains
 unverified until it passes. Only the designated Corrections Doc supplies
 writeback. Check saved/read-back and applied status separately.

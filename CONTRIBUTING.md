@@ -27,6 +27,14 @@ Use the [official ASD-STE100 reference](https://www.asd-ste100.org/assets/files/
 Do not claim a measured compliance percentage from a sentence-length check alone.
 The full standard also covers vocabulary, word meanings, and other writing rules.
 
+## Keep client setup short
+
+Use a few meaningful checkpoints on established paths: collection, filtering, and a useful phone answer.
+Do not turn exploratory experiments into default owner tasks.
+Keep changed-file, repeated-read, restart, and outage tests in focused troubleshooting.
+Let the agent reuse passing results and check routine status with tools.
+A new connector or security boundary still needs appropriate integration checks.
+
 ## Review code and data boundaries
 
 Preserve owner identity, existing data, corrections, deliberate pauses, and private account bindings.

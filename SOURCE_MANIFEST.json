@@ -93,7 +93,7 @@
       "sha256": "9ff9cb76a111932fc8f9a4f28da61b952c89b0c8d0a6f8e109a60de212c7f636"
     },
     "owner_archive_publisher.py": {
-      "sha256": "6f3594de2101084ec4a5827cf298b23019b6c7eed62b50daf404d6ed1be37142"
+      "sha256": "685ea010c0384313ee7f08d3c0b943ebab49d98843abab21dea921d01bca68c1"
     },
     "owner_onboarding.py": {
       "sha256": "ac712284d7eabb07b2691f9ed5c06f6aa50d7630d2d9882c04afacb2e9d96b15"
@@ -234,7 +234,7 @@
       "sha256": "40a2247cf129ce34d1ae824a2b71b32007374438e15441778f786ca93527f5c6"
     },
     "tests/test_owner_archive_publisher.py": {
-      "sha256": "40cc26480756b2db4d54449c2afec0ed1e9af39f7aed67c9fe44fcc683f47089"
+      "sha256": "7c8db1c03a187cb2b17bb1fad9c05158ebe002193176781d93a5278d05ac3726"
     },
     "tests/test_owner_onboarding.py": {
       "sha256": "1f0a5f89c1c9175936ac23cd5e10fc69c53b25e90498c3cfd3b1a0d64d3d1fbe"

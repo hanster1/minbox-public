@@ -298,10 +298,10 @@ class OwnerPublisherTests(unittest.TestCase):
                 self.assertIn('Connect your chosen AI app yourself', guide)
                 self.assertIn('Use ChatGPT, Grok, Claude or another app', guide)
                 self.assertIn('You handle sign-in and access consent', guide)
-                self.assertIn('Check answers and updates from your phone', guide)
+                self.assertIn('Ask a useful question from your phone', guide)
                 self.assertNotIn('You can skip it and finish onboarding', guide)
-                self.assertIn('Test a known message and an updated source', guide)
-                self.assertIn('Compare the quote, date, and source with the message on your phone', guide)
+                self.assertIn('Check one useful answer and its source', guide)
+                self.assertIn('Compare the answer and its source with the messages you recognize', guide)
                 for document in ('corrections', 'status', 'optional-work',
                                  client.keys['messages:2020:part001']):
                     link = 'https://docs.google.com/document/d/' + document

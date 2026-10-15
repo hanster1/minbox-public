@@ -1,7 +1,7 @@
 # Android recovery on the collection computer
 
 Use this agent recipe to restore Android collection and the existing filtered
-archive. Then verify that the owner's phone AI app can use fresh content.
+archive. If the repair affects phone access, confirm one useful answer in the owner's AI app.
 [README](README.md) gives the full path. [PHONE_ACCESS](PHONE_ACCESS.md) gives the
 phone acceptance checks. Use [REFERENCE_GUIDE](REFERENCE_GUIDE.md) for access
 choices and privacy boundaries. Drive repair applies only to a selected Drive path.

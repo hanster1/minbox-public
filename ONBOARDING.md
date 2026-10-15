@@ -109,7 +109,7 @@ offline false and send_mode off. The supplied service runs
 `--read-only=true serve --idle-exit 0`. Never use `--auto`. Keep sending off.
 Import once with `archive_cli.py import-gmkit Casey PRIVATE_GMCLI_DB`.
 Inspect counts and coverage gaps without private content. Ask the owner to compare
-approved harmless incoming and outgoing texts on the phone and in the archive.
+one approved captured message on the phone and in the archive.
 Do not print private history.
 
 ## Private Drive connection
@@ -142,10 +142,10 @@ folder sandbox. Minbox separately enforces the chosen root and managed parents.
 Manually inserted unrelated files are neither automatically authorized nor imported.
 Existing broad grants use DRIVE_MIGRATION.md before fresh limited consent.
 
-Before enabling the owner_all schedule, follow
-[publication performance](OWNER_ARCHIVE.md#publication-performance): establish a
-verified first run and warm repeat, inspect actual completed timestamps, and
-measure locally before tuning concurrent reads, part sizes or image attempts.
+Confirm that the first owner_all publication completed with verified output.
+Keep default performance settings during normal setup. Use
+[publication performance](OWNER_ARCHIVE.md#publication-performance) only for slow runs or tuning.
+Do not add cold/warm benchmarks to every installation.
 Use this computer's private config and reviewed installed runtime; the examples
 are optional settings, not universal onboarding defaults.
 
@@ -167,10 +167,10 @@ Preserve existing pauses and delivery settings during repair. External emergency
 delivery is optional. The owner chooses it and consents to its test.
 Without delivery configured, emergency incidents remain local.
 
-Check per-user manager persistence after logout/reboot; do not assume lingering
-or disable sleep/security silently. Verify actual scheduled new capture and Drive
-publication, plus an idle repeat with zero writes/model calls. Observe renewal,
-restart and offline catch-up where practical and record untested checks. A service
+Inspect the per-user schedule, persistence settings, and available completed-run status.
+Do not change sleep or security settings silently. Let health monitoring observe later runs.
+Keep idle-repeat benchmarks and restart/outage drills for tuning, a new access design, or a reported failure.
+Report any pending first automatic run without making the owner wait through unrelated tests. A service
 being active is not proof of complete phone history. History/media queues are
 bounded; pending/unavailable items stay explicit.
 
@@ -197,10 +197,9 @@ separate permissions. They can be broader than Minbox's. Use the Start Here Doc'
 prompt.
 
 Follow [PHONE_ACCESS](PHONE_ACCESS.md) for final phone acceptance. Ask the AI to
-quote a harmless recent text with its date and source Doc link. Compare the
-answer with your phone. Then ask a useful question that needs archive context.
-Test fresh content as well as an existing item. This tests the AI connection
-separately from capture and publication. You can defer it while collection runs;
+answer one useful question about a familiar topic, preferably involving a recent message.
+Check the answer and source from the phone. This also checks the actual AI connection.
+The agent handles collection, filtering, and schedule checks without extra owner tests. You can defer it while collection runs;
 the phone question-answering goal remains unverified until it passes.
 Keep files private if access fails. Correction writeback is optional. Verify
 both saved/read-back and applied status; “recorded” alone does not prove either.

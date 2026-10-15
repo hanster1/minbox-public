@@ -67,7 +67,7 @@ installs must reuse their saved paths, source, limits, publisher and pauses.
 **Mac owner and iPhone owner:** confirm the intended Apple Account on both devices.
 Check that Messages on the Mac shows the expected conversations. Check Messages
 in iCloud and text message forwarding as needed for these devices. Wait for the
-initial sync. Compare a harmless incoming and outgoing message on **both** devices.
+initial sync. Compare one familiar message on both devices; reuse it for the collection checkpoint.
 Mac database counts alone do not prove iPhone coverage.
 **Agent:** do not request Apple passwords. Do not copy another user's database.
 Do not change the owner's Apple account automatically.
@@ -103,9 +103,12 @@ archive_python="$archive_support/venv/bin/python"
 mkdir -p "$archive_support/test-tmp"
 export TMPDIR="$archive_support/test-tmp"
 "$archive_python" -m pip install -r "$archive_checkout/requirements-mac.txt"
-"$archive_python" -m unittest discover -s "$archive_checkout/tests" -q
 "$archive_python" "$archive_checkout/archive_cli.py" --root "$archive_data" init --owner Casey
 ```
+
+Reuse regression results for an unchanged reviewed source version.
+Run the [development tests](CONTRIBUTING.md) when source changes or a specific failure warrants them.
+Local source access and import checks below still apply.
 
 `pytypedstream` is the optional, pinned, pure Python decoder for modern binary
 attributed message bodies. Without it, plain-text records still work, but binary
@@ -210,8 +213,9 @@ Collection runs every two minutes; Loom capture every five minutes. LaunchAgents
 run for the logged-in user, not as system daemons. An always-on Mac still needs an
 appropriate logged-in session and available Messages sync; sleep, logout and network
 outages can delay capture. Do not change sleep policy without Casey's approval.
-Verify status advances and a new benign message imports through the **scheduled**
-job. Then verify logout/login or reboot recovery and outage catch-up when practical.
+Inspect scheduled-job status and available completed import results.
+Use the normal collection checkpoint instead of asking the owner to repeat message tests.
+Investigate logout, reboot, or outage recovery only for a specific issue or requested reliability requirement.
 Accessible Loom transcripts need no login; restricted videos remain explicit gaps.
 
 Logs are private under `$archive_support/logs`. Inspect sanitized error codes and
@@ -276,8 +280,8 @@ Linux timings do not prove Mac/iPhone acceptance.
 
 **Mac owner:** explicitly authorize publication of your all-captured filtered
 private archive. **Mac coding agent:** run the publisher once.
-Verify readback and filtering. Verify a repeat with zero writes and zero model
-calls. Then enable the scheduled publisher separately:
+Verify the first completed output and filtering. Then enable the scheduled publisher separately.
+The commands below run publication and enable its schedule:
 
 ```bash
 "$archive_python" "$archive_checkout/owner_publish_cli.py" \
@@ -296,9 +300,9 @@ checks are not a substitute for actual authorized Drive read/write verification.
 **Owner, phone or computer:** connect your preferred compatible mobile AI to your
 Google Drive yourself. Start Here contains archive links and copyable prompts.
 Follow [PHONE_ACCESS](PHONE_ACCESS.md) for final phone acceptance. Ask for a
-harmless familiar message with its date and source Doc link. Compare the result
-with the phone. Then test a useful archive question and fresh content.
-This checks AI access separately from capture and publication. Collection can
+useful answer about a familiar topic, preferably involving a recent message.
+Check the answer and its source from the phone. This is the normal AI connection checkpoint.
+The agent handles collection, filtering, and scheduled-run checks. Collection can
 run while you defer the check. The phone question-answering goal remains
 unverified until it passes. Ordinary URL fetching cannot read private Docs.
 

@@ -45,7 +45,9 @@ Give it this prompt:
 > Help me choose what to collect and filter before exposing message content.
 > Do the authorized technical work and preserve existing data.
 > Tell me when I must act on the computer or phone.
-> Verify a real answer and an updated source from my phone before calling the setup complete.
+> Use the simplest supported path and reuse completed checks.
+> Check collection, filtering, and one useful answer from my phone.
+> Keep extra diagnostic tests for failures or new integrations.
 
 You do not need to run every command in this repository yourself.
 Your agent can select a supported recipe or adapt it to your needs.
@@ -98,14 +100,15 @@ A new installation without Drive needs agent adaptation; no complete automatic r
 
 ### 2. Connect your messages
 
-Your agent installs and tests the collector for your devices.
+Your agent installs the collector and checks its status for your devices.
 You complete sign-in, pairing, and device permissions.
 
 Use [Android/Linux setup](ONBOARDING.md) or [iPhone/Mac setup](MAC_ONBOARDING_AGENT.md).
 If you chose Drive, also use [Google setup](GOOGLE_SETUP.md).
 
-**Check:** A harmless new message reaches the local archive with its date and source ID.
-Your agent also reports missing history or unsupported content.
+**Essential check 1, agent:** Confirm that a captured message reached the archive.
+Check its date and source ID through the local tools.
+Report missing history or unsupported content. No separate incoming/outgoing test sequence is needed on an established path.
 
 ### 3. Build and check the filtered archive
 
@@ -114,37 +117,40 @@ The supplied rules exclude authentication codes, recognizable password-reset lin
 Explicit corrections and optional phone spam exclusions add control.
 No filter guarantees that all private data is removed.
 
-Review examples that should remain and examples that should be excluded.
+Agree on the filter policy. Let the agent check it within the agreed privacy boundary.
 Use [filtering choices](REFERENCE_GUIDE.md#filtering-and-useful-views), [archive behavior](OWNER_ARCHIVE.md), and the optional [local text export](LOCAL_EXPORT.md).
 
-**Check:** The output retains useful messages and excludes the agreed sensitive examples.
-Check text extracted from images and transcripts too.
+**Essential check 2, agent:** Confirm that the agreed filters are applied before sharing output.
+Reuse local filter checks and review a small output sample where permitted.
+Include image text and transcripts when used. You do not need to inspect every message.
 
 ### 4. Connect your AI phone app
 
 Your agent helps configure the route selected in step 1.
 You complete that AI service's sign-in and access consent.
 
-Start with a harmless test file before granting access to the real archive.
+Connect the approved filtered output through the selected route.
 An AI project does not automatically read a local folder.
-A desktop success does not prove that the phone app can use the same connection.
 
-**Check:** From your phone, ask about a known message.
-Verify the answer, date, and source reference against the archive.
-Use the intended project or conversation if that matters to you.
+**Essential check 3, owner:** Ask one useful question from your phone.
+Choose a familiar topic, preferably involving a recent message.
+Check that the answer is right and includes its source.
+Use the intended project or conversation. A separate desktop chat test is unnecessary.
 
 ### 5. Check updates and ongoing operation
 
 Your agent schedules collection, filtering, and any output updates.
 It also sets up health checks suited to your computer.
 
-Test a harmless changed source from your phone.
-Check that the AI reads the new version rather than repeating an old answer.
+Your agent checks the schedule and available completed-run status in the background.
 Agree on expected update delays and any desktop approval requirements.
+Do not repeat successful file-read checks or run restart drills during normal setup.
 
-**Finish when:** You can get a correct, source-backed answer from your phone and retrieve an updated source.
-Scheduled operation must also work. Record untested restart, recovery, or coverage checks.
-A running collector alone does not complete this goal.
+**Finish when:** Messages arrive, the agreed filters are applied, and your phone gives a useful answer with a source.
+Your agent should leave updates scheduled and explain any unresolved issue.
+Extra refresh, restart, or disconnection tests belong in [troubleshooting](PHONE_ACCESS.md#troubleshooting-and-new-integrations).
+Use them only for a new integration, an unresolved requirement, or a specific failure.
+The routes tried so far have partial evidence; recommendations do not make every installation a proven path.
 
 ## Where to go next
 

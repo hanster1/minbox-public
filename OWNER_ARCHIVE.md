@@ -106,15 +106,15 @@ Search for the exact Start Here title.
 Ask for original IDs and timestamp citations. Ordinary public URL fetch cannot read
 these private files. Mobile connector availability still depends on the AI account.
 The owner approves this separate connection after archive setup. Start Here
-is a user-facing guide with a copyable owner-specific prompt and an explicitly
-optional retrieval confidence check. Collection and publication can run without
-that check. The full setup still needs a known-message answer and a fresh-read
-test from the phone. A successful Drive publication alone does not complete the
+is a user-facing guide with a copyable owner-specific prompt. Collection and
+publication can run before the AI connection is ready. The full setup needs
+one useful source-backed answer from the intended phone conversation. A successful Drive publication alone does not complete the
 owner's goal. See [PHONE_ACCESS.md](PHONE_ACCESS.md) and [ONBOARDING.md](ONBOARDING.md).
 
 ## Publication performance
 
-**Agent:** Use this procedure before scheduling a new `owner_all` publisher or repairing slow publication. It applies to the shared
+**Agent:** Use this procedure when publication is slow or you are changing performance settings.
+Normal setup can keep the defaults and reuse existing benchmark results. It applies to the shared
 Python publisher on Linux and macOS; use the actual owner's environment, config
 and installed source. No other computer's tools, credentials, global agent
 instructions or private operating notes are prerequisites.
@@ -124,7 +124,7 @@ instructions or private operating notes are prerequisites.
 Keep defaults for a small archive that completes comfortably. First publication
 and expired proofs require full verification; concurrent revision checks cannot
 accelerate that work. Complete an initial verified publication to create verification proofs.
-Then measure an unchanged repeat. An idle repeat needs zero output writes and
+For this performance investigation, measure an unchanged repeat. An idle repeat needs zero output writes and
 zero AI calls, but still makes verification requests.
 
 Record elapsed time, chunk count, cold versus warm proofs, completed timestamps,

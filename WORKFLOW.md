@@ -15,7 +15,7 @@ Then guide the agent and owner through these stages:
 3. Collect messages and preserve private originals.
 4. Build and check a separate filtered archive.
 5. Connect the chosen AI phone app through a suitable route.
-6. Verify a useful answer, an updated source, scheduled operation, and health checks.
+6. Ask one useful question from the phone while the agent checks schedules and health status.
 
 The agent handles technical work. The owner handles device and account approvals.
 Explain alternatives and tradeoffs in simple language.
@@ -44,7 +44,10 @@ For Drive, retain exact `drive.file` scope and account, root, and parent checks.
 ## Completion and maintenance
 
 Collection, filtering, storage, and phone retrieval are separate checks.
-The full user goal needs a source-backed answer and updated-source retrieval from the intended phone app.
+Normal setup has three checkpoints: collection works, agreed filtering applies, and the intended phone app gives a useful source-backed answer.
+The agent checks schedules and available completed-run status without adding owner tasks.
+Reuse passing checks. Keep changed-file, restart, and outage experiments in troubleshooting.
+Use extra diagnostics only for new integrations, changed conditions, or a specific failure.
 Record unsupported or untested behavior honestly.
 Use ordinary programs for scheduled work and limited recovery.
 Explain alert coverage and any gaps in monitoring.
