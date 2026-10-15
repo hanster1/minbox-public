@@ -13,12 +13,17 @@ import tempfile
 UPSTREAM = 'https://github.com/johnlindquist/gmkit.git'
 COMMIT = 'c714f8ea1602d9c61876a87a44f6984ba3aeb4c4'
 PATCH = Path(__file__).with_name('gmkit-media.patch')
+# Applied in order on top of the pinned commit. Each later patch assumes the
+# earlier ones; all remain AGPL-3.0-or-later like upstream gmkit.
+PATCHES = [PATCH, Path(__file__).with_name('gmkit-spam-paging.patch')]
 NOTICE = '''Minbox full-media and phone-spam metadata modification of gmkit v0.4.0 (2026-10-13)
 Upstream: https://github.com/johnlindquist/gmkit
 Pinned commit: c714f8ea1602d9c61876a87a44f6984ba3aeb4c4
 License: GNU Affero General Public License version 3 or later (see LICENSE).
-Modified source is included in gmkit-media-source.tar.gz; the patch is included
-as gmkit-media.patch. Retain these source/license/provenance artifacts with any
+2026-10-15: phone Spam & blocked folder scan escalates its request size while the
+folder is capped (gmkit-spam-paging.patch).
+Modified source is included in gmkit-media-source.tar.gz; the patches are included
+alongside it. Retain these source/license/provenance artifacts with any
 binary distribution. This build includes no account credentials or archive data.
 '''
 
@@ -62,15 +67,17 @@ def build(output, *, source=None, go='go'):
             run(['git', 'clone', '--no-hardlinks', source, checkout])
         if run(['git', 'rev-parse', 'HEAD'], checkout) != COMMIT:
             raise ValueError('Fetched gmkit commit does not match pin')
-        run(['git', 'apply', '--check', PATCH], checkout)
-        run(['git', 'apply', PATCH], checkout)
+        for patch_file in PATCHES:
+            run(['git', 'apply', '--check', patch_file], checkout)
+            run(['git', 'apply', patch_file], checkout)
         env = {**os.environ, 'GOTOOLCHAIN': 'local', 'GOFLAGS': '-mod=readonly'}
         version = run([go, 'version'], env=env)
         run([go, 'test', './internal/media', './internal/gm', './internal/rpc', './internal/sync', './internal/store', './internal/cmd', './cmd/minbox-refresh-session'], checkout, env=env)
         run([go, 'build', '-trimpath', '-o', output / 'gmcli', './cmd/gmcli'], checkout, env=env)
         run([go, 'build', '-trimpath', '-o', output / 'minbox-refresh-session', './cmd/minbox-refresh-session'], checkout, env=env)
         shutil.copyfile(checkout / 'LICENSE', output / 'LICENSE')
-        shutil.copyfile(PATCH, output / PATCH.name)
+        for patch_file in PATCHES:
+            shutil.copyfile(patch_file, output / patch_file.name)
         upstream_notice = checkout / 'NOTICE'
         original_notice = upstream_notice.read_text() if upstream_notice.is_file() else ''
         (output / 'NOTICE').write_text(original_notice.rstrip() + '\n\n' + NOTICE if original_notice else NOTICE)
@@ -80,8 +87,9 @@ def build(output, *, source=None, go='go'):
                     archive.add(path, arcname=str(Path('gmkit-media') / path.relative_to(checkout)), recursive=False)
         artifacts = {p.name: digest(p) for p in output.iterdir() if p.is_file()}
         metadata = dict(upstream=UPSTREAM, commit=COMMIT, patch_sha256=digest(PATCH),
+                        patches={p.name: digest(p) for p in PATCHES},
                         go_version=version, artifacts=artifacts,
-                        checks=['pinned commit', 'clean source', 'git apply --check',
+                        checks=['pinned commit', 'clean source', 'git apply --check (ordered patch series)',
                                 'go test media/gm/rpc/sync/store/cmd/refresh', 'go build -trimpath collector and refresh helper'],
                         installed=False)
         (output / 'provenance.json').write_text(json.dumps(metadata, indent=2) + '\n')

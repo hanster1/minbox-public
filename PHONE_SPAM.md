@@ -88,7 +88,7 @@ Incoming updates usually propagate promptly. The collector also scans folder
 metadata every five minutes. Import schedules, publication schedules and ongoing
 work add delay.
 
-The SDK scan has a 500-conversation cap and reports incomplete coverage.
+The SDK scan starts at 500 conversations. When the folder fills that response, coverage is reported as capped and the next scan doubles the request size, up to 8,000, until the whole folder fits. Nothing is ever inferred as removed from a capped response.
 It cannot prove that every existing phone spam conversation was seen.
 Restoration uses bounded rotating lookups of known excluded conversations.
 It does not infer normal status from absence or depend on the inbox list cap.

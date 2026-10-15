@@ -14,7 +14,7 @@ An empty Go module cache can require dependency downloads.
 **Agent:** build, inspect and install only within the authorized setup or repair.
 **Owner:** handle account consent, phone pairing and device prompts.
 
-`scripts/gmkit-media.patch` modifies official gmkit v0.4.0 commit
+`scripts/gmkit-media.patch` and then `scripts/gmkit-spam-paging.patch` modify official gmkit v0.4.0 commit
 `c714f8ea1602d9c61876a87a44f6984ba3aeb4c4`. The changes retain gmkit's AGPL-3.0
 license. The builder produces its license, modification notice, complete modified
 source archive, patch, binary and SHA-256 provenance together outside Git.
@@ -31,7 +31,7 @@ python3 scripts/build_gmkit_media.py --output /tmp/gmkit-media-build --go /path/
 
 Optional `--source /path/to/gmkit` accepts a clean checkout of the pinned commit.
 It must use the official HTTPS origin. The builder verifies the commit.
-It checks the patch with `git apply --check`. It applies the patch, runs focused
+It checks each patch in order with `git apply --check`. It applies them, runs focused
 Go tests and builds the binaries. It uses locked Go dependencies and refuses
 module-file updates. It does not install binaries, touch a collector account or
 download a toolchain. An empty Go module cache can require dependency downloads.
