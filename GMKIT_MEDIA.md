@@ -14,7 +14,8 @@ An empty Go module cache can require dependency downloads.
 **Agent:** build, inspect and install only within the authorized setup or repair.
 **Owner:** handle account consent, phone pairing and device prompts.
 
-`scripts/gmkit-media.patch` and then `scripts/gmkit-spam-paging.patch` modify official gmkit v0.4.0 commit
+`scripts/gmkit-media.patch`, `scripts/gmkit-spam-paging.patch` and then
+`scripts/gmkit-phone-deletions.patch` modify official gmkit v0.4.0 commit
 `c714f8ea1602d9c61876a87a44f6984ba3aeb4c4`. The changes retain gmkit's AGPL-3.0
 license. The builder produces its license, modification notice, complete modified
 source archive, patch, binary and SHA-256 provenance together outside Git.

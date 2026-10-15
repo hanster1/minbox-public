@@ -9,7 +9,7 @@
       "sha256": "c93f64c3731ca29d5dc0aa754c683322fc1e35385e83467b3eb4e49b3176bbf9"
     },
     "archive_cli.py": {
-      "sha256": "99da50676f3c6ecc7fd94a3354a25af3b196fb95169ac8018ed1063b9eb61420"
+      "sha256": "a5b30dcb1ce25c80792c91e510882e4be1652f807140165a79ddbd112189cb4b"
     },
     "archive_corrections.py": {
       "sha256": "45bd54a092550bbd0970532c9942aa213ac18c15dad7adbea4a4f5c5b6a7cb68"
@@ -30,7 +30,7 @@
       "sha256": "560107de1117895fd010fc4e0767e5d7b8f34d06a8392bd0b5c6cfe7372d7a72"
     },
     "archive_snapshot.py": {
-      "sha256": "42f3111155fcd941426edd7f64049e8f8d0b8e7f100533cef01a3cd480695744"
+      "sha256": "d5bcac0c3f6fd6fce0fa2f6dcff11df78675fe8486af39595b1daa6776f5288d"
     },
     "attachment_capture.py": {
       "sha256": "18d7180722458d936e5b4e0af009515bbbc1541dda3cd2e8b6a03dca89ac77b7"
@@ -111,7 +111,7 @@
       "sha256": "9c4a96b70b7c5fd57d0641792d2d89284eff39e33662cce9c6338503bcb194c2"
     },
     "scripts/build_gmkit_media.py": {
-      "sha256": "9167d83cc7e3a49e01e72064ac9a879f4591dfd8ad19deccc83f6e8550f67573"
+      "sha256": "22044f8b261a3e6af7b1a2f592f9747618826c77f0f998540fbafdd4161de490"
     },
     "scripts/gmkit-media.patch": {
       "sha256": "5a8fa8e14d1c2d7c14f1c83d295715dc66cd361e8d25bb29a86f4aa8cac941ef"
@@ -207,7 +207,7 @@
       "sha256": "b20199cb9cd8cccfe8f1b2aa96185ecf663f997f97d065ddac536d0f021ea458"
     },
     "tests/test_gmkit_media_patch.py": {
-      "sha256": "21a92e49a788b832386939c8fc28230bedf3704ea44a3c0b631b5961c7b35ef0"
+      "sha256": "672c241cace3562b8ed357d9a9c1eb23e7e615d1de2d307b65dc2d310cfc7835"
     },
     "tests/test_health.py": {
       "sha256": "31f2132b0e21dcf636c9cbfd9049d833cce65f391de270950c4cdaae751977c9"
@@ -279,7 +279,7 @@
       "sha256": "8bee7d55ba00cbc8fc78584099858202d548a3bc69b0fa1fdf0a776e9a2ed6c1"
     },
     "local_archive_export.py": {
-      "sha256": "388825925cdc697223a6ace72019736d4a28ff2c954527d6ba2799e887f6b934"
+      "sha256": "31f1083379f2cd79d7194044aed68fb9bd7b345229cbea2659b568425dc18184"
     },
     "tests/test_local_archive_export.py": {
       "sha256": "2e00dfedcdc7247e32b44220590e361bcbc95d20d70acb2bc59e32225189ebc2"
@@ -289,6 +289,12 @@
     },
     "scripts/gmkit-spam-paging.patch": {
       "sha256": "2d7fa263c10afeb1e482bccc8df8c848e87f2aa298b7242e2349d4724666e433"
+    },
+    "scripts/gmkit-phone-deletions.patch": {
+      "sha256": "86030306fd342a95caf1fbe7a2a35c15f55c64f21bf923d2cc95d933b8a4ba88"
+    },
+    "tests/test_phone_deletions.py": {
+      "sha256": "216d8f41c59c221e297e635fcb1ceca8a041726ea8ddd7e9e5514b920b426aa1"
     }
   }
 }

@@ -39,10 +39,16 @@ def _import_gmkit(archive, owner, database, *, capture_options=None):
     with capture.session(), closing(sqlite3.connect(database.as_uri() + '?mode=ro', uri=True)) as db:
         db.row_factory = sqlite3.Row
         db.execute('BEGIN')
-        rows = db.execute('''SELECT m.*, c.name AS conversation_name,
-            c.participants_json, co.name AS sender_name, co.e164 AS sender_number FROM messages m
+        tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        # Collector schema v7+ records phone deletions (two consecutive scans). Older
+        # collectors have no table; then nothing is ever marked deleted.
+        presence = ('p.deleted_at AS phone_deleted_at_ms', 'LEFT JOIN message_presence p ON p.message_id=m.message_id') \
+            if 'message_presence' in tables else ('0 AS phone_deleted_at_ms', '')
+        rows = db.execute(f'''SELECT m.*, c.name AS conversation_name,
+            c.participants_json, co.name AS sender_name, co.e164 AS sender_number, {presence[0]} FROM messages m
             LEFT JOIN conversations c ON c.conversation_id=m.conversation_id
             LEFT JOIN contacts co ON co.participant_id=m.sender_id
+            {presence[1]}
             ORDER BY m.timestamp_ms DESC, m.message_id DESC''').fetchall()
         payload = []
         rows = sorted(rows, key=lambda row: (*capture.priority(row['message_id'], row['media_id']),
@@ -52,6 +58,10 @@ def _import_gmkit(archive, owner, database, *, capture_options=None):
             # Keep credentials, media decryption keys and raw protocol out of derived exports.
             for key in ('decryption_key', 'raw_proto'):
                 m.pop(key, None)
+            # Only present when flagged, so unflagged payloads (and revisions) are unchanged.
+            deleted_ms = m.pop('phone_deleted_at_ms', 0) or 0
+            if deleted_ms > 0:
+                m['phone_deleted_at'] = dt.datetime.fromtimestamp(deleted_ms / 1000, dt.timezone.utc).isoformat()
             stamp = dt.datetime.fromtimestamp(m['timestamp_ms'] / 1000, dt.timezone.utc).isoformat()
             attachments = []
             if m.get('media_id') or str(m.get('mime_type') or '').startswith('image/'):

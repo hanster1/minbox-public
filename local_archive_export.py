@@ -377,6 +377,8 @@ def _render(owner, current, effective_labels, active_spam, policy, generated_at,
     filtered = Counter()
     if current.get('phone_spam_source_ids'):
         filtered['phone_spam'] = len(current['phone_spam_source_ids'])
+    if current.get('phone_deleted_source_ids'):
+        filtered['phone_deleted'] = len(current['phone_deleted_source_ids'])
     messages, looms = [], []
     rendered_looms = {}
     for source in sources:

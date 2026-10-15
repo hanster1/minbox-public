@@ -15,13 +15,16 @@ COMMIT = 'c714f8ea1602d9c61876a87a44f6984ba3aeb4c4'
 PATCH = Path(__file__).with_name('gmkit-media.patch')
 # Applied in order on top of the pinned commit. Each later patch assumes the
 # earlier ones; all remain AGPL-3.0-or-later like upstream gmkit.
-PATCHES = [PATCH, Path(__file__).with_name('gmkit-spam-paging.patch')]
+PATCHES = [PATCH, Path(__file__).with_name('gmkit-spam-paging.patch'),
+           Path(__file__).with_name('gmkit-phone-deletions.patch')]
 NOTICE = '''Minbox full-media and phone-spam metadata modification of gmkit v0.4.0 (2026-10-13)
 Upstream: https://github.com/johnlindquist/gmkit
 Pinned commit: c714f8ea1602d9c61876a87a44f6984ba3aeb4c4
 License: GNU Affero General Public License version 3 or later (see LICENSE).
 2026-10-15: phone Spam & blocked folder scan escalates its request size while the
 folder is capped (gmkit-spam-paging.patch).
+2026-10-15: phone-deletion evidence; a message is flagged deleted only after two
+consecutive guarded scans miss it, and rows are never removed (gmkit-phone-deletions.patch).
 Modified source is included in gmkit-media-source.tar.gz; the patches are included
 alongside it. Retain these source/license/provenance artifacts with any
 binary distribution. This build includes no account credentials or archive data.
