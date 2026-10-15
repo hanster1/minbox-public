@@ -63,6 +63,15 @@ class GmkitMediaPatchTests(unittest.TestCase):
             self.assertIn(name, source)
         self.assertIn('gmkit-spam-paging.patch', builder.NOTICE)
 
+    def test_phone_deletion_patch_is_guarded_additive_and_tested(self):
+        self.assertEqual(builder.PATCHES[2].name, 'gmkit-phone-deletions.patch')
+        source = builder.PATCHES[2].read_text()
+        for name in ['internal/cmd/deletion_scan.go', 'internal/store/presence.go',
+                     'CREATE TABLE IF NOT EXISTS message_presence', 'VALUES (7)',
+                     'TestPresenceMigrationKeepsExistingRows']:
+            self.assertIn(name, source)
+        self.assertIn('gmkit-phone-deletions.patch', builder.NOTICE)
+
     @unittest.skipUnless(os.environ.get('GMKIT_TEST_SOURCE') and os.environ.get('GMKIT_TEST_GO'),
                          'requires clean pinned upstream checkout and local Go toolchain')
     def test_pinned_patch_applies_tests_and_builds_offline_account_free(self):

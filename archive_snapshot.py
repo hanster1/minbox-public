@@ -21,6 +21,7 @@ def snapshot(root, owner, conversations, start_date, *, phone_spam_policy=None):
         from phone_spam import excluded_conversations
         excluded_threads = excluded_conversations(db, owner, phone_spam_policy)
         excluded_ids = set()
+        deleted_ids = set()
         scope_ids = set()
         generation_threads = excluded_threads.copy() if conversations is None else excluded_threads & set(conversations)
         excluded_images = []
@@ -34,6 +35,12 @@ def snapshot(root, owner, conversations, start_date, *, phone_spam_policy=None):
                 scope_ids.add(sid)
             if row['source'] == 'google-messages' and value['conversation_id'] in excluded_threads:
                 excluded_ids.add(sid)
+                continue
+            if row['source'] == 'google-messages' and value.get('phone_deleted_at'):
+                # Deleted on the phone (confirmed by two collector scans). The row
+                # stays in the archive; it is only left out of derived outputs.
+                if in_scope:
+                    deleted_ids.add(sid)
                 continue
             if not in_scope:
                 continue
@@ -120,7 +127,7 @@ def snapshot(root, owner, conversations, start_date, *, phone_spam_policy=None):
         latest_import = db.execute('SELECT MAX(imported_at) FROM imports WHERE owner=?', (owner,)).fetchone()[0]
         return {'phone_spam_generation': fingerprint(sorted(generation_threads)),
                 'phone_spam_source_ids': sorted(excluded_ids), 'phone_spam_images': excluded_images,
-                'phone_spam_conversations': len(excluded_threads), 'message_gaps': message_gaps, 'loom_gaps': gaps, 'sources': messages + sorted(transcripts, key=lambda x: x['source_id']),
+                'phone_spam_conversations': len(excluded_threads), 'phone_deleted_source_ids': sorted(deleted_ids), 'message_gaps': message_gaps, 'loom_gaps': gaps, 'sources': messages + sorted(transcripts, key=lambda x: x['source_id']),
                 'latest_import': latest_import, 'latest_scoped_message': max((m['timestamp'] for m in messages), default=None),
                 'coverage': ('Selected threads only.' if conversations is not None else 'All currently captured owner conversations.') +
                     ' Import freshness does not prove full phone coverage. Image availability is reported per attachment; missing media may remain.'}

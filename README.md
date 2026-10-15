@@ -237,7 +237,7 @@ The reference guide distinguishes existing implementations from features that ne
 | A separate local text folder | [Local export](LOCAL_EXPORT.md) |
 | A restricted search service | [Read-only search prototype](READ_ONLY_SEARCH.md) |
 | Repair an existing installation | [Android recovery](ANDROID_RECOVERY.md) or [Mac recovery](MAC_RECOVERY.md) |
-| Detailed archive and filter behavior | [Archive reference](OWNER_ARCHIVE.md) and [phone spam policy](PHONE_SPAM.md) |
+| Detailed archive and filter behavior | [Archive reference](OWNER_ARCHIVE.md) [phone spam policy](PHONE_SPAM.md) and [phone deletions](PHONE_DELETIONS.md) |
 | Health checks and alerts | [Health reference](HEALTH_ALERTS.md) |
 | Optional Loom transcripts | [Loom capture](LOOM_CAPTURE.md) |
 | Develop or maintain Minbox | [Contribution checks](CONTRIBUTING.md), [maintenance map](MAINTENANCE.md), and [collector source](GMKIT_MEDIA.md) |
