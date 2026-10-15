@@ -1,9 +1,62 @@
 <!doctype html>
-<html lang="en"><head><meta name="google-site-verification" content="gv0O4xvuoQUr_-D8BEoAQpwtS95swskeE6lew6rSneQ" /><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>minbox-text-archive</title><meta name="description" content="minbox-text-archive: owner-authorized text archives and private Google Drive publication."><link rel="stylesheet" href="style.css"></head><body><header><a href="index.html">minbox-text-archive</a><nav aria-label="Main navigation"><a href="index.html">About</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></nav></header><main><p class="eyebrow">Minbox text archive</p><h1>Your messages, organized for useful answers.</h1><p class="intro">minbox-text-archive helps you collect your text conversations, filter authentication codes and clear spam, and keep a private archive in your own Google Drive.</p>
-<p>minbox-text-archive is the Minbox text archive software. It runs on your own always-on collection computer. Your archive is separate from this public information site.</p>
-<h2>How it works</h2><ol><li>You authorize collection from your own messaging account. Android uses Google Messages on Linux; the iPhone adapter uses Messages on your own Mac. Android collection on Mac or Windows is not implemented.</li><li>Your collection computer keeps available messages and source identifiers in a local archive, filters excluded content, and updates private Google Docs in your Drive.</li><li>You connect your Drive to a compatible AI service yourself to ask questions and follow citations to original messages. That service has separate permissions. An optional check can confirm that it retrieves a familiar message with the correct date and source link; skipping the check does not block collection or publication. Connector availability depends on your account and provider.</li></ol>
-<h2>Your account, your archive</h2><p>You create a private folder with any name, then select it while signing in to Google. Minbox requests Google’s drive.file permission for selected and app-created files. This is per-file access, not a recursive folder grant; Minbox separately checks the signed-in owner, private root and managed parent bindings. Unrelated files you add to the folder are not automatically authorized or imported. Renaming your folder keeps the connection working. Archive documents retain owner-based names, such as “Casey Text Archive” (a fictional example). Archived messages are not published on this site.</p>
-<h2>Corrections and limits</h2><p>A designated Corrections document records explicit changes, such as marking a message as spam. Personal labels keep a message in the full private archive while excluding it from narrower work views.</p><p>Collection is limited to accessible history. Available original images are verified, stored privately and linked to their messages. Optional local OCR is labeled as machine-extracted text and can contain errors. Unavailable or unsupported attachments remain explicit gaps. AI answers can be mistaken, and an archive is not proof of complete phone coverage.</p>
-<p class="note">Android/Linux phone-to-Drive capture and images have been verified in an existing installation; independent client installation still needs acceptance. The Mac/iPhone adapter is fixture-tested; live synchronization, permissions and background operation still need verification on the owner’s machine.</p>
-<h2>Health and notifications</h2><p>Reviewed local recovery handles ordinary failures. Only unresolved emergencies requiring human action are eligible for email; routine failures, reminders and recovery do not send mail. External delivery is optional and separately configured with the owner. A local monitor cannot notify during complete host or network failure.</p>
-<h2>Contact</h2><p>Questions about Minbox or account access: <a href="mailto:spencer.r.h@gmail.com">spencer.r.h@gmail.com</a>.</p></main><footer>minbox-text-archive · Contact: <a href="mailto:spencer.r.h@gmail.com">spencer.r.h@gmail.com</a></footer></body></html>
+<html lang="en">
+<head>
+<meta name="google-site-verification" content="gv0O4xvuoQUr_-D8BEoAQpwtS95swskeE6lew6rSneQ">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Minbox text archive</title>
+<meta name="description" content="Use your agent CLI to build a filtered text archive and get useful answers from your AI phone app.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><a href="index.html">minbox-text-archive</a>
+<nav aria-label="Main navigation"><a href="index.html">About</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></nav></header>
+<main>
+<p class="eyebrow">Minbox text archive</p>
+<h1>Ask your phone AI about your text messages.</h1>
+<p class="intro">Use your own agent CLI on an always-on computer to build a filtered text archive. Then ask your preferred AI phone app useful questions about it.</p>
+<p>Minbox provides reference code, setup guides, and lessons from real installations. Your agent does the technical work. You choose the privacy rules and AI service.</p>
+<h2>What you need first</h2>
+<ul>
+<li>An always-on computer with internet access and private storage.</li>
+<li>An installed coding agent CLI with command access and a strong reasoning model.</li>
+<li>Your messaging device or synchronized message source.</li>
+<li>An AI phone account that supports the connection you choose.</li>
+</ul>
+<p>A CLI is an assistant you run in a terminal. A chat subscription alone does not install it or supply every connection.</p>
+<p><a href="https://github.com/hanster1/minbox-public">Start with the Minbox repository</a>. Its README gives you a setup prompt for your agent.</p>
+<h2>The setup path</h2>
+<ol>
+<li>Agree on which originals the setup agent may inspect and what the answering AI may receive.</li>
+<li>Connect your messages. Android/Linux uses a paired Google Messages collector. iPhone/Mac uses Messages synchronized to your Mac.</li>
+<li>Collect private originals and create a separate filtered archive.</li>
+<li>Connect your AI phone app through a suitable cloud connector, connected computer, or restricted search service.</li>
+<li>Verify a useful answer, its source, an updated message, and scheduled operation.</li>
+</ol>
+<p>Google Drive is one option. It is not required for every design. The supplied Drive path has the most complete setup recipe.</p>
+<p>The local exporter needs an existing archive and correction ledger. A new installation without Drive needs agent adaptation.</p>
+<h2>Your privacy choices</h2>
+<p>Routine collection and full-archive filtering need no AI model calls. The supplied rules exclude authentication codes, recognizable reset links, and clear promotional spam.</p>
+<p>A cloud setup agent can still receive originals through its tools. Broad computer access can let an answering app read beyond the filtered folder.</p>
+<p>For stricter privacy, your agent can explore local-model filtering before releasing text to a cloud AI. That integration is not included. No filter detects every secret.</p>
+<h2>If you choose Drive</h2>
+<p>You choose a private folder and complete Google consent. Minbox requests <code>drive.file</code> for selected and app-created files.</p>
+<p>This is per-file access, not recursive folder access. Minbox also checks the signed-in owner, private root, and managed parent folders.</p>
+<p>Renaming the folder preserves its ID and connection. Unrelated files added to it are not automatically authorized or imported.</p>
+<p>Your AI service needs separate access consent. Its permissions can cover more than the archive. Private messages are not published on this website.</p>
+<h2>Corrections and limits</h2>
+<p>A Corrections document records explicit changes, such as hiding spam. A personal label can exclude a message from a work view while retaining it in the full archive.</p>
+<p>Collection covers accessible history, not a complete phone backup. Available original images can be verified and stored privately through the Drive path.</p>
+<p>Optional local OCR extracts text from images and can make mistakes. Unsupported media and unavailable history remain gaps.</p>
+<p>AI answers can omit context or be wrong. Check the source messages before relying on an answer.</p>
+<p class="note">Live Android/Linux operation has worked in an existing installation. New installations need their own checks. The Mac/iPhone path is fixture-tested; live operation still needs verification. Android collection on Mac or Windows is not implemented.</p>
+<h2>Keeping it working</h2>
+<p>Your agent schedules collection, filtering, output updates, and suitable health checks. Reviewed recovery handles ordinary failures.</p>
+<p>Optional external email covers unresolved emergencies that need human action. It does not send routine, reminder, or recovery mail.</p>
+<p>A local monitor cannot report a complete host or network outage. Check phone retrieval separately from local job health.</p>
+<h2>Contact</h2>
+<p>Questions about Minbox or account access: <a href="mailto:spencer.r.h@gmail.com">spencer.r.h@gmail.com</a>.</p>
+</main>
+<footer>minbox-text-archive · Contact: <a href="mailto:spencer.r.h@gmail.com">spencer.r.h@gmail.com</a></footer>
+</body>
+</html>

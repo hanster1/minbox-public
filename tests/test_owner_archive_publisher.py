@@ -292,15 +292,16 @@ class OwnerPublisherTests(unittest.TestCase):
                 self.assertTrue(guide.startswith(title + '\n'))
                 self.assertIn('Find the exact title "' + title + '"', guide)
                 self.assertIn('Use connected Google Drive.', guide)
-                self.assertIn('current connection settings and documentation', guide)
-                self.assertIn('separate Google permission grant from Minbox', guide)
-                self.assertIn('may request access beyond your archive folder', guide)
+                self.assertIn('current settings and documentation', guide)
+                self.assertIn('Google grant is separate from Minbox', guide)
+                self.assertIn('can extend beyond this archive', guide)
                 self.assertIn('Connect your chosen AI app yourself', guide)
-                self.assertIn('Use Grok, Claude or another AI app', guide)
-                self.assertIn('does not connect your AI account for you', guide)
-                self.assertIn('Optional: check that your AI can read your archive', guide)
-                self.assertIn('You can skip it and finish onboarding', guide)
-                self.assertIn('Compare the quote and date with the message on your phone', guide)
+                self.assertIn('Use ChatGPT, Grok, Claude or another app', guide)
+                self.assertIn('You handle sign-in and access consent', guide)
+                self.assertIn('Check answers and updates from your phone', guide)
+                self.assertNotIn('You can skip it and finish onboarding', guide)
+                self.assertIn('Test a known message and an updated source', guide)
+                self.assertIn('Compare the quote, date, and source with the message on your phone', guide)
                 for document in ('corrections', 'status', 'optional-work',
                                  client.keys['messages:2020:part001']):
                     link = 'https://docs.google.com/document/d/' + document
@@ -316,7 +317,7 @@ class OwnerPublisherTests(unittest.TestCase):
             run(config(root), {'sources': []}, client)
             guide = client.bodies['guide']
             for expected in ('read-only and does not send texts',
-                             'Authentication codes and clear promotional spam',
+                             'authentication codes, recognizable password-reset links, and clear promotional spam',
                              'History may be incomplete', 'Captured images with verified private Drive links',
                              'safely rename your archive folder', 'stable folder ID',
                              'does not delete or change the text on your phone',

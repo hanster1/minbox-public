@@ -1,96 +1,156 @@
-# Minbox text archive
+# Minbox: ask your AI phone app about your text messages
 
-Minbox is an adaptable reference for coding agents setting up private text
-collection, filtering and Google Drive sync on a client's computer. It includes
-a working implementation, concrete setup recipes and documented operating lessons.
-Start with [the reference guide](REFERENCE_GUIDE.md) for design choices, health
-checks and efficient AI use; tailor the approach to the client's environment.
+Use your own agent CLI on an always-on computer to build a filtered text message archive.
+Then ask your preferred AI phone app questions about that archive.
 
-The included implementation keeps captured texts and available images in a
-private Google Drive folder. A preferred AI app can search it through its own
-Drive connection. Collection and full archive publication require no AI model.
+Minbox helps you and your agent reach that result. It provides working code, setup guides, options, and lessons from real installations.
+Your agent does the technical work. You choose what to collect, what to exclude, and which AI service to use.
 
-That does not restrict what the setup agent or a broadly authorized AI app can
-read. Review [data boundaries and optional local-model filtering](REFERENCE_GUIDE.md#who-sees-the-originals)
-before exposing originals. A client can adapt the pipeline to filter locally
-and release only the resulting text folder to a cloud assistant.
+## What you need first
 
-## Get started
+1. **An always-on computer.** Keep it powered, connected to the internet, and available for scheduled work.
+2. **An installed agent CLI with access to a strong reasoning model.** It must read files, run commands, and install software with your approval.
+3. **Your phone and access to your messaging account.** You complete pairing and permission prompts yourself.
+4. **An AI app on your phone.** Its account must support the connection you choose for the archive.
+5. **Private storage and a privacy choice.** Decide which messages may reach a cloud AI before setup begins.
 
-On the computer you will leave running, open a coding agent that can run local
-commands, such as Codex or Claude Code, and give it this prompt:
+An *agent CLI* is a coding assistant that you run in a terminal on your computer.
+A chat subscription does not install the CLI for you.
+Check whether your plan or API account supports the chosen CLI.
+Check usable model access and any usage costs before setup.
+Strong reasoning is useful for setup and repairs. Routine collection and rule-based filtering do not require an AI model.
 
-> Use https://github.com/hanster1/minbox-public to set up this computer to sync
-> my text messages to my private Google Drive archive. Read the project's
-> AGENTS.md and REFERENCE_GUIDE.md, inspect any existing setup, adapt the
-> approach to my computer and preferences, and do the technical work. Explain
-> clearly when I need to act on this computer versus my phone.
+Check your device combination with your agent:
 
-For a supported implementation path, the agent clones the project, checks your
-platform, prepares private runtime storage, guides account consent and verifies scheduled collection/publication.
-You choose the archive folder's name and may rename it later.
-
-This is the primary Minbox project. No ZIP or pre-created source directory is
-required.
-A chat subscription alone does not provide local CLI access. Grok or another
-agent can perform setup if its actual environment supports local files/commands;
-Minbox does not assume any provider has a particular CLI.
-
-## Compatibility and owner actions
-
-| Phone | Always-on collection computer | Status |
+| Your devices | Included collection path | What still needs checking |
 | --- | --- | --- |
-| Android with Google Messages | Linux with a per-user systemd session | Live phone-to-Drive capture and images verified; independent client installation still needs acceptance. |
-| iPhone | Mac with Messages synchronized to that iPhone | Adapter, images, installer and recovery fixture-tested; live macOS/iPhone acceptance still required. |
+| Android with Google Messages and a Linux computer | Pair a read-only Google Messages collector | Live operation has worked. Your installation still needs its own tests. |
+| iPhone and a Mac with Messages synchronization | Read Messages on your Mac | Automated tests pass. Live iPhone/Mac operation still needs verification. |
+| Other combinations | Adaptation or another collector | The supplied code does not implement Android collection on Mac or Windows. |
 
-Android collection on Mac and Windows is not implemented. Sleep, phone
-connectivity, account revocation and host outages can interrupt capture.
+Phone pairing applies to the Android path. The iPhone path uses Messages synchronization and Mac permissions.
+Sleep, disconnection, expired pairing, or limited history can interrupt collection.
+An always-on computer does not guarantee complete message history.
 
-You complete Google sign-in/consent and phone pairing yourself. iPhone owners also
-approve the Mac's Messages access. A matching Desktop OAuth application with
-Drive, Docs and Picker APIs enabled is required; obtain its client configuration
-privately or create your own using [GOOGLE_SETUP.md](GOOGLE_SETUP.md). An agent
-must check this prerequisite before promising an unattended installation.
+## Start with your agent
 
-Minbox requests Google's `drive.file` permission. Google authorizes selected and
-app-created files; Minbox separately enforces its chosen archive root. Files you
-manually add inside that folder do not automatically gain authorization. Read
-[ONBOARDING.md](ONBOARDING.md) for the setup sequence and limits.
+On the always-on computer, open your installed agent CLI.
+Give it this prompt:
 
-Connect Grok, Claude or another compatible AI app yourself using its settings.
-That app has its own permissions. An explicitly optional retrieval check can
-confirm that it finds a familiar message; skipping it does not block Minbox.
+> Use https://github.com/hanster1/minbox-public as a reference to set up my filtered text message archive.
+> The goal is to ask my preferred AI phone app useful questions about my messages.
+> Read README.md, AGENTS.md, and the relevant setup guides.
+> Check my phone, computer, model access, existing installation, and AI app.
+> Explain the privacy and connection choices in simple language.
+> Help me choose what to collect and filter before exposing message content.
+> Do the authorized technical work and preserve existing data.
+> Tell me when I must act on the computer or phone.
+> Verify a real answer and an updated source from my phone before calling the setup complete.
 
-## What it preserves
+You do not need to run every command in this repository yourself.
+Your agent can select a supported recipe or adapt it to your needs.
+An adaptation may need new code and tests. These guides do not make every device or AI account compatible.
 
-Messages retain source IDs, dates and revisions. Authentication codes and clear
-promotional spam are filtered from published Docs. Available original images are
-verified, stored privately and linked to their messages; optional local OCR is
-labeled as machine-extracted text. Missing/unsupported media stays an explicit
-coverage gap. This is a bounded archive, not a complete phone backup.
+## The setup path
 
-Reviewed health actions retry ordinary failures. Only unresolved emergencies
-requiring human action are eligible for notifications; no routine, reminder or
-recovery mail. External delivery is separately configured and tested with consent.
-A local monitor cannot notify during complete host/network failure.
+### 1. Choose your privacy level and connection
 
-## Guides and development
+Decide which originals your setup agent may inspect.
+A cloud-backed agent can send tool results to its model provider, even when its CLI runs locally.
 
-- [Adaptation, design choices and lessons](REFERENCE_GUIDE.md), including health signals and AI/token budgets.
-- [Agent setup entry](AGENTS.md), [onboarding](ONBOARDING.md) and [Google application setup](GOOGLE_SETUP.md).
-- [Mac setup](MAC_SETUP.md), [Mac repair](MAC_RECOVERY.md) and [Android recovery](ANDROID_RECOVERY.md).
-- [Phone spam exclusions](PHONE_SPAM.md), [archive behavior](OWNER_ARCHIVE.md), [health policy](HEALTH_ALERTS.md), [collector source](GMKIT_MEDIA.md).
-- [Publication performance and tuning](OWNER_ARCHIVE.md#publication-performance), including bounded revision reads, part sizes and completed-run verification.
-- [Where to make changes](MAINTENANCE.md), [website source](information-site/README.md).
-- [Development and release checks](CONTRIBUTING.md), [license](LICENSE) and [third-party notices](THIRD_PARTY_NOTICES.md).
+Choose which messages the answering AI may receive.
+For stricter privacy, consider local-model filtering before releasing a separate text folder.
+That option needs an added model integration; it is not included in the exporter.
+Read [privacy and filtering choices](REFERENCE_GUIDE.md#who-sees-the-originals).
 
-Run `python3 -m unittest discover -s tests -q` for synthetic regression checks.
-Runtime archives, credentials, images and machine-specific checkpoints belong
-outside Git. Read-only support reports help an agent resume without uploading
-message history. Never make archive files public to solve an AI access problem.
+Then choose a connection with your agent:
 
-For an optional local retrieval alternative, see the [read-only archive search prototype](READ_ONLY_SEARCH.md), including client compatibility and phone acceptance checks.
+| Connection | Main advantage | Main tradeoff |
+| --- | --- | --- |
+| Private cloud archive and the AI app's connector | Convenient when your account already supports it | Cloud storage and AI access need separate permissions. |
+| AI desktop app connected to your computer | Can read current local files from a phone conversation | Computer access can include more than the filtered folder. |
+| A restricted search connector | Can expose only selected search and read functions | Requires more setup, authentication, and compatibility tests. |
+| Manual file upload | Simple for occasional questions | Files are snapshots. Updates need another upload. |
 
-Compare [phone access options](PHONE_ACCESS.md) for Grok Bot, Grok/SuperGrok and ChatGPT, including convenience, permissions, freshness and actual trial limits.
+See [phone access options](PHONE_ACCESS.md) before committing to a route.
+Google Drive is one option. It is not the purpose of Minbox or a requirement for every design.
+The included Drive path has the most complete setup recipe.
+The local exporter currently needs an existing archive and correction ledger.
+A new installation without Drive needs agent adaptation; no complete automatic recipe is supplied for it.
 
-For direct local-file retrieval without Drive, the [filtered text export](LOCAL_EXPORT.md) provides a separate folder using the existing filtering and correction policy.
+### 2. Connect your messages
+
+Your agent installs and tests the collector for your devices.
+You complete sign-in, pairing, and device permissions.
+
+Use [Android/Linux setup](ONBOARDING.md) or [iPhone/Mac setup](MAC_ONBOARDING_AGENT.md).
+If you chose Drive, also use [Google setup](GOOGLE_SETUP.md).
+
+**Check:** A harmless new message reaches the local archive with its date and source ID.
+Your agent also reports missing history or unsupported content.
+
+### 3. Build and check the filtered archive
+
+Your agent keeps originals separate from the output used for answers.
+The supplied rules exclude authentication codes, recognizable password-reset links, and clear promotional spam.
+Explicit corrections and optional phone spam exclusions add control.
+No filter guarantees that all private data is removed.
+
+Review examples that should remain and examples that should be excluded.
+Use [filtering choices](REFERENCE_GUIDE.md#filtering-and-useful-views), [archive behavior](OWNER_ARCHIVE.md), and the optional [local text export](LOCAL_EXPORT.md).
+
+**Check:** The output retains useful messages and excludes the agreed sensitive examples.
+Check text extracted from images and transcripts too.
+
+### 4. Connect your AI phone app
+
+Your agent helps configure the route selected in step 1.
+You complete that AI service's sign-in and access consent.
+
+Start with a harmless test file before granting access to the real archive.
+An AI project does not automatically read a local folder.
+A desktop success does not prove that the phone app can use the same connection.
+
+**Check:** From your phone, ask about a known message.
+Verify the answer, date, and source reference against the archive.
+Use the intended project or conversation if that matters to you.
+
+### 5. Check updates and ongoing operation
+
+Your agent schedules collection, filtering, and any output updates.
+It also sets up health checks suited to your computer.
+
+Test a harmless changed source from your phone.
+Check that the AI reads the new version rather than repeating an old answer.
+Agree on expected update delays and any desktop approval requirements.
+
+**Finish when:** You can get a correct, source-backed answer from your phone and retrieve an updated source.
+Scheduled operation must also work. Record untested restart, recovery, or coverage checks.
+A running collector alone does not complete this goal.
+
+## Where to go next
+
+| You need | Read |
+| --- | --- |
+| Choices, privacy, health, and efficient AI use | [Reference guide](REFERENCE_GUIDE.md) |
+| AI app routes and phone tests | [Phone access](PHONE_ACCESS.md) |
+| A separate local text folder | [Local export](LOCAL_EXPORT.md) |
+| A restricted search service | [Read-only search prototype](READ_ONLY_SEARCH.md) |
+| Repair an existing installation | [Android recovery](ANDROID_RECOVERY.md) or [Mac recovery](MAC_RECOVERY.md) |
+| Detailed archive and filter behavior | [Archive reference](OWNER_ARCHIVE.md) and [phone spam policy](PHONE_SPAM.md) |
+| Health checks and alerts | [Health reference](HEALTH_ALERTS.md) |
+| Optional video transcripts | [Loom capture](LOOM_CAPTURE.md) |
+| Develop or maintain Minbox | [Contribution checks](CONTRIBUTING.md), [maintenance map](MAINTENANCE.md), and [collector source](GMKIT_MEDIA.md) |
+
+## Terms used in these guides
+
+- **Original archive:** Private collected messages and history kept on your computer.
+- **Filtered archive:** The selected output you permit an AI service to read.
+- **Connector:** A connection that lets an AI app search or read a source.
+- **Publication:** Updating readable output, such as private Google Docs.
+- **Freshness:** How recently the source or output was updated and read.
+- **Source ID:** A stable reference that helps you find the original message.
+
+Keep messages, credentials, and private installation notes outside this public repository.
+Never make the archive public to fix a connection problem.
+See the [license](LICENSE) and [third-party notices](THIRD_PARTY_NOTICES.md) for software terms.

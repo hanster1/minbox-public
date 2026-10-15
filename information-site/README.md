@@ -1,28 +1,29 @@
-# Public information site
+# Public information pages
 
-This folder is the canonical authored source for the public Minbox information,
-privacy and terms pages. Edit the HTML and CSS directly; there is no JavaScript
-or build step. This site contains no archive, account connection or upload flow.
+These pages introduce the [Minbox goal](../README.md): useful phone AI answers about a filtered text archive.
+They also explain privacy and terms.
+The site does not collect messages, connect accounts, or accept uploads.
 
-The existing public URLs and OAuth application branding remain unchanged:
+Edit the HTML and CSS in `dist/` directly.
+These are authored source files. There is no JavaScript or build step.
+Use the same clear terms and short sentences as the main guides.
+
+Keep the existing public URLs:
 
 - [Homepage](https://minbox-text-archive.vercel.app/)
 - [Privacy](https://minbox-text-archive.vercel.app/privacy.html)
 - [Terms](https://minbox-text-archive.vercel.app/terms.html)
 
-`vercel.json` serves `dist/`. The `.vercelignore` upload allowlist includes only
-`vercel.json` and the four authored files in `dist/`; new assets must be reviewed
-and explicitly allowed. Keep credentials, environment files, archives, account identifiers and private
-hosting runbooks outside public source. Local project linkage may reside in the
-ignored `.vercel/` directory for the CLI; it never belongs in public Git. The
-static site needs no environment file. `.gitignore` excludes local environment
-and Vercel linkage files.
+`vercel.json` serves `dist/`.
+The `.vercelignore` allowlist includes only that config and the four authored files in `dist/`.
+Review and explicitly allow any new assets.
+The static site needs no environment file.
+Keep credentials, private accounts, archive content, and hosting notes outside public source.
+Local `.vercel/` linkage stays ignored.
 
-Before publishing, check the HTML navigation and stylesheet links, privacy claims
-against current source, and the repository's public release checks. Source edits
-and this relocation do not deploy or change the live site. See the repository's
-[maintenance guidance](../MAINTENANCE.md) for source maintenance; hosting account
-and deployment details belong in a private operator runbook.
-
-The homepage contains the owner-supplied public Google Search Console verification
-meta tag. Preserve it through future deployments to retain ownership verification.
+Before publication, check navigation, stylesheet links, and privacy statements against the code.
+Run the repository's [release checks](../CONTRIBUTING.md).
+Preserve the homepage's Google Search Console verification tag.
+Source edits do not deploy the site or change OAuth branding settings.
+Use the private operator runbook for hosting operations.
+See [MAINTENANCE](../MAINTENANCE.md) for source ownership.

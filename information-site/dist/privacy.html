@@ -1,8 +1,61 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privacy — minbox-text-archive</title><meta name="description" content="minbox-text-archive: owner-authorized text archives and private Google Drive publication."><link rel="stylesheet" href="style.css"></head><body><header><a href="index.html">minbox-text-archive</a><nav aria-label="Main navigation"><a href="index.html">About</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></nav></header><main><p class="eyebrow">Minbox text archive</p><h1>Privacy policy</h1><p>Last updated October 13, 2026. This describes owner-managed Android/Linux installations and the fixture-tested Mac/iPhone adapter. Live Mac/iPhone acceptance remains unverified.</p>
-<h2>What the application handles</h2><p>Minbox processes accessible message text, sender/recipient identifiers, conversation identifiers, timestamps, revisions and attachment metadata and available original images, with optional local OCR. It may capture accessible transcripts from Loom links in those messages. Restricted videos and unavailable message formats remain reported gaps.</p>
-<h2>Where information is stored</h2><p>Archives, settings and Google credentials stay on the owner’s collection computer: Linux for Android, or Mac for iPhone. The administrator of that computer can access its local data. Private archive copies are stored in the owner's Google Drive.</p><p>Local file permissions restrict access; they are not a guarantee of encryption at rest. Device encryption and independent backups require separate setup. Source code updates do not contain archives or account credentials.</p>
-<h2>Google account permissions</h2><p>For new connections, you create a private Drive folder with any name and select it in Google's folder picker. Minbox requests permission for selected and app-created files, using Google's drive.file scope. It does not request permission to browse or manage your entire Drive or Google Sheets.</p><p>Minbox binds to the selected folder's ID, so renaming it keeps the connection working. It verifies that managed subfolders and archive documents remain inside that selected root and belong to the signed-in owner. Google's permission is per file rather than a recursive folder sandbox; pre-existing archive items can require separate selection during migration. Unrelated folder contents are not imported or managed.</p><p>Existing installations with broad Drive or retired Sheets grants require an explicit permission migration and fresh consent. Minbox uses its access to maintain private archive folders and Docs, read designated corrections, and verify outputs. It does not ask you to make your archive public.</p><h2>AI services and other providers</h2><p>Full-archive publication uses local filtering and does not require an AI model. Optional work analysis sends selected eligible message/transcript content to the configured AI provider. Connecting Drive to your preferred AI service grants that service access according to the permissions you approve and its own policies.</p><p>Google stores your Drive files. Loom handles requests for linked transcripts. Provider retention and model-training settings depend on the provider and account; Minbox does not promise that all third-party processing stays on your device.</p>
-<h2>Filtering, retention and removal</h2><p>Authentication codes, clear unsolicited promotional spam and active explicit spam exclusions are excluded from published archive views and AI input. Original local imports may retain excluded records; filtering is not deletion from the local source archive.</p><p>Local archive history and revisions remain until explicitly removed. Stopping or uninstalling background jobs preserves data and credentials. To stop Google access, revoke the connected application in your Google Account’s third-party connections (currently branded minbox-text-archive). Delete unwanted Drive files separately and arrange local archive/credential removal with the installation administrator. Copies retained by an AI service must be managed with that service.</p>
-<h2>Health notifications</h2><p>Normal operation and ordinary recovery stay local. Optional external email is reserved for unresolved emergencies that require human action. Notices use fixed operational wording, configured owner names and recovery counts; message bodies, contacts, source identifiers, credentials and provider error text are excluded. No routine, reminder or recovery mail is sent.</p>
-<h2>This information website</h2><p>These static pages do not request messages, Google sign-in or uploads. They contain no analytics scripts or cookies. Once hosted, the hosting provider may keep normal request logs under its own policies.</p><h2>Contact</h2><p>For questions or help removing installation data, email <a href="mailto:spencer.r.h@gmail.com">spencer.r.h@gmail.com</a>. Minbox does not sell message content or use it for advertising.</p></main><footer>minbox-text-archive · Contact: <a href="mailto:spencer.r.h@gmail.com">spencer.r.h@gmail.com</a></footer></body></html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Privacy — Minbox text archive</title>
+<meta name="description" content="Use your agent CLI to build a filtered text archive and get useful answers from your AI phone app.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><a href="index.html">minbox-text-archive</a>
+<nav aria-label="Main navigation"><a href="index.html">About</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></nav></header>
+<main>
+<p class="eyebrow">Minbox text archive</p>
+<h1>Privacy policy</h1>
+<p>Last updated October 14, 2026. This policy describes owner-managed installations and the fixture-tested Mac/iPhone path. Live Mac/iPhone operation remains unverified.</p>
+<h2>What the application handles</h2>
+<p>Minbox processes accessible message text, sender and recipient identifiers, conversation identifiers, timestamps, revisions, attachment metadata, and available images.</p>
+<p>Optional local OCR extracts text from images. Minbox can also collect accessible transcripts from Loom links in messages. Restricted videos and unavailable formats remain reported gaps.</p>
+<h2>Where information is stored</h2>
+<p>Original archives, settings, and credentials stay on the owner's collection computer. The administrator of that computer can access its local data.</p>
+<p>If you choose Drive publication, private output copies are stored in your Google Drive. The optional local export creates a separate filtered text folder.</p>
+<p>File permissions restrict access but do not guarantee encryption at rest. Device encryption and independent backups need separate setup.</p>
+<p>Source updates do not contain your archive or account credentials.</p>
+<h2>Google account permissions</h2>
+<p>For a new Drive connection, you create a private folder and select it in Google's folder picker. Minbox requests <code>drive.file</code> for selected and app-created files.</p>
+<p>It does not request access to browse or manage your entire Drive or Google Sheets.</p>
+<p>Minbox follows the selected folder's ID, so renaming the folder preserves the connection. It verifies the owner and managed root and parent folders.</p>
+<p>Google's access is per file, not recursive folder authorization. Existing archive items can require separate selection during migration. Unrelated folder contents are not imported or managed.</p>
+<p>Older broad Drive or retired Sheets grants need an explicit permission migration and fresh consent.</p>
+<p>Minbox maintains private folders and Docs, reads designated corrections, and verifies outputs. It does not ask you to make your archive public.</p>
+<h2>AI services and other providers</h2>
+<p>Routine collection, full publication, and local text export use local rules without model calls.</p>
+<p>A setup agent using a cloud model can receive originals returned by its tools. An AI app with broad computer access can read beyond the filtered folder.</p>
+<p>Optional work analysis sends selected eligible message and transcript content to its configured provider. Your chosen retrieval connection can send returned content to the answering AI provider.</p>
+<p>That service has its own access permissions and policies. Granting Minbox access does not configure or restrict the AI service's separate grant.</p>
+<p>A local-model filtering stage is an adaptation option, not an included backend. Local-only processing needs checks for remote inference, fallback, telemetry, and logs.</p>
+<p>Google stores Drive files. Loom handles linked-transcript requests. Provider retention and training settings depend on the provider and account.</p>
+<p>Minbox does not promise that all third-party processing stays on your device.</p>
+<h2>Filtering, retention and removal</h2>
+<p>The supplied security rules withhold authentication codes, recognizable password-reset links, and clear promotional spam from filtered archive views.</p>
+<p>Active explicit spam corrections also exclude their sources. The optional analyzer has separate filtering gates.</p>
+<p>These protections do not restrict a setup agent or broadly authorized app from reading originals. No rule set detects every secret.</p>
+<p>Local imports can retain excluded records. Filtering output is not deletion from the original archive.</p>
+<p>Local history and revisions remain until explicitly removed. Stopping or uninstalling background jobs preserves data and credentials.</p>
+<p>To stop Google access, revoke the application in your Google Account's third-party connections. Its current branding is minbox-text-archive.</p>
+<p>Delete unwanted Drive files separately. Arrange local archive and credential removal with the installation administrator.</p>
+<p>Earlier document revisions, uploaded images, provider copies, and cached answers can remain after a filter change. Manage provider copies with that service.</p>
+<h2>Health notifications</h2>
+<p>Normal operation and ordinary recovery stay local. Optional external email covers unresolved emergencies that require human action.</p>
+<p>Notices use fixed operational wording, configured owner names, and recovery counts. They exclude message bodies, contacts, source identifiers, credentials, and provider error text.</p>
+<p>No routine, reminder, or recovery mail is sent.</p>
+<h2>This information website</h2>
+<p>These static pages do not request messages, Google sign-in, or uploads. They contain no analytics scripts or cookies.</p>
+<p>The hosting provider can keep normal request logs under its own policies.</p>
+<h2>Contact</h2>
+<p>For questions or data-removal help, email <a href="mailto:spencer.r.h@gmail.com">spencer.r.h@gmail.com</a>. Minbox does not sell message content or use it for advertising.</p>
+</main>
+<footer>minbox-text-archive · Contact: <a href="mailto:spencer.r.h@gmail.com">spencer.r.h@gmail.com</a></footer>
+</body>
+</html>

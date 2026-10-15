@@ -2,7 +2,7 @@
 
 This technical guide covers optional Google Drive publication on the always-on
 archive computer. Drive is one route to answers in the owner's preferred AI phone
-app. Start with the [beginner path](README.md#get-started).
+app. Start with the [beginner path](README.md#start-with-your-agent).
 Use [phone acceptance](PHONE_ACCESS.md#start-with-a-small-retrieval-check) to check
 answers from the phone.
 

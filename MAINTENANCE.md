@@ -1,35 +1,36 @@
-# Where Minbox changes belong
+# Where to make changes
 
-This repository is the primary Minbox project. Start here for product work.
-Each active source or procedure has one authoritative home:
+Make changes that support the [message-to-phone-answer path](README.md#the-setup-path).
+Keep one authoritative source for each part.
 
-| What needs changing | Where to change it |
+| Change | Source |
 | --- | --- |
-| Capture, images, filtering, publication, consent, recovery policy | Application code in this repository |
-| Client onboarding and repair instructions | This repository's ONBOARDING, MAC_SETUP and recovery guides |
-| Public homepage, privacy policy and terms | `information-site/` in this repository |
-| Hosted-server tools, service administration and website deployment procedure | The operator's private infrastructure notebook; the maintainer uses the separate `alfred` project |
-| Account/folder bindings, credentials, installed state and owner-specific operating notes | Private runtime/local storage outside Git |
-| Old experiments and initial migration evidence | Retained private historical repository; reference only |
+| Beginner entry, prerequisites, and setup journey | README.md |
+| Design choices, privacy, and efficient AI use | REFERENCE_GUIDE.md |
+| Agent responsibilities and project purpose | AGENTS.md and WORKFLOW.md |
+| Device setup and repair | ONBOARDING.md, Mac guides, and recovery guides |
+| Collection, filtering, output, and health behavior | Application code in this repository |
+| AI phone routes and acceptance evidence | PHONE_ACCESS.md |
+| Local text output and search prototype | LOCAL_EXPORT.md and READ_ONLY_SEARCH.md |
+| Public homepage, privacy, and terms | information-site/ |
+| Hosting accounts and deployment operations | Private operator infrastructure notebook |
+| Credentials, account bindings, and installation receipts | Private runtime storage outside Git |
+| Historical experiments | Retained private history, for reference only |
 
-For the maintainer's hosted installation, the private notebook's entry points are
-`docs/minbox-hosting.md`, `docs/minbox-information-site.md` and
-`scripts/minbox/pair-owner.sh`. Independent clients use their own computer and
-this repository's portable guides; that notebook is not an installation dependency.
+For the maintainer's hosted installation, private references include
+`docs/minbox-hosting.md`, `docs/minbox-information-site.md`, and `scripts/minbox/pair-owner.sh` in the separate `alfred` project.
+Clients do not need that project or the maintainer's accounts.
 
-Edit and test application source here, then perform a reviewed update of the
-installed application. The installed directory's legacy name is not a different
-product or a source checkout. Do not rename runtime directories, credentials,
-owner namespaces or Drive IDs merely to match the repository name. Never edit an
-installed copy as the new source master or refresh this project from older code.
+Edit and review application source here before updating an installed runtime.
+The installed directory's legacy name does not make it another development source.
+Do not rename runtime paths, credentials, owner namespaces, or Drive IDs to match a new project name.
+Do not import private history into this repository.
 
-The website source also lives here. A source edit does not publish the site;
-publication is a separate authorized operation. Preserve the existing Google
-OAuth branding URLs and hosting target during source moves. CLI login, local
-hosting linkage and owner Google grants are separate and stay outside public Git.
+Edit the website's authored HTML and CSS here.
+Source edits do not deploy the site.
+Preserve public OAuth branding URLs and the ownership verification tag.
+Keep hosting credentials and local deployment linkage private.
 
-Private context cannot be inferred from cloning this repository. Keep exact
-account/configuration details and rollback receipts in private local notes. Do
-not paste them into public issues or merge private Git history. The historical
-repository remains retained until its remaining branches and operational evidence
-are accounted for; it is not another place to maintain the active application.
+Use [CONTRIBUTING](CONTRIBUTING.md) for writing, source, and release checks.
+Record current development work in HANDOFF.md.
+Keep machine inventories, exact account details, and rollback receipts outside public Git.

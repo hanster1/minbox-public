@@ -3,7 +3,7 @@
 This optional technical guide adds Loom transcripts to the text archive.
 It supports answers about linked videos in the owner's preferred AI phone app.
 It is not required for text collection or phone access.
-Start with the [beginner path](README.md#get-started).
+Start with the [beginner path](README.md#start-with-your-agent).
 Use [phone acceptance](PHONE_ACCESS.md#start-with-a-small-retrieval-check) to test
 answers from the finished archive.
 

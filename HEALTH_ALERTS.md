@@ -2,7 +2,7 @@
 
 This technical guide helps the owner's installed coding agent keep the always-on
 archive computer working. It supports the path from paired texts to useful answers
-in the owner's preferred AI phone app. Start with the [beginner path](README.md#get-started).
+in the owner's preferred AI phone app. Start with the [beginner path](README.md#start-with-your-agent).
 Use [phone acceptance](PHONE_ACCESS.md#start-with-a-small-retrieval-check) to test
 answers. Healthy local services alone do not prove phone access.
 

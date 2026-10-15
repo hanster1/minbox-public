@@ -6,10 +6,14 @@ about it. Start with [README](README.md). Finish with the phone checks in
 [PHONE_ACCESS](PHONE_ACCESS.md). Use [REFERENCE_GUIDE](REFERENCE_GUIDE.md) for
 storage choices, access choices and privacy boundaries.
 
-**Prerequisites:** an installed coding agent CLI with a capable reasoning model
-and working model access; the owner's ordinary Mac login; Python 3.11+ with
-sqlite3; Git; private runtime storage; and iPhone messages synced to Messages on
-this Mac. The Mac needs an available logged-in session for scheduled collection.
+**Prerequisites:** prepare these before setup:
+
+- An installed agent CLI with a capable reasoning model and working model access.
+- The owner's ordinary Mac login.
+- Python 3.11+ with sqlite3, Git, and private runtime storage.
+- iPhone messages synchronized to Messages on this Mac.
+
+The Mac needs an available logged-in session for scheduled collection.
 The support report alone can use standard-library Python 3.9+.
 For the Drive recipe in section 6, also prepare the application in GOOGLE_SETUP.md.
 Drive is one publication option. A different phone access path needs its own
@@ -52,7 +56,7 @@ The application needs Python 3.11+ with sqlite3; support reporting works on
 standard-library Python 3.9+. Inspect architecture; avoid hardcoded Homebrew paths.
 Collection/full publication require no AI runtime; optional work analysis is separate.
 
-Bring only the matching application's Desktop OAuth client JSON privately (0600),
+For the Drive recipe, bring only the matching application's Desktop OAuth client JSON privately (0600),
 never another owner's refresh grant. Drive, Docs and Picker APIs must be enabled;
 verify actual application publishing/test-user status. Report any unknowns honestly.
 The commands below are agent references for a fresh standard installation. Existing

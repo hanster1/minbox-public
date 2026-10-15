@@ -59,8 +59,9 @@ Continue independent work while that action is blocked.
 | Phone sync | Casey confirms intended Apple identity and benign incoming/outgoing/group messages on both devices. |
 | Local reader | Selected Python environment, relevant tests, doctor/check-only, owner-bound capture and content-free gap report. |
 | Scheduled capture | Installed per-user job reads after required approval; a new benign message imports without interactive Terminal. |
-| Private Drive | Casey's own account, exact drive.file grant, selected private root, native Docs readback and stable bindings. |
-| Scheduled publisher | Verified first filtered publication, unchanged zero-write/zero-model-call repeat, fresh scheduled status. |
+| Private Drive, if chosen | Casey's own account, exact drive.file grant, selected private root, native Docs readback and stable bindings. |
+| Scheduled Drive publisher, if chosen | Verified first filtered publication, unchanged zero-write/zero-model-call repeat, fresh scheduled status. |
+| Phone answers | Known-message answer and changed-source retrieval from the chosen phone app, with dates and source references. |
 | Local health | Explicit --enable-monitor after core checks, paused state respected, local check/report; chosen emergency delivery tested only if configured. |
 | Continuation | Local checkpoint records real results, coverage limits, pending approvals and next action. |
 
@@ -89,8 +90,8 @@ sleep/security policy automatically. Confirm actual scheduled fresh capture.
 Known binary decoder, edit/unsend, bounded history and attachment limitations in
 MAC_SETUP.md remain; successful rows do not prove complete SMS/MMS/RCS coverage.
 
-Google Drive, Docs and Picker APIs and matching Desktop OAuth application are
-prerequisites. Keep client JSON and Casey's independently authorized refresh grant
+For the Drive path, Google Drive, Docs and Picker APIs and a matching Desktop
+OAuth application are prerequisites. Keep client JSON and Casey's independently authorized refresh grant
 private outside Git. **Mac owner:** create/name a private root and explicitly select it
 in constrained Picker. Require exactly drive.file, owner/account/root/privacy
 checks and native Doc readback; no Sheets and no broad-scope shortcut. Renaming

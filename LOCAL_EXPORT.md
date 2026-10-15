@@ -1,20 +1,28 @@
-# Local filtered text folder
+# Create a local filtered text folder
 
-`local_archive_export.py` builds a real folder of filtered UTF-8 text files from an existing local Minbox archive. It makes no Google, AI or network calls. This is an optional output for direct computer access or the [read-only search adapter](READ_ONLY_SEARCH.md); it does not replace existing Drive publication.
+Use this output when an AI connection will read files from the always-on computer.
+Your agent creates and maintains the folder. You choose what the AI may read.
+Return to [the setup path](README.md#the-setup-path) for the full journey.
 
-This describes routine export, not what a setup/debugging agent can access.
-A cloud-backed coding agent may see originals returned by its tools. Clients
-who want originals kept away from cloud models can adapt the pipeline to use
-local-model filtering before releasing an output folder; that backend is not
-included here. See [data boundaries and local-model filtering](REFERENCE_GUIDE.md#who-sees-the-originals).
-The supplied security rules exclude sources containing recognizable password-reset
-links, including OCR/transcript matches. They are useful safeguards, not a complete
-secret detector. Limit the answering app's actual permissions to the released
-folder when enforcing this boundary matters.
+`local_archive_export.py` exports filtered UTF-8 text from an existing Minbox archive.
+It makes no Google, model, or network calls.
+It can run alongside Drive publication, but does not require Drive calls to generate the folder.
+
+This exporter is an existing-installation tool, not a complete local-only installer.
+It needs a local archive and committed correction ledger.
+A fresh installation without those inputs needs adaptation by your agent.
+The current folder replacement code requires Linux.
+
+Read [privacy choices](REFERENCE_GUIDE.md#who-sees-the-originals) before setup.
+A cloud setup agent can receive originals returned by its tools.
+An answering app with broad computer access can also read beyond this folder.
+Local-model filtering is an optional added integration, not part of this exporter.
 
 ## Inputs and invocation
 
-Use an existing archive database, the owner's committed local correction ledger, and an explicit phone-folder policy. The correction ledger is mandatory: failure to read it does not fall back to an uncorrected export. This trial implements an existing-installation export, not a complete standalone collector/onboarding path.
+This section is for the agent.
+Use the existing archive database, committed correction ledger, and agreed phone spam policy.
+If the ledger cannot be read, the exporter refuses to release uncorrected output.
 
 ```sh
 python3 -B -S local_archive_export.py \
@@ -25,46 +33,114 @@ python3 -B -S local_archive_export.py \
   --phone-spam-policy spam_and_blocked
 ```
 
-Adapt the paths, owner and policy to the client's actual installation. The destination must be separate from collection/runtime directories and outside Git; its parent must already be owner-private. Source databases and their parent directories must be private. The tool refuses symlinks, hardlinks, unsafe permissions and unmanaged destination contents rather than overwrite an arbitrary folder.
+Replace the example paths and owner with the actual installation values.
+Agree on the spam policy with the owner.
+Keep the destination separate from collection and runtime directories.
+Keep it outside Git.
+Its parent directory must already be private to the owner.
+Source databases and their parent directories must also be private.
 
-The source module needs these neighboring Minbox modules: `archive_corrections`, `archive_drive`, `archive_incremental`, `archive_io`, `archive_snapshot`, `owner_archive_publisher`, `phone_spam`, `publisher_status` and `storage`. These imports use the standard library and do not initialize Google credentials. A standalone bundled test runs with Python site packages disabled.
+The tool refuses symlinks, hardlinks, unsafe permissions, and unmanaged destination contents.
+It does not overwrite an arbitrary existing folder.
+
+These neighboring Minbox modules are required:
+`archive_corrections`, `archive_drive`, `archive_incremental`, `archive_io`,
+`archive_snapshot`, `owner_archive_publisher`, `phone_spam`, `publisher_status`, and `storage`.
+They use Python's standard library for this path and do not initialize Google credentials.
+A standalone automated test runs with Python site packages disabled.
 
 ## Filtering and generation behavior
 
-The output uses existing publisher validation/rendering helpers and applies authentication-code/promotional-spam exclusions, matching OCR exclusions, durable spam corrections and undo, and the configured phone Spam & blocked policy. Loom transcripts need a retained origin message. A further phrase-text check avoids exposing excluded content through transcript phrases. Original images, raw files, databases and credentials are not copied into this text-only export.
+The output applies the existing publisher rules and validation helpers:
 
-Corrections reflect the committed local ledger at generation time. An unprocessed change in a remote Corrections Doc is not yet local policy. Phone-folder exclusions reflect imported observations. These freshness boundaries should remain visible to the client.
+- Authentication-code and recognizable password-reset-link exclusions.
+- Clear promotional-spam exclusions.
+- Matching checks on message text, image text, and rendered transcript phrases.
+- Committed spam corrections and undo operations.
+- The selected phone Spam & blocked policy.
 
-A complete generation is staged privately beside the selected folder. The exporter rechecks source and correction fingerprints, verifies the existing managed destination, and exchanges directories atomically. It removes stale files from the selected path. Failure before the exchange preserves the old generation; consumers must not call that old generation current just because it still exists.
+Loom transcripts need a retained origin message.
+The output contains text only.
+Original images, raw files, databases, and credentials are not copied.
+No rule set guarantees that all sensitive content is removed.
 
-Current replacement requires Linux `renameat2` support on the destination filesystem. Cross-platform replacement needs separate implementation/testing. Files are at most 100 KiB, total output at most 256 MiB / 5,000 files. The search adapter has separate scan limits and may return partial coverage.
+Corrections reflect the committed local ledger at generation time.
+An unprocessed remote Corrections Doc change is not yet local policy.
+Phone spam exclusions reflect imported phone observations.
+Make both update limits visible to the owner.
 
-The original source and correction databases are opened read-only; corrections are recomputed in a private backup. SQLite WAL readers may participate in shared-memory coordination or sidecars. This is not a claim of absolutely zero filesystem activity around a live database.
+The exporter prepares a complete private generation beside the selected folder.
+It rechecks source and correction fingerprints before replacement.
+It also verifies the existing managed destination.
+Then it exchanges the directories atomically, so readers see a complete generation.
+Stale files disappear from the selected path.
+A failure before exchange preserves the old generation; label that output with its actual age.
+
+Replacement needs Linux `renameat2` support on the destination filesystem.
+Other platforms need their own replacement implementation and tests.
+Limits are 100 KiB per file, 256 MiB total output, and 5,000 files.
+The search adapter has separate limits and can return partial coverage.
+
+Source and correction databases are opened read-only.
+Corrections are recomputed in a private database backup.
+SQLite WAL readers can still participate in shared-memory or sidecar coordination.
+Read-only access does not mean zero filesystem activity around a live database.
 
 ## Keeping it living
 
-Schedule this ordinary program independently of AI sessions. Choose an interval that fits collection cadence and device cost. The Linux trial uses a separate user timer every three minutes; its service disallows new privileges and internet socket families. This is a trial operating choice, not a required interval. Existing collectors and publishers are unchanged.
+Schedule the exporter independently of AI sessions.
+Choose an interval suited to message collection and computer resources.
+The Linux trial used a separate user timer every three minutes.
+Its service blocked new privileges and internet socket families.
+Those are tested choices, not required settings for every client.
 
-The folder contains `START_HERE.txt`, message/transcript parts and a hidden manifest with generation time, source/correction fingerprints, file hashes and counts. Monitor the refresh service and manifest age separately from whether the AI app is online. Keep health output content-free.
+The folder contains `START_HERE.txt`, message parts, transcript parts, and a hidden manifest.
+The manifest records generation time, counts, source fingerprints, correction fingerprints, and file hashes.
+Check the refresh service and manifest age separately from AI app availability.
+Keep message content out of health reports.
 
-Readers should reopen the absolute folder path on each fresh request. Atomic exchange changes its inode; a retained working-directory handle, open file, watcher or uploaded copy can point at an older generation. Old bytes already copied to an AI provider are not revoked by local replacement. Test a changed synthetic value and actual updated archive source from the intended phone app.
+Readers must reopen the absolute folder path for fresh requests.
+Directory exchange changes its inode, the filesystem's directory identity.
+Old open handles, working directories, watchers, or uploads can retain an earlier generation.
+A local replacement does not retract content already copied to an AI provider.
+
+Use [phone access checks](PHONE_ACCESS.md#start-with-a-small-retrieval-check) to verify updates.
+Check a changed harmless value and a useful answer about the actual archive.
+A new local generation alone does not prove that the phone AI reads it.
 
 ## Native desktop apps on a headless host
 
-A headless computer may need a persistent graphical session even when the user only interacts from a phone. The trial uses TigerVNC's virtual X display, the native apps and a browser noVNC client over an SSH forward. VNC/web access and app debugging ports listen on loopback only; no public archive endpoint is created. The owner performs sign-in and computer-access consent.
+A headless computer has no normal interactive desktop session.
+Some AI desktop apps still need a graphical session for login and computer access.
+The trial used TigerVNC, a virtual display, and a noVNC browser view over SSH.
+VNC, web access, and app debugging ports listened on loopback only.
+No public archive endpoint was created.
+The owner completed sign-in and computer-access consent.
 
-These are user-session components, not a separate OS security boundary. Broad app local execution still runs as that user; Auto Review rules are model-based. An optional isolated environment requires its own restrictions and tests. See [phone access choices](PHONE_ACCESS.md).
+This session ran as the host user; it was not an OS security boundary.
+Broad execution still allowed access as that user.
+Auto Review rules were model-based.
+An isolated environment needs separate restrictions and tests.
+See [phone connection choices](PHONE_ACCESS.md).
 
-On the tested Omarchy installation, the official ChatGPT installer's direct full-upgrade transaction was stopped by Omarchy's update guard. Use the installed Omarchy update workflow and package-management commands rather than bypassing the guard. A remote shell may need the ordinary `OMARCHY_PATH=/usr/share/omarchy` environment. Review installer/update scope with the owner, preserve server services and check them afterward. Do not equate a successful package install or virtual-display launch with unattended phone/reboot acceptance.
+On Omarchy, the official ChatGPT installer attempted a full upgrade.
+Omarchy's update guard stopped that direct transaction.
+The supported Omarchy update and package workflow then succeeded.
+A remote shell needed `OMARCHY_PATH=/usr/share/omarchy`.
+Use the installed update workflow rather than bypassing its guard.
+Review system changes with the owner and check existing services afterward.
+A successful installation does not prove unattended phone or reboot operation.
 
 ## Evidence
 
-Twenty-one synthetic export tests cover filtering/publisher counts, correction undo, phone observations, source/ledger change refusal, safe atomic replacement, stale removal, path refusals, failed-write preservation and standalone operation. The combined repository suite ran 527 tests with five optional skips and no failures.
+Synthetic tests cover filter parity, correction undo, phone observations, safe replacement, and failure preservation.
+They also check path restrictions, source changes, standalone operation, and reset links across text and image-text fields.
+The live security repair removed every detected reset-link source from the refreshed local output.
+This does not prove that all possible secrets or opaque links are detected.
 
-A live Linux export produced a private folder with counts matching the current filtered publication, and a scheduled refresh completed successfully. Native ChatGPT/Grok Bot and the remote virtual display were installed/started on the archive host. Grok Bot's first synthetic local read matched the expected value with owner approval; an Android-initiated read then matched a changed value without desktop approval under the owner's chosen convenience permissions. A subsequent actual local entry-file read matched local manifest facts. ChatGPT also passed its first synthetic local read after owner confirmation; its changed-value Android read also matched the new private value without desktop approval. Message-level answers and reboot checks remain pending. No Google retrieval was used to generate the local folder.
-
-A later security regression pass verified reset-link exclusion in bodies, OCR and
-rendered phrases, including cross-field context. After the live repair, all detected
-reset-link sources were absent from the refreshed local output; originals remained
-private and unchanged. This does not establish that every possible secret or
-context-free opaque link is detected.
+A Linux trial created and refreshed the local folder without Google retrieval.
+Its counts matched the corresponding filtered publication before the later security repair.
+Grok Bot read the real entry file correctly.
+Grok Bot and ChatGPT both returned changed test values from Android without desktop approval.
+Their actual message answers, project behavior, and reboot persistence remain unverified.
+See [phone trial evidence](PHONE_ACCESS.md#observed-evidence-and-limits--october-14-2026) for route-specific limits.

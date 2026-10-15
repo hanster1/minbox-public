@@ -3,7 +3,7 @@
 This optional technical guide helps the owner's installed coding agent connect
 Android folder choices to archive filtering. It supports the path from paired
 texts to answers in the owner's preferred AI phone app. Start with the
-[beginner path](README.md#get-started). Use
+[beginner path](README.md#start-with-your-agent). Use
 [phone acceptance](PHONE_ACCESS.md#start-with-a-small-retrieval-check) for the
 complete phone-answer test.
 
