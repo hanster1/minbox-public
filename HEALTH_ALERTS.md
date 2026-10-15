@@ -20,6 +20,64 @@ including fixed thresholds and delivery behavior. Other designs can use it as a
 working example. Documentation changes do not change controller behavior.
 Mac has a separate monitor in [MAC_SETUP.md](MAC_SETUP.md).
 
+## Optional reliability checks and agent-assisted repair
+
+Offer these after the basic setup works, according to the owner's needs.
+They are not a required outage drill for every installation.
+
+### Restart and power-loss recovery
+
+Start with a planned restart when the owner wants this check.
+Confirm that the pairing remains valid and enabled collection jobs resume.
+Check the filtered output and any selected Drive publisher.
+For direct phone access, include the AI desktop app and its computer registration.
+Note any disk unlock, user login, or manual app launch still required.
+The operating system's startup settings and the AI app's session can fail independently.
+
+Use an actual outage record when available to assess power-return behavior and catch-up.
+A planned restart does not establish recovery after every abrupt power loss.
+Report any unverified case without extending normal onboarding into repeated drills.
+
+### Safe recovery and an email that leads to action
+
+The included controller uses ordinary code for reviewed, bounded recovery actions.
+It does not need an agent model running on every poll.
+Keep explicit pauses, account checks, and privacy guards intact.
+Automatic retries should not re-pair accounts, change filters, or weaken permissions.
+
+For the selected route, consider these operational checks:
+
+- Collection remains connected and imports complete.
+- Filtering or export completes and the last good output is recent enough.
+- Drive publication completes when Drive is used.
+- The connected AI app is available when that status can be checked reliably.
+
+The current Linux controller covers collector, import, and configured publisher jobs.
+The separate local exporter and AI connection are not automatically included.
+An agent can add suitable status or manifest-age checks for those components.
+A healthy job status does not prove that every sensitive message was filtered correctly.
+Do not release raw output to work around a filtering failure.
+
+Configure optional email only with the owner's chosen recipient and consent.
+One harmless delivery test confirms the destination.
+For ordinary failures, try limited recovery before sending a persistent-issue notice.
+Account, privacy, or integrity failures can need owner action immediately.
+The implemented thresholds and notice policy are described below.
+Keep message content and credentials out of alerts.
+
+The owner can give their installed CLI this prompt after an alert:
+
+> Diagnose the Minbox issue described in this alert on this computer.
+> Inspect local status and safe diagnostics without exposing messages or credentials.
+> Preserve my archive, filters, account bindings, and deliberate pauses.
+> Repair what you can within my authorization.
+> Ask me only for account or device actions you cannot perform.
+> Confirm that the failed stage is working again and explain anything unresolved.
+
+A local monitor cannot email while its computer or network is fully offline.
+Use independent monitoring if notification during that outage matters.
+A successful email test does not prove that every future failure will be detected.
+
 ## Agent installation
 
 `health_monitor.py` observes the Linux archive computer; `health_recovery.py` runs bounded, allowlisted

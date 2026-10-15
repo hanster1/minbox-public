@@ -139,6 +139,30 @@ Refresh existing outputs after a filter change.
 Earlier document revisions, provider copies, and cached answers can remain.
 Previously uploaded images need a separate withdrawal check.
 
+## Optional content coverage
+
+Ask which message types the user actually wants to ask about.
+Choose one representative example for each selected type; do not test the whole menu.
+Use an example in the normal phone question where practical.
+Check the path from capture through filtering to the answer.
+A saved attachment is not necessarily readable by the phone AI.
+
+| Content | Included behavior or current limit | Optional check or extension |
+| --- | --- | --- |
+| Photos, screenshots, and image-only messages | Available image originals can be captured and published through Drive. Local text export includes available OCR, not image files. | Check whether the chosen AI can read the image or its extracted text. |
+| Loom links | Accessible saved transcripts can be included. Restricted videos remain gaps. | Check transcript retrieval and a source timestamp for a video the user can access. |
+| Voice notes and audio attachments | The supplied image attachment path does not provide general audio capture or speech transcription. | Add capture and transcription if needed. Decide whether transcription stays local. |
+| PDFs and other documents | General document attachment extraction is not included. | Add supported file capture and text extraction, then apply the same privacy filters. |
+| Ordinary video attachments | Loom transcript support does not cover arbitrary video files. | Decide whether audio transcription, captions, or visual content is needed. |
+| Web links and shared locations or contacts | A link or text is not the same as the linked page, map, or structured card. | Check what the collector retained before adding page retrieval or another parser. |
+| Groups, replies, reactions, edits, and unsent messages | Representation varies by source; some events are omitted. Mac collection does not reconstruct full edit history. | Check participant identity and the context needed for the user's questions. Report gaps honestly. |
+
+A transcript or extracted document can contain the same secrets as a message body.
+Filter derived text before exposing it to the answering provider.
+Keep original media private and preserve source references.
+Do not imply that deleting a message on the phone retracts copies already retained elsewhere.
+New extraction features need implementation and focused tests before being described as supported.
+
 ## Google connection and publication
 
 Use this section only when the user chooses Drive.
@@ -197,6 +221,8 @@ Optional analysis or history backlog should not appear as failure of a healthy p
 A local monitor cannot report complete host or network loss.
 Consider an independent heartbeat if the user needs that coverage.
 Health recovery is not an independent backup. Test restoration separately when needed.
+Offer [optional restart and alert checks](HEALTH_ALERTS.md#optional-reliability-checks-and-agent-assisted-repair) after basic setup.
+Pairing persistence, background-job startup, and AI desktop-app availability are separate parts of restart recovery.
 
 ## Efficient AI and agent use
 

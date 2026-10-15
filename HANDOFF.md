@@ -38,6 +38,14 @@ The owner clarified that exploratory file-change and repeated retrieval tests sh
 Reuse passing evidence on established paths. Investigate only new integrations, changed conditions, or concrete failures.
 Essential permission and privacy checks remain. Existing trials still have partial evidence; the shorter checklist does not prove new capabilities.
 
+## Optional follow-up choices
+
+README now offers restart/power-return recovery, bounded automatic repair and email escalation, selected content coverage, and backup restoration.
+REFERENCE_GUIDE separates included image/Loom behavior from potential audio, document, video, and link extraction extensions.
+HEALTH_ALERTS explains agent-assisted repair and the missing automatic monitoring of local export and AI connections.
+These are optional choices after basic setup, not added mandatory onboarding steps.
+No runtime, device restart, notification delivery, or new media support changed in this documentation update.
+
 ## Next actions
 
 Guide files, heading links, HTML navigation, and the release inventory pass checks.

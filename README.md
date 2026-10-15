@@ -152,6 +152,31 @@ Extra refresh, restart, or disconnection tests belong in [troubleshooting](PHONE
 Use them only for a new integration, an unresolved requirement, or a specific failure.
 The routes tried so far have partial evidence; recommendations do not make every installation a proven path.
 
+## Optional checks after basic setup
+
+Choose only the options that matter to you. These do not add steps to every installation.
+Your agent can reuse setup results and automate routine checks.
+
+| Optional goal | A useful check |
+| --- | --- |
+| Recover after restart or power loss | Start with one planned restart. Confirm that pairing, scheduled jobs, and the connected AI app recover as expected. |
+| Repair routine failures and request help | Use bounded automatic retries. Confirm that persistent failures needing owner action can send a private email. |
+| Use more message content | Check one example of each content type you care about. Image storage alone does not prove that the phone AI can read the image. |
+| Recover lost data | Keep an independent backup and check restoration if recovery matters to you. |
+
+For restart recovery, include any disk unlock or user login the computer requires.
+A computer that restarts successfully may still need its desktop app opened.
+Use real outage observations when available; a planned restart does not prove every power-loss case.
+
+For health alerts, your agent checks collection, filtered-output age, and Drive publication when used.
+The current monitor may need added checks for local export or the AI connection.
+If an issue needs you, open your agent CLI and ask it to diagnose and repair the installation.
+See [recovery and alert options](HEALTH_ALERTS.md#optional-reliability-checks-and-agent-assisted-repair).
+
+For content choices, start with [the optional coverage menu](REFERENCE_GUIDE.md#optional-content-coverage).
+Loom transcripts and image attachments are included paths.
+Voice notes, documents, ordinary videos, and linked-page content can need added collection or extraction support.
+
 ## Where to go next
 
 | You need | Read |
