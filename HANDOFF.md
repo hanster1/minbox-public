@@ -103,3 +103,11 @@ Source and image reads and small private policy-backup writes remain.
 Tests: 542 tests run, 8 skipped, no failures; release inventory and whitespace checks passed.
 Installed the reviewed exporter on the Linux trial host. An actual unchanged run preserved the manifest, generation ID, directory inode, and every output file inode and modification time.
 The run returned `unchanged` with a new `checked_at`; its scheduled timer was resumed. No phone retest was needed because output bytes were unchanged.
+
+## Optional reference code and security limits
+
+The owner chose to keep code as an optional starting point.
+README, agent guidance and the reference guide now say that client agents can reuse, adapt or replace it.
+Before installation, agents inspect relevant source and dependencies and explain permissions, known limits and data boundaries.
+Contribution guidance distinguishes tested behavior and release-pattern checks from a security audit.
+Private content and installation settings remain outside public Git. No application or runtime behavior changed.

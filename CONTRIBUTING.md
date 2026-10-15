@@ -37,6 +37,11 @@ A new connector or security boundary still needs appropriate integration checks.
 
 ## Review code and data boundaries
 
+Present code as an optional reference, not a mandatory client implementation.
+Document relevant permissions, external dependencies, known limits, and actual test evidence.
+Keep tested behavior separate from proposed or unverified capabilities.
+A release-check pass is not a security audit or a guarantee that private data is absent.
+
 Preserve owner identity, existing data, corrections, deliberate pauses, and private account bindings.
 Use synthetic examples for regression tests.
 Do not commit live messages, credentials, media, support dumps, or private notes.

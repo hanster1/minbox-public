@@ -4,6 +4,9 @@ Minbox is a reference for the user's own agent CLI.
 Use it to set up device-connected message collection, a filtered archive, and useful answers in the user's preferred AI phone app.
 The agent does the technical work on the user's always-on computer.
 Google Drive is one option, not the goal.
+The included code is optional reference material. Reuse, adapt, or replace it to fit the agreed setup.
+Inspect relevant source and dependencies before installation. Explain permissions and known limits.
+Follow [reference-code guidance](REFERENCE_GUIDE.md#choose-and-review-reference-code); tests and release checks are not a security audit.
 
 Start with [README](README.md) for prerequisites and the complete setup path.
 Use [REFERENCE_GUIDE](REFERENCE_GUIDE.md) for choices, privacy, health, and model costs.

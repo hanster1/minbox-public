@@ -6,6 +6,10 @@ Then ask your preferred AI phone app questions about that archive.
 Minbox helps you and your agent reach that result. It provides working code, setup guides, options, and lessons from real installations.
 Your agent does the technical work. You choose what to collect, what to exclude, and which AI service to use.
 
+The code is an optional starting point. Your agent can reuse it, adapt it, or build another solution.
+It should inspect the relevant code and explain its permissions and limits before installation.
+See [using reference code](REFERENCE_GUIDE.md#choose-and-review-reference-code).
+
 ## What you need first
 
 1. **An always-on computer.** Keep it powered, connected to the internet, and available for scheduled work.

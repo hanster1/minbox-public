@@ -20,7 +20,7 @@ Confirm the owner's choices together; reuse decisions already made.
 Then do the authorized work. Ask the user for missing facts or device and account actions.
 Name the computer or phone for each action.
 
-Use the included code where it fits. Adapt it where necessary.
+Use the included code where it fits. Adapt it where necessary, or build another implementation.
 New platforms and connections need implementation and tests; a guide alone does not add support.
 
 | Type of guidance | How to use it | Example |
@@ -32,6 +32,34 @@ New platforms and connections need implementation and tests; a guide alone does 
 The repository provides a working reference, not one mandatory computer configuration.
 Google Drive is an output option. It is not the final result.
 Keep [phone access](PHONE_ACCESS.md) in the plan from the start.
+
+## Choose and review reference code
+
+The code is an optional starting point with tests and lessons from existing installations.
+It is not a required installer or a guarantee of security.
+Your agent can reuse it, adapt it, or build another implementation.
+Keep the agreed privacy boundaries and verify the selected route in each case.
+
+Before installation, the agent should inspect the relevant source and dependencies.
+Explain which files, accounts, network services, and background jobs that implementation can access or change.
+Separate collector permissions from filtering, publication, and answering-app permissions.
+Use [the data boundaries](#who-sees-the-originals) to explain who can receive originals.
+Prefer the narrowest practical access for the chosen route.
+Disclose broad computer access when the app cannot enforce a folder boundary.
+
+Use synthetic examples to check new or changed filtering rules when practical.
+Confirm the result with the normal collection, filtering, and useful phone-answer checkpoints.
+Reuse relevant passing checks. Do not repeat exploratory tests for each installation.
+Report unsupported or untested behavior with the result.
+
+Keep messages, media, credentials, databases, account bindings, and machine-specific settings outside the public repository.
+Use placeholders in examples and counts in support reports.
+Publishing reference code does not itself grant access to an installation.
+Running that code, granting permissions, and exposing private data are separate decisions.
+
+Release checks look for unexpected files, some private-data patterns, and source inventory mismatches.
+Automated tests cover specific behavior. Neither is a security audit or proof that all private data will be filtered.
+Text and OCR filters can miss sensitive visual details in images.
 
 ## Collection and coverage
 
