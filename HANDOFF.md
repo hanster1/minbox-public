@@ -118,3 +118,15 @@ Added to README, phone route comparisons, agent guidance and the evidence table.
 The route uses a local filtered folder and Hermes gateway, with no Drive or desktop AI app requirement.
 Guide explains saved archive instructions, authorized Telegram callers, model exposure and shared-host file permissions.
 No Minbox Hermes phone trial or runtime setup was performed. No private host or account configuration was published.
+
+## Multiple family members on one computer
+
+README and the reference guide now distinguish archive owners, agent profiles, and OS accounts.
+Local export and search examples use owner-named filtered roots and correction paths.
+Guides explain separate scheduled jobs, saved agent locations, caller authorization, and shared-database limitations.
+A Drive publisher does not imply a local export, and future owners remain unconfigured until their own setup completes.
+Same-user folders and profile labels are not an enforced security boundary.
+Linux/Mac onboarding, Drive setup, and health guidance link these considerations without requiring a single family architecture.
+Examples use fictional owners. No application or live installation changed.
+Validation: documentation links/fragments, HTML navigation, release inventory and whitespace checks passed.
+Independent review found no material issue. No code suite was repeated for this prose-only change.

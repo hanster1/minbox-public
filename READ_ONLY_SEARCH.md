@@ -19,8 +19,13 @@ The optional adapter pins MCP SDK 1.30.0 and is independent of Drive publication
 ```sh
 python3 -m venv /path/to/search-venv
 /path/to/search-venv/bin/pip install -r requirements-search.txt
-/path/to/search-venv/bin/python archive_search_mcp.py --root /path/to/filtered-export --transport stdio
+/path/to/search-venv/bin/python archive_search_mcp.py --root /home/user/Minbox/Casey/Filtered --transport stdio
 ```
+
+Choose the owner's exact filtered root, not the parent containing all family archives.
+Use a separate server configuration and caller authorization for another owner.
+Keep a remote server's credentials and owner binding separate too.
+A profile label does not restrict other tools or shared memory available to the agent.
 
 For `stdio`, the client launches the command and communicates through its input and output pipes.
 No HTTP listener or bearer token is needed.

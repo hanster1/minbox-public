@@ -26,6 +26,8 @@ prerequisites. A different platform needs implementation and acceptance work.
 The agent does the technical work on the client's own always-on computer. Read
 AGENTS.md, inspect existing state and choose the supported phone/host combination.
 Use the actual owner namespace, email and paths; Casey below is fictional.
+For family installations, review [multiple-owner boundaries](REFERENCE_GUIDE.md#multiple-owners-on-one-computer).
+Keep pairing sessions, corrections, export jobs, and phone-agent access bound to the correct person.
 
 ## Before consent
 

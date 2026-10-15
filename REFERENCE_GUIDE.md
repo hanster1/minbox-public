@@ -61,6 +61,48 @@ Release checks look for unexpected files, some private-data patterns, and source
 Automated tests cover specific behavior. Neither is a security audit or proof that all private data will be filtered.
 Text and OCR filters can miss sensitive visual details in images.
 
+## Multiple owners on one computer
+
+Here, an owner means the person whose messaging account supplies the archive.
+An agent profile is a set of instructions and settings. It is not an OS user account.
+An OS account controls process and file permissions on the computer.
+
+A shared family computer can support different choices for each owner.
+Agree on the privacy and access boundaries with each person before setup.
+Use stable owner names in collection, corrections, output, jobs, and agent instructions.
+
+| Component | Keep separate for each owner |
+| --- | --- |
+| Source connection | The actual phone pairing or synchronized messaging account |
+| Filtering | Agreed rules, correction history, and optional media choices |
+| Local output | A named folder such as `/home/user/Minbox/Casey/Filtered` |
+| Refresh job | The owner, ledger, destination, schedule, and pause state |
+| Answering agent | The owner's folder, model choice, saved instructions, and authorized callers |
+| Drive, if selected | The owner's consent, credential, account, and destination bindings |
+
+The supplied archive database can contain records for several owners.
+Owner-scoped queries separate their output logically; they do not restrict who can open that database.
+Keep shared collection databases, credentials, and correction storage away from answering agents when restricted access is needed.
+Folders with mode 0700 can still be read by another agent running as the same OS user.
+A shared bot workspace or memory can also expose material to other bots with access.
+
+Consider separate OS users, restricted tool connections, or isolated environments when owners need enforced privacy.
+Check inherited groups, mounts, privileges, shared memories, and other available tools before claiming isolation.
+A read-only connection can still disclose data; limit which owner's files it can read.
+
+On Mac, connect each owner's actual Messages account and user database.
+Changing an owner label does not turn one person's Messages database into another person's source.
+Do not promise multi-account collection from a single logged-in Messages session.
+
+One owner can use Drive while another uses Grok Bot or Hermes with a local folder.
+A working Drive publisher does not create a local export automatically.
+An unconfigured owner has no usable filtered output just because a folder name has been reserved.
+Use [local export guidance](LOCAL_EXPORT.md#one-local-export-per-owner) when adding that output.
+
+When moving an output, update its refresh job and the answering agent's saved location together.
+When disconnecting an owner, preserve other owners' jobs, grants, data, and health state.
+Keep real names, account identifiers, and machine bindings in private installation notes.
+
 ## Collection and coverage
 
 Choose a message source that works with the user's devices.

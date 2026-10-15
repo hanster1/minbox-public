@@ -22,6 +22,8 @@ for Minbox setup or repair on a Mac. Do not start an installation for other work
 
 This is the common entry point for local Mac setup/repair from the actual repository
 checkout. Examples use Casey; preserve the agreed existing owner namespace.
+For family installations, review [multiple-owner boundaries](REFERENCE_GUIDE.md#multiple-owners-on-one-computer).
+Confirm each owner's actual Mac login and synchronized Messages source; labels alone do not separate accounts.
 Read AGENTS.md, WORKFLOW.md, HANDOFF.md, MAC_SETUP.md and MAC_RECOVERY.md.
 Use [publication performance](OWNER_ARCHIVE.md#publication-performance) for slow runs or tuning, not as a normal setup benchmark. Preserve defaults unless local completed
 runs justify a change; validate the scheduled repeat and configuration binding.

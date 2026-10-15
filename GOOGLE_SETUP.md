@@ -14,6 +14,11 @@ Picker APIs in that same project. **Agent:** check these before opening consent.
 authorize their own account. Never reuse another owner's refresh token or
 collector session.
 
+A family can share the computer while choosing different output routes.
+A Drive publisher does not create a [local filtered folder](LOCAL_EXPORT.md#one-local-export-per-owner) automatically.
+When removing one owner's Drive setup, preserve other owners' grants, folders, jobs, and shared app registration.
+Keep the departing owner's local correction ledger if local export still uses it.
+
 ## Shared Minbox app or your own app
 
 A shared Minbox Cloud application can avoid a separate Cloud project for each

@@ -122,6 +122,8 @@ collectors `~/.local/state/minbox-text-archive-collectors`, and state directory
 numbers, underscores or hyphens. Numeric collector labels in output follow the
 configured owner order; keep that order stable while incidents are pending.
 For two owners, set `owners` to `["Casey", "Jordan"]`.
+This names monitored collection owners; it does not create local filtered exports or separate answering-agent profiles.
+Configure and monitor each selected [local export](LOCAL_EXPORT.md#one-local-export-per-owner) independently.
 Set `auto_enroll` to `true` for automatic inclusion.
 An account is included when its pairing file, collector database or enabled collector unit exists.
 Accounts with none of these are skipped. Existing databases keep an account monitored if pairing is later lost.

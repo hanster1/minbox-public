@@ -45,6 +45,7 @@ Give it this prompt:
 > The goal is to ask my preferred AI phone app useful questions about my messages.
 > Read README.md, AGENTS.md, and the relevant setup guides.
 > Check my phone, computer, model access, existing installation, and AI app.
+> If this computer serves other people, keep each owner's archive and agent access separate.
 > Explain the privacy and connection choices in simple language.
 > Show me the available content and service options before setup.
 > Explain what my chosen route includes and what needs added work.
@@ -58,6 +59,17 @@ Give it this prompt:
 You do not need to run every command in this repository yourself.
 Your agent can select a supported recipe or adapt it to your needs.
 An adaptation may need new code and tests. These guides do not make every device or AI account compatible.
+
+## Sharing a computer with family members
+
+Each person can choose their own filters and phone AI connection.
+Use a named output such as `Minbox/Casey/Filtered` for Casey and `Minbox/Jordan/Filtered` for Jordan.
+Give each output its own refresh job and connect each answering agent to the correct folder.
+A Drive archive does not automatically create a local filtered folder.
+
+Names and agent profiles organize the setup. They do not enforce private access between people.
+Your agent should explain actual file permissions and any shared administrator access.
+See [multiple owners on one computer](REFERENCE_GUIDE.md#multiple-owners-on-one-computer).
 
 ## Choose what is included
 

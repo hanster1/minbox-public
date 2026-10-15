@@ -29,8 +29,8 @@ If the ledger cannot be read, the exporter refuses to release uncorrected output
 python3 -B -S local_archive_export.py \
   --archive-root /private/minbox-collection \
   --owner Casey \
-  --correction-ledger /private/minbox-publisher/corrections.sqlite3 \
-  --destination /home/user/Minbox-Filtered \
+  --correction-ledger /private/minbox-publisher/Casey-full/corrections.sqlite3 \
+  --destination /home/user/Minbox/Casey/Filtered \
   --phone-spam-policy spam_and_blocked
 ```
 
@@ -49,6 +49,33 @@ These neighboring Minbox modules are required:
 `archive_snapshot`, `owner_archive_publisher`, `phone_spam`, `publisher_status`, and `storage`.
 They use Python's standard library for this path and do not initialize Google credentials.
 A standalone automated test runs with Python site packages disabled.
+
+## One local export per owner
+
+Use a separate named folder for each person's filtered output, even when they share a computer.
+These examples describe independent configurations, not folders that already exist:
+
+| Owner | Correction ledger | Destination |
+| --- | --- | --- |
+| Casey | `/private/minbox-publisher/Casey-full/corrections.sqlite3` | `/home/user/Minbox/Casey/Filtered` |
+| Jordan | `/private/minbox-publisher/Jordan-full/corrections.sqlite3` | `/home/user/Minbox/Jordan/Filtered` |
+
+For Jordan, change the command's owner, correction ledger, and destination together.
+Use Jordan's agreed spam policy and content choices, rather than copying Casey's settings blindly.
+Create private parent directories before export. A directory alone is not a configured archive.
+Give each export a separate scheduled job with its actual owner and paths.
+The repository does not supply a local-export service installer; the agent must create or adapt those jobs.
+Adding Jordan must not replace Casey's job or retarget its destination.
+
+Give each answering agent only its owner's filtered root, not the parent `Minbox` folder.
+A common source database is possible, but it can contain all owners' originals.
+Folder names and shared-user permissions do not enforce isolation between agents running as the same OS user.
+See [shared-computer boundaries](REFERENCE_GUIDE.md#multiple-owners-on-one-computer).
+
+A Drive publisher can exist without a local export, and a local export can refresh without Drive credentials.
+Preserve each local correction ledger if its Drive publisher is retired.
+When moving an existing export, update the job and the answering agent's saved instructions together.
+Verify the new entry file. Reuse earlier phone acceptance if its contents did not change.
 
 ## Filtering and generation behavior
 
@@ -183,5 +210,6 @@ A Linux trial created and refreshed the local folder without Google retrieval.
 Its counts matched the corresponding filtered publication before the later security repair.
 Grok Bot read the real entry file correctly.
 Grok Bot and ChatGPT both returned changed test values from Android without desktop approval.
-Their actual message answers, project behavior, and reboot persistence remain unverified.
+The owner also confirmed Grok Bot message answers, Loom answers, and original image delivery from Android.
+ChatGPT real archive answers, project behavior, and reboot persistence remain unverified.
 See [phone trial evidence](PHONE_ACCESS.md#observed-evidence-and-limits--october-14-2026) for route-specific limits.

@@ -71,6 +71,16 @@ Offer extra content sources only when useful to the owner. Loom is optional, lik
 Skip unchosen feature setup and tests; account for installer constraints documented in its guide.
 New platforms and connections need implementation and tests.
 
+## Shared computers and multiple owners
+
+Use [multiple-owner guidance](REFERENCE_GUIDE.md#multiple-owners-on-one-computer) when a computer serves several people.
+Use named output folders and separate owner-bound export jobs, corrections, credentials, and answering-agent instructions.
+Connect each answering agent to its owner's filtered root, not the common parent or raw collection database.
+A Drive publisher does not automatically create a local filtered folder.
+Do not claim an unconfigured owner's output is ready or change another owner's working setup.
+Explain that profile names and same-user private folders do not enforce isolation.
+Adapt OS accounts or tool boundaries when the owners need enforced separation.
+
 ## Preserve data and code constraints
 
 Inspect existing state before changing it.
