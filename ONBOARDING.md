@@ -1,11 +1,23 @@
 # Client onboarding
 
-This is a concrete recipe for the supplied implementation. For architectural
-choices, alternative approaches and lessons, start with
-[REFERENCE_GUIDE.md](REFERENCE_GUIDE.md). Adapt example paths and operating choices
-to the client; account bindings, privacy checks and script prerequisites describe
-actual code constraints. A different platform needs its own implementation and
-acceptance work.
+Use this guide to collect texts on an always-on computer and build a filtered
+archive. The end goal is useful answers in the owner's preferred phone AI app.
+Start with [README](README.md) for the full path. Use
+[PHONE_ACCESS](PHONE_ACCESS.md) to choose and test phone access.
+
+**Owner:** bring your own installed coding agent CLI with a capable reasoning
+model and working model access. Keep the collection computer available for its
+scheduled jobs. Handle account consent, phone pairing and device permission
+prompts yourself. **Agent:** perform the technical steps below.
+
+Drive is one storage and retrieval option. The Drive sections are recipes for
+the supplied publisher. They are required only when that path is selected.
+Use [REFERENCE_GUIDE](REFERENCE_GUIDE.md) for choices and privacy boundaries.
+A local filtered export or another access path needs its own acceptance checks.
+
+This is a technical recipe for the supplied implementation. Adapt example paths
+and schedules to the owner. Preserve account bindings, privacy checks and script
+prerequisites. A different platform needs implementation and acceptance work.
 
 The agent does the technical work on the client's own always-on computer. Read
 AGENTS.md, inspect existing state and choose the supported phone/host combination.
@@ -13,10 +25,16 @@ Use the actual owner namespace, email and paths; Casey below is fictional.
 
 ## Before consent
 
-Confirm a working CLI-capable agent, a supported OS, Python 3.11+ with sqlite3,
-Git, private runtime storage outside the checkout and a matching Desktop OAuth
-client JSON. Check GOOGLE_SETUP.md before asking for Google consent. Runtime
-collection/full publication require no model subscription; the setup agent needs working local command and model access.
+**Agent:** confirm these prerequisites before device or account consent:
+
+- A working coding agent CLI with a capable reasoning model and local command access.
+- A supported phone and computer combination.
+- Python 3.11+ with sqlite3, Git and private runtime storage outside the checkout.
+- For the Android collector build, Go 1.25+ and the tools in GMKIT_MEDIA.md.
+- For Drive, a matching Desktop OAuth client JSON and the APIs in GOOGLE_SETUP.md.
+
+Check GOOGLE_SETUP.md before asking for Google consent. Routine collection and
+full publication need no model calls. The setup agent needs usable model access.
 
 For **iPhone on Mac**, use MAC_ONBOARDING_AGENT.md and MAC_SETUP.md. For **Android
 on Linux**, use the sequence below. Android on Mac/Windows is not implemented.
@@ -24,14 +42,15 @@ Existing installations go through the appropriate recovery guide first.
 
 ## Android on Linux
 
-Use a normal user account and per-user systemd manager. Inspect existing jobs and
-bindings before changing them. Keep one owner per independent client login.
+**Agent:** use a normal Linux user account with a per-user systemd manager.
+Inspect existing jobs and bindings before changing them. Use a separate client
+login for each independent owner.
 
-**Computer (collection host), agent:** build the pinned collector following
-GMKIT_MEDIA.md with Go 1.25+. Keep the emitted binary, upstream license/notices,
-modified corresponding source and provenance together outside Git. The builder
-never installs or pairs automatically. Inspect the exact build output before
-installing its gmcli binary into `~/.local/lib/minbox-text-archive/bin/`.
+**Computer (collection host), agent:** build the pinned collector with Go 1.25+.
+Follow GMKIT_MEDIA.md. Keep its binary, upstream license, notices, modified source
+and provenance together outside Git. The builder does not install or pair.
+Inspect the build output. Then install its gmcli binary into
+`~/.local/lib/minbox-text-archive/bin/`.
 
 Prepare the application and empty owner archive only when no existing runtime
 requires recovery. From the reviewed checkout, agent reference commands are:
@@ -54,12 +73,13 @@ Install the needed collector, import, backfill, owner-archive and health templat
 from `services/`; optional scoped work and Loom jobs are not prerequisites.
 Reload the user manager. Do not enable jobs before their checks below pass.
 
-**Computer (collection host), owner:** use an isolated private Firefox window
-for the upstream cookie-based authentication flow. Sign into your Google account
-at `https://accounts.google.com/AccountChooser?continue=https://messages.google.com/web/config`.
-In Developer Tools → Network → All, reload the configuration page and select its
-`config` document request; choose Copy → Copy as cURL. This request contains
-credentials: keep it on the clipboard for direct stdin transfer, never in chat.
+**Computer (collection host), owner:** open an isolated private Firefox window.
+Sign into your Google account at
+`https://accounts.google.com/AccountChooser?continue=https://messages.google.com/web/config`.
+Open Developer Tools → Network → All. Reload the configuration page. Select its
+`config` document request. Choose Copy → Copy as cURL.
+This request contains credentials. Keep it on the clipboard for direct stdin
+transfer. Never put it in chat.
 
 **Computer (same host), agent:** use the available clipboard command (`wl-paste`
 on Wayland or `xclip -selection clipboard -o` on X11) to pipe those bytes directly
@@ -83,13 +103,14 @@ exact pairing emoji shown by the collector. **Computer:** close the private setu
 window and competing Google Messages web tabs. Google allows one active Messages
 computer per account. Browser sign-in and Drive consent are separate.
 
-**Computer, agent:** start only the installed read-only collector service and
-verify status through its existing `gmcli.sock`: connected true, auth_expired
-false, offline false and send_mode off. The supplied service runs
-`--read-only=true serve --idle-exit 0`. Never use `--auto` or enable sending.
-Import once with `archive_cli.py import-gmkit Casey PRIVATE_GMCLI_DB`; inspect
-sanitized counts/gaps. Confirm owner-approved benign incoming/outgoing texts match
-on the phone and in the archive without printing private history.
+**Computer, agent:** start only the installed read-only collector service.
+Check its existing `gmcli.sock`. Require connected true, auth_expired false,
+offline false and send_mode off. The supplied service runs
+`--read-only=true serve --idle-exit 0`. Never use `--auto`. Keep sending off.
+Import once with `archive_cli.py import-gmkit Casey PRIVATE_GMCLI_DB`.
+Inspect counts and coverage gaps without private content. Ask the owner to compare
+approved harmless incoming and outgoing texts on the phone and in the archive.
+Do not print private history.
 
 ## Private Drive connection
 
@@ -110,10 +131,11 @@ and child folders remain inside it.
 
 For Mac use its documented private support/venv/config paths instead. Omit
 `--host` and `--activate` for independent local provisioning. Google consent is
-interactive; do not automate acceptance. Inspect the returned private config and
-run `owner_publish_cli.py --config PRIVATE_CONFIG` with the venv interpreter.
-Verify the account, actual `drive.file` grant, root/parent privacy and native Docs
-readback. Provisioning preserves existing IDs and rejects unexpected rebinding.
+interactive; do not automate acceptance. Inspect the returned private config.
+Run `owner_publish_cli.py --config PRIVATE_CONFIG` with the venv interpreter.
+Verify the account and actual `drive.file` grant. Verify root/parent privacy and
+native Docs readback. Provisioning preserves existing IDs and rejects unexpected
+rebinding.
 
 Google's permission is per-file selected/app-created access, not a recursive
 folder sandbox. Minbox separately enforces the chosen root and managed parents.
@@ -137,12 +159,13 @@ systemctl --user enable --now minbox-text-collector@Casey.service \
   minbox-owner-archive@Casey.timer
 ```
 
-Create a private 0600 health config in a 0700 directory before starting its timer.
-Use the owner, verified publisher status and optional backfill status paths in
-HEALTH_ALERTS.md. Start with `delivery.type: none`; run the local check, then
-explicitly enable the health timer after review. Preserve existing pauses/delivery
-on repair. External emergency delivery is optional, owner-selected and tested only
-with consent. Without delivery configured, emergency incidents remain local.
+Create a private mode-0600 health config in a mode-0700 directory.
+Use the owner, verified publisher status and optional backfill status paths from
+HEALTH_ALERTS.md. Start with `delivery.type: none`. Run the local check.
+Review the result before explicitly enabling the health timer.
+Preserve existing pauses and delivery settings during repair. External emergency
+delivery is optional. The owner chooses it and consents to its test.
+Without delivery configured, emergency incidents remain local.
 
 Check per-user manager persistence after logout/reboot; do not assume lingering
 or disable sleep/security silently. Verify actual scheduled new capture and Drive
@@ -154,28 +177,33 @@ bounded; pending/unavailable items stay explicit.
 ## Optional Android Spam & blocked synchronization
 
 Explain the whole-folder scope in PHONE_SPAM.md before enabling this policy.
-The protocol cannot reliably distinguish manual reports from automatic spam or
-block-only actions. After the owner chooses the all-Spam-&-blocked policy and the
-updated collector/import signal is verified, set the private owner publishers'
-`phone_spam_policy` to `spam_and_blocked`. This removes whole conversations from
-current Drive views and managed images, while local originals remain. Moving
-the conversation out of that phone folder restores eligible content after a fresh
-status confirmation and archive sync. Explain this reversal and test both directions. Default
-is off; never enable this Android policy for iPhone or bypass missing metadata.
-Perform a benign disposable phone-conversation acceptance check if the owner
-agrees, and record unverified event propagation honestly.
+The protocol cannot reliably distinguish manual reports, automatic spam and
+block-only actions. The owner must choose the all-Spam-&-blocked policy.
+Verify the updated collector/import signal. Then set the private owner
+publishers' `phone_spam_policy` to `spam_and_blocked`.
+This removes whole conversations from current Drive views and managed images.
+Local originals remain. Moving the conversation out of that phone folder can
+restore eligible content after fresh status confirmation and archive sync.
+Explain this reversal. Test both directions with a harmless disposable phone
+conversation if the owner agrees. The default is off. Never enable this Android
+policy for iPhone. Never bypass missing metadata. Record event propagation that
+remains unverified.
 
 ## Optional AI connection
 
-**Owner, phone or computer:** connect your preferred compatible AI app to the
-Google account containing the archive yourself. The app's Drive permissions are
-separate and may be broader than Minbox's. Use the Start Here Doc's prompt.
+**Owner, phone or computer:** connect your preferred compatible AI app yourself.
+For the Drive path, use the Google account that contains the archive. The app has
+separate permissions. They can be broader than Minbox's. Use the Start Here Doc's
+prompt.
 
-Explain this optional check: ask the AI to quote a harmless recent text you
-recognize and include its date and source Doc link, then compare it with your
-phone. This checks the AI connector separately from Minbox capture/publication.
-Skipping it does not block setup or collection. Keep files private if it fails.
-Corrections/writeback tests are also optional; recorded and applied differ.
+Follow [PHONE_ACCESS](PHONE_ACCESS.md) for final phone acceptance. Ask the AI to
+quote a harmless recent text with its date and source Doc link. Compare the
+answer with your phone. Then ask a useful question that needs archive context.
+Test fresh content as well as an existing item. This tests the AI connection
+separately from capture and publication. You can defer it while collection runs;
+the phone question-answering goal remains unverified until it passes.
+Keep files private if access fails. Correction writeback is optional. Verify
+both saved/read-back and applied status; “recorded” alone does not prove either.
 
 Leave a private local checkpoint with source revision, owner-bound stages,
 checks, coverage gaps, pending approvals and one next action. No message bodies,

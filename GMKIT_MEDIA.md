@@ -1,5 +1,19 @@
 # Pinned Android full-media collector
 
+Use this agent recipe to build the read-only Android collector for the supplied
+Linux path. It collects texts and available images for a filtered archive.
+The end goal is useful answers in the owner's preferred phone AI app.
+Start with [README](README.md). Follow ONBOARDING.md for installation and pairing.
+Use [PHONE_ACCESS](PHONE_ACCESS.md) for final phone acceptance and
+[REFERENCE_GUIDE](REFERENCE_GUIDE.md) for choices and privacy. Drive publication
+is a separate option; building this collector does not connect a phone AI app.
+
+**Prerequisites:** the owner's installed coding agent CLI with a capable reasoning
+model; Python 3.11+; Git; Go 1.25+; and a private build output location outside Git.
+An empty Go module cache can require dependency downloads.
+**Agent:** build, inspect and install only within the authorized setup or repair.
+**Owner:** handle account consent, phone pairing and device prompts.
+
 `scripts/gmkit-media.patch` modifies official gmkit v0.4.0 commit
 `c714f8ea1602d9c61876a87a44f6984ba3aeb4c4`. The changes retain gmkit's AGPL-3.0
 license. The builder produces its license, modification notice, complete modified
@@ -15,22 +29,21 @@ Build with an installed Go 1.25 or later toolchain:
 python3 scripts/build_gmkit_media.py --output /tmp/gmkit-media-build --go /path/to/go
 ```
 
-An optional `--source /path/to/gmkit` accepts a clean checkout of exactly the
-pinned commit with the official HTTPS origin. The builder verifies the commit,
-applies the patch with `git apply --check`, runs focused Go tests, then builds.
-It uses locked Go dependencies and refuses module-file updates. The builder
-never installs the binary, touches a collector account, or downloads a toolchain.
-Dependency downloads may occur when the Go module cache is empty.
+Optional `--source /path/to/gmkit` accepts a clean checkout of the pinned commit.
+It must use the official HTTPS origin. The builder verifies the commit.
+It checks the patch with `git apply --check`. It applies the patch, runs focused
+Go tests and builds the binaries. It uses locked Go dependencies and refuses
+module-file updates. It does not install binaries, touch a collector account or
+download a toolchain. An empty Go module cache can require dependency downloads.
 
-The CLI now calls `media.download` on the existing daemon rather than opening a
-second phone connection. The CLI directly dials the configured socket and never
-auto-starts a daemon. If the managed collector is unavailable, media capture
-fails within the socket connection timeout and retries through the normal import
-cooldown; it cannot create an unmanaged collector with different send settings.
-Read-only collection remains permitted; no text, reaction
-or message-send operation is added. A daemon running an older binary must be
-restarted deliberately after an approved installation before the new CLI can
-use the extended response.
+The CLI calls `media.download` on the existing daemon. It opens no second phone
+connection. It connects directly to the configured socket and never starts a
+daemon automatically. If the managed collector is unavailable, media capture
+fails within the socket connection timeout. It retries through the normal import
+cooldown. It cannot create an unmanaged collector with different send settings.
+Read-only collection remains permitted. The patch adds no text, reaction or
+message-send operation. After an approved installation, deliberately restart an
+older daemon before the new CLI uses the extended response.
 
 Stored `raw_proto` is decoded privately as `UpdateEvents`. Only the requested
 message and its `MessageInfo` media entries are used. Each image without a full
@@ -61,11 +74,11 @@ remain necessary for live acceptance; synthetic tests do not prove phone access.
 
 ## Existing-session refresh candidate helper
 
-The build also produces `minbox-refresh-session`. It is an explicit recovery tool
-for an already paired account, never a collection-time automatic repair. Stop the
-owner's managed collector before using it. Give it an existing private session
-and a new candidate path in an existing directory owned by the current UID with
-mode 0700:
+The build also produces `minbox-refresh-session`. Use it only for explicit
+recovery of an already paired account. It is not automatic collection repair.
+Stop the owner's managed collector first. Supply the existing private session.
+Choose a new candidate path in an existing mode-0700 directory owned by the
+current UID:
 
 ```sh
 timeout 50s /path/to/minbox-refresh-session --input /private/session.json \
@@ -108,10 +121,11 @@ only for normal statuses (1, 2 or 4), with a request started after the latest sp
 observation and the safety delay. A newer spam observation wins the race.
 The ledger retains active/restored state and history rather than deleting rows.
 
-The SDK exposes folder state, not the Android user's exact Report spam action.
-Spam can be automatic; blocked conversations can be blocked without reporting.
-The separate Drive publication policy must be explicitly chosen and enabled.
-Its current supported value is `spam_and_blocked`; `off` is the default.
+The SDK exposes folder state. It does not identify the Android user's exact
+Report spam action. Spam can be automatic. A blocked conversation need not have
+been reported. The owner must choose the separate Drive publication policy.
+The agent must enable it explicitly. Its supported value is `spam_and_blocked`.
+The default is `off`.
 
 Scans are capped at 500 conversations, with explicit snapshot/capped/pending/failed
 coverage recorded in `phone_spam_scan_state`. The SDK's public method does not

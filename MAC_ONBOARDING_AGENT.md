@@ -1,12 +1,20 @@
 # Shared Mac onboarding instructions for local coding agents
 
-Use [REFERENCE_GUIDE.md](REFERENCE_GUIDE.md) for adaptable design considerations.
-This document is the concrete workflow for the supplied Mac implementation;
-its safety checks and binding/update procedures reflect actual code behavior.
-Example paths and operating choices can be adapted with appropriate verification.
+Use this agent recipe to collect iPhone texts on the owner's always-on Mac and
+build a filtered archive. The end goal is useful answers in the owner's preferred
+phone AI app. Start with [README](README.md). Use [PHONE_ACCESS](PHONE_ACCESS.md)
+for final phone acceptance and [REFERENCE_GUIDE](REFERENCE_GUIDE.md) for choices
+and privacy boundaries. Drive is one supported publication recipe, not the goal.
 
-Apply this workflow when the user asks for Minbox setup or repair on a Mac.
-For other work, follow the current task without starting an installation.
+**Prerequisites:** the owner has an installed coding agent CLI with a capable
+reasoning model and usable model access. The Mac must be available for scheduled
+jobs. Check the Python, Apple sync and optional Drive requirements in MAC_SETUP.md.
+**Agent:** do technical work. **Owner:** handle sign-in, account consent, Apple
+permissions and phone checks.
+
+This recipe describes the supplied Mac code and its safety checks.
+Adapt example paths and schedules after verification. Use it when the owner asks
+for Minbox setup or repair on a Mac. Do not start an installation for other work.
 
 This is the common entry point for local Mac setup/repair from the actual repository
 checkout. Examples use Casey; preserve the agreed existing owner namespace.
@@ -18,33 +26,32 @@ Installed Linux workflows/skills are optional; report unavailable ones once and
 continue with these documents. Any usable CLI-capable coding agent may perform
 this work. Preserve host preferences and do not change global agent settings.
 
-The request authorizes necessary local setup, diagnosis, source fixes and relevant
-checks for Casey's independent Mac installation. Continue autonomously through
-reversible technical steps and reuse completed work. Ask only for missing facts
-that cannot be read safely (Casey's intended Google email, private Desktop OAuth
-client location/application status, intended Apple identity) and actions that
-require the owner: Google consent/Picker, macOS permission approval, or benign
-phone checks. Explain each required action briefly. Do not ask the owner to run
-long command sequences that you can perform. If host approval is mandatory,
-state the concrete action and reason; do unaffected work while blocked.
+Work within the owner's request for local setup or repair. Do the necessary
+technical work and relevant checks. Reuse completed work. Ask only for missing
+facts that cannot be read safely. These can include the intended Apple identity,
+Google email, private Desktop OAuth client path and application status.
+Ask the owner to perform Google consent/Picker, macOS permission approval and
+harmless phone checks. Explain each action briefly. Run technical commands
+yourself. If the host requires approval, state the action and reason.
+Continue independent work while that action is blocked.
 
 ## Inspect and choose the next stage
 
-1. Confirm the ordinary logged-in Mac user, macOS/architecture, available Python,
-   checkout identity and source commit. For Git, inspect branch/status and
-   origin without discarding edits. Use a reviewed source revision; preserve local changes before updating.
-2. Run `./mac-repair.sh report --owner Casey` from the checkout before modifying
-   existing runtime state. Alternatively use standard-library Python 3.9+:
-   `python3 mac_support.py report --owner Casey`. Use `--home` only for the actual
-   intended home, and `--bundle` only for an explicitly chosen private report
-   location. This report does not require app imports or a working venv. Treat
-   missing/malformed config, manifest or interpreter as evidence to diagnose,
-   not permission to initialize a new archive.
-3. Map verified evidence to the stages below. Retain actual configured archive,
-   Python, Messages source, limits, publisher and enabled/paused settings. A
-   pending installation journal goes through MAC_RECOVERY.md before setup/update.
-   Legacy Family Text Archive paths or inconsistent bindings need reviewed
-   migration; do not silently create empty replacements.
+1. Confirm the ordinary logged-in Mac user, macOS version and architecture.
+   Inspect available Python, checkout identity and source commit.
+   Inspect the Git branch, status and origin. Preserve local edits before updates.
+   Use a reviewed source revision.
+2. Run `./mac-repair.sh report --owner Casey` from the checkout before runtime changes.
+   Or use standard-library Python 3.9+: `python3 mac_support.py report --owner Casey`.
+   Use `--home` only for the intended home. Use `--bundle` only for a chosen private
+   report location. The report needs no app imports or working venv.
+   Diagnose missing or malformed config, manifest or interpreter.
+   Do not initialize a new archive to bypass these failures.
+3. Compare verified evidence with the stages below. Retain the configured archive,
+   Python, Messages source, limits, publisher and enabled/paused settings.
+   Follow MAC_RECOVERY.md for a pending installation journal before setup or update.
+   Review migration for legacy Family Text Archive paths or inconsistent bindings.
+   Do not create empty replacements.
 
 | Stage | Evidence required before moving on |
 | --- | --- |
@@ -92,11 +99,14 @@ manually added files are not recursively authorized. Existing broad grants need
 the reviewed migration procedure, not changed scope labels. Never make Docs
 public to solve connector access or replace a different owner's credentials.
 
-**Owner, phone or computer:** connect the preferred mobile AI yourself. Explain that an
-optional familiar-message/date/Doc-link confidence check verifies that separate
-connection. Skipping it does not block Minbox setup. Only the designated
-Corrections Doc supplies writeback; saved/read-back and applied are separate
-checks. No model call is required for collection or routine full publication.
+**Owner, phone or computer:** connect your preferred mobile AI yourself.
+Follow [PHONE_ACCESS](PHONE_ACCESS.md). For Drive, compare a harmless familiar
+message, its date and its source Doc link with the phone. Then test a useful
+archive question and fresh content. These checks verify the separate AI connection.
+Collection can run before this check. The phone question-answering goal remains
+unverified until it passes. Only the designated Corrections Doc supplies
+writeback. Check saved/read-back and applied status separately.
+Collection and routine full publication need no model calls.
 
 ## Complete or pause with a concrete checkpoint
 
