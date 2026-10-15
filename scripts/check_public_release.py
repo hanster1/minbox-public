@@ -9,6 +9,40 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# Truncated SHA-256 of lowercase private words (household names and machine
+# names). Stored as hashes so the denylist itself does not publish them.
+PRIVATE_WORD_HASHES = {
+    '01df2cc6fa6f8098',
+    '0335aa820af252db',
+    '20e09e434912381a',
+    '2df7b03d1a69954f',
+    '44f1a03440984278',
+    '5d702eb07928ed7b',
+    '7b2b547ab5377906',
+    '9f27ff9b29865097',
+    'c7566ba71fd4b99b',
+    'c7c1319276e936c8',
+    'f617936d4a0533db',
+}
+# Files where the maintainer's identity is intentionally public.
+IDENTITY_ALLOWED = {'LICENSE'}
+PUBLIC_CONTACT = b'spencer+minboxpublic@mail.grokbot.com'
+WORD = re.compile(rb'[A-Za-z]{4,}')
+# North American numbers outside the reserved fictional 555-01xx range.
+PHONE = re.compile(rb'(?<![0-9])(?:\+?1[ .-]?)?\(?[2-9][0-9]{2}\)?[ .-]?(?!555)[2-9][0-9]{2}[ .-][0-9]{4}(?![0-9])'
+                   rb'|\+1[2-9][0-9]{2}(?!555)[2-9][0-9]{6}(?![0-9])')
+HOME_PATH = re.compile(rb'/(?:home|Users)/(?!(?:user|you|Alex|USER|PRIVATE|name)/)[A-Za-z0-9_.-]+/')
+PRIVATE_EMAIL = re.compile(rb'(?<![A-Za-z0-9._%+-])(?!(?:person|example|someone|you)@)[A-Za-z0-9._%+-]+@(?:gmail|icloud|yahoo|outlook|hotmail)\.com')
+
+
+def private_word_hits(data):
+    hits = set()
+    for word in WORD.findall(data):
+        digest = hashlib.sha256(word.lower()).hexdigest()[:16]
+        if digest in PRIVATE_WORD_HASHES:
+            hits.add(digest)
+    return hits
+
 
 def check(verify_hashes=True):
     failures = []
@@ -54,6 +88,14 @@ def check(verify_hashes=True):
             failures.append('private document/folder link requires review: ' + name)
         if credential.search(data):
             failures.append('credential-shaped content requires review: ' + name)
+        if name not in IDENTITY_ALLOWED and private_word_hits(data.replace(PUBLIC_CONTACT, b'')):
+            failures.append('private name or machine name: ' + name)
+        if PHONE.search(data):
+            failures.append('real-looking phone number (use 555-01xx): ' + name)
+        if HOME_PATH.search(data):
+            failures.append('personal home-directory path: ' + name)
+        if PRIVATE_EMAIL.search(data):
+            failures.append('personal email address: ' + name)
         if path.suffix == '.md':
             text = data.decode()
             for target in re.findall(r'\]\(([^)]+)\)', text):

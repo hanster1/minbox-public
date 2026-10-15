@@ -17,8 +17,7 @@ Keep one authoritative source for each part.
 | Credentials, account bindings, and installation receipts | Private runtime storage outside Git |
 | Historical experiments | Retained private history, for reference only |
 
-For the maintainer's hosted installation, private references include
-`docs/minbox-hosting.md`, `docs/minbox-information-site.md`, and `scripts/minbox/pair-owner.sh` in the separate `alfred` project.
+The maintainer's hosted installation keeps its operational notes in a separate private project.
 Clients do not need that project or the maintainer's accounts.
 
 Edit and review application source here before updating an installed runtime.

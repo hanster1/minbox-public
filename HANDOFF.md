@@ -35,4 +35,4 @@ Automatic Codex incident repair is deferred. Reboot persistence and enforced sha
 Finish the authorized GitHub backup and verify remote commits.
 Then resume only requested setup or maintenance; do not add routine phone tests.
 Keep credentials, content, exact bindings and runtime receipts outside Git.
-Hosted operations belong in the private alfred project. No website deployment is authorized by this checkpoint.
+Hosted operations belong in the maintainer's private operations project. No website deployment is authorized by this checkpoint.
