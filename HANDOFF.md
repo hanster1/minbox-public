@@ -54,10 +54,16 @@ Before setup, the agent presents one compact menu of content and service options
 It confirms selections and labels each as included, optional, needing adaptation, or unavailable for the selected route.
 Explain image files separately from OCR and distinguish local capture, output, and phone AI access.
 
-The owner requires actual Grok Bot Android use before any push: useful answers from the filtered archive, including Loom and images.
-This gate is not yet passed. Distinguish image interpretation from OCR-only retrieval.
-The text-only local export does not contain original image files; verify the actual route rather than claiming otherwise.
+The owner requires actual Grok Bot Android use before any push: useful archive answers, Loom transcripts, and original image retrieval.
+The owner clarified that images from retained messages should be included by default, with text-only as an option.
+No individual image approval list is required.
+This gate is not yet passed. Do not describe OCR-only retrieval as original-image viewing.
 Desktop checks and earlier synthetic file reads do not satisfy this owner-specific publication gate.
+Archy reports a saved archive skill and durable-memory pointer for natural-language questions without host/path details.
+With owner approval, Google Drive and Google Docs plugins were removed account-wide from Grok Bot for this test.
+Cloud files, source archives, and publisher jobs remain intact. Reconnection uses the normal plugin setup and owner sign-in if needed.
+Archy reports updated skill and durable memory for default image inclusion, OCR limits, and filtered-folder-only retrieval.
+Archy reports a CopyToBox route from the connected host to a conversation attachment; Android delivery is still unverified.
 No push is authorized by recording the gate.
 
 ## Next actions
@@ -71,3 +77,14 @@ Keep credentials, exact bindings, and receipts private.
 Google branding retry remains separate: October 15 after 3:20 PM US/Central, Branding → View issues → “I have fixed the issues” → Proceed.
 Ownership verification succeeded; no verification approval or established Drive-policy violation exists.
 Changes remain local until publication is authorized.
+
+## Local image export update
+
+Local export now includes captured images from retained messages by default.
+`--text-only` omits originals and preserves available OCR.
+Excluded messages never contribute images. Image files use verified owner-root bindings, private permissions, size, signature and hash checks.
+Images are linked from their messages and take part in atomic replacement and withdrawal.
+Text and OCR rules do not perform visual privacy review.
+Tests: 537 tests run, 8 skipped, no failures; release inventory and whitespace checks passed.
+The reviewed exporter is installed on the Linux trial host. A live generation succeeded with images, message links and file hashes verified. Scheduled refresh is active.
+Android image display remains pending; do not infer phone acceptance from code or desktop checks.

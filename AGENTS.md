@@ -37,7 +37,9 @@ Distinguish local capture, filtered output, and actual phone AI access.
 A feature supported somewhere in Minbox is not automatically included in every route.
 
 Original images and OCR are separate capabilities.
-The Drive path publishes retained captured images; the local text exporter includes available OCR but no original image files.
+The Drive path publishes retained captured images.
+The local exporter includes available OCR and captured images from retained messages by default.
+Use `--text-only` to omit image files.
 Do not describe images as always absent or always included.
 Check actual settings and explain bundled features, including the Mac collector/Loom coupling.
 If the user declines a bundled feature, adapt the implementation or choose another suitable route.

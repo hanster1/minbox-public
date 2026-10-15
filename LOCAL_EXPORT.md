@@ -1,10 +1,11 @@
-# Create a local filtered text folder
+# Create a local filtered archive folder
 
 Use this output when an AI connection will read files from the always-on computer.
 Your agent creates and maintains the folder. You choose what the AI may read.
 Return to [the setup path](README.md#the-setup-path) for the full journey.
 
 `local_archive_export.py` exports filtered UTF-8 text from an existing Minbox archive.
+Available image files from retained messages are included by default.
 It makes no Google, model, or network calls.
 It can run alongside Drive publication, but does not require Drive calls to generate the folder.
 
@@ -60,8 +61,11 @@ The output applies the existing publisher rules and validation helpers:
 - The selected phone Spam & blocked policy.
 
 Loom transcripts need a retained origin message.
-The output contains text only.
-Original images, raw files, databases, and credentials are not copied.
+By default, the output contains text, available OCR, and captured images from retained messages.
+Use `--text-only` to omit image files.
+The user does not need to approve each image.
+Images from excluded messages are omitted.
+Raw databases, credentials, and unrelated source files are not copied.
 No rule set guarantees that all sensitive content is removed.
 
 Corrections reflect the committed local ledger at generation time.
@@ -78,13 +82,37 @@ A failure before exchange preserves the old generation; label that output with i
 
 Replacement needs Linux `renameat2` support on the destination filesystem.
 Other platforms need their own replacement implementation and tests.
-Limits are 100 KiB per file, 256 MiB total output, and 5,000 files.
+Text limits are 100 KiB per file. Images are bounded separately at 20 MiB each.
+Text is bounded at 256 MiB per generation.
+A generation with images is bounded at 1 GiB total.
+The output is bounded at 5,000 files.
 The search adapter has separate limits and can return partial coverage.
 
 Source and correction databases are opened read-only.
 Corrections are recomputed in a private database backup.
 SQLite WAL readers can still participate in shared-memory or sidecar coordination.
 Read-only access does not mean zero filesystem activity around a live database.
+
+## Optional image files
+
+Choose original images separately from OCR.
+By default, the exporter copies verified captured image bytes into the same filtered folder.
+Each message names its exported image file. File names use the image hash, not a raw source path.
+The exporter checks the owner attachment root, file permissions, size, image type, and content hash.
+Missing or invalid captured files stop replacement and preserve the previous generation.
+Uncaptured attachments remain coverage gaps.
+
+Message and OCR filters do not examine the whole picture.
+They can miss sensitive visual details, including text that OCR did not recognize.
+Explain that limit when presenting the image option.
+Optional local image models can add visual filtering, but this exporter does not include one.
+Do not claim that a retained image has passed visual privacy review.
+
+The answering app must be able to retrieve and attach a file from the computer.
+A local path in an answer is not a viewable image on the phone.
+Use one requested image to check that delivery works.
+Copies sent to the AI service leave the local computer.
+Removing an image from a later export does not retract earlier provider copies.
 
 ## Keeping it living
 
@@ -94,7 +122,7 @@ The Linux trial used a separate user timer every three minutes.
 Its service blocked new privileges and internet socket families.
 Those are tested choices, not required settings for every client.
 
-The folder contains `START_HERE.txt`, message parts, transcript parts, and a hidden manifest.
+The folder contains `START_HERE.txt`, message parts, transcript parts, available image files, and a hidden manifest.
 The manifest records generation time, counts, source fingerprints, correction fingerprints, and file hashes.
 Check the refresh service and manifest age separately from AI app availability.
 Keep message content out of health reports.

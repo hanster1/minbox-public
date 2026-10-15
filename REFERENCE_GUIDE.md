@@ -152,11 +152,11 @@ Use an example in the normal phone question where practical.
 Check the path from capture through filtering to the answer.
 A saved attachment is not necessarily readable by the phone AI.
 Explain local capture, filtered output, and phone retrieval separately.
-The Drive publisher includes retained captured images; a text-only local export does not include image files.
+The Drive publisher includes retained captured images. The local exporter includes them by default; `--text-only` omits image files.
 
 | Content | Included behavior or current limit | Optional check or extension |
 | --- | --- | --- |
-| Photos, screenshots, and image-only messages | Available image originals can be captured and published through Drive. Local text export includes available OCR, not image files. | Check whether the chosen AI can read the image or its extracted text. |
+| Photos, screenshots, and image-only messages | Available image originals can be captured and published through Drive. Local export includes available OCR and retained captured images by default. `--text-only` omits image files. | Check whether the chosen AI can read the image or its extracted text. |
 | Loom links, only if wanted | Optional capture can include accessible saved transcripts. Restricted videos remain gaps. | Check transcript retrieval and a source timestamp for a video the user can access. |
 | Voice notes and audio attachments | The supplied image attachment path does not provide general audio capture or speech transcription. | Add capture and transcription if needed. Decide whether transcription stays local. |
 | PDFs and other documents | General document attachment extraction is not included. | Add supported file capture and text extraction, then apply the same privacy filters. |

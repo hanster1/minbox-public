@@ -78,7 +78,7 @@ For each choice, the agent should say: **included**, **optional**, **needs adapt
 “Supported by Minbox” does not mean “included in this route.”
 
 For example, the Drive path publishes retained captured image files.
-The local text export includes available OCR text but does not copy original images.
+The local export includes available OCR and image files from retained messages by default. Choose `--text-only` to omit image files.
 An AI connection must also be able to read the chosen output.
 You should not have to discover that distinction after setup.
 
