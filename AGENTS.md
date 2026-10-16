@@ -120,3 +120,14 @@ Read [publication performance](OWNER_ARCHIVE.md#publication-performance) before 
 Repair reviewed source in this checkout before updating an installation.
 Do not deploy generated background fixes, publish source, or change unrelated global settings without authorization.
 On interruption, leave a concise private checkpoint outside Git.
+
+<!-- pstack:start -->
+## Engineering principles (pstack)
+Guidance from Lauren Tan's [pstack](https://github.com/cursor/plugins/tree/main/pstack) (v0.15.25, upstream cdb3c41, synced 2026-10-16). Repo-specific rules in this file take precedence.
+- Prefer proving a change works on the real thing (run it, read the actual output) before calling it done.
+- Aim to fix the root cause rather than guarding around the symptom.
+- Prefer the smallest change that solves the problem; subtract before you add.
+- Aim for small steps that each end in a checkable state.
+- Prefer tests that check behavior users can observe, not internals.
+- Aim to keep code easy to follow: fewer layers, less hidden state.
+<!-- pstack:end -->
