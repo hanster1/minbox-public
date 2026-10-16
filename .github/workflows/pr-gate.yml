@@ -1,0 +1,84 @@
+# PR gate: run checks, classify risk by changed paths, auto-merge low-risk PRs.
+# Rules: agent-workflows v6 RULES (branch + PR, never push to main).
+# High-risk paths live in .github/high-risk-paths.txt. Anything matching them
+# (or anything under .github/) gets the `needs-maintainer` label and waits for the maintainer.
+name: PR gate
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+concurrency:
+  group: pr-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  checks:
+    uses: ./.github/workflows/source-checks.yml
+
+  risk:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    outputs:
+      level: ${{ steps.classify.outputs.level }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: classify
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git diff --name-only "$BASE...$HEAD" > /tmp/changed.txt
+          python3 - <<'PY'
+          import fnmatch, os
+          pats = [".github/*", ".github/**"]
+          if os.path.exists(".github/high-risk-paths.txt"):
+              for line in open(".github/high-risk-paths.txt"):
+                  line = line.split("#", 1)[0].strip()
+                  if line:
+                      pats.append(line)
+          hits = []
+          for f in open("/tmp/changed.txt").read().split():
+              for p in pats:
+                  if fnmatch.fnmatch(f, p) or fnmatch.fnmatch(f, p.rstrip("/") + "/*"):
+                      hits.append(f"{f}  (matches {p})"); break
+          level = "high" if hits else "low"
+          print("Risk:", level); print("\n".join(hits))
+          with open(os.environ["GITHUB_OUTPUT"], "a") as o:
+              o.write(f"level={level}\n")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as s:
+              s.write(f"### Risk: {level}\n" + "".join(f"- `{h}`\n" for h in hits))
+          PY
+      - name: Label high-risk PRs
+        if: steps.classify.outputs.level == 'high'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          gh label create needs-maintainer --color B60205 --description "High-risk change: waits for maintainer approval" -R "$GITHUB_REPOSITORY" 2>/dev/null || true
+          gh pr edit "$PR" --add-label needs-maintainer -R "$GITHUB_REPOSITORY"
+
+  automerge:
+    needs: [checks, risk]
+    if: >-
+      needs.risk.outputs.level == 'low' &&
+      !github.event.pull_request.draft &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !contains(github.event.pull_request.labels.*.name, 'needs-maintainer') &&
+      !contains(github.event.pull_request.labels.*.name, 'hold')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Enable auto-merge (squash)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr merge "$PR" --auto --squash --delete-branch -R "$GITHUB_REPOSITORY" \
+            || gh pr merge "$PR" --squash --delete-branch -R "$GITHUB_REPOSITORY"

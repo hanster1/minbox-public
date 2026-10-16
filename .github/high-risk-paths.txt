@@ -1,0 +1,24 @@
+# High-risk paths (fnmatch globs). A PR touching any of these gets
+# the needs-maintainer label and is NOT auto-merged.
+# Always high risk in every repo (also hard-coded: .github/**)
+LICENSE*
+licenses/**
+THIRD_PARTY_NOTICES*
+.env*
+**/.env*
+*.pem
+*.key
+**/secrets/**
+AGENTS.md
+CLAUDE.md
+WORKFLOW.md
+# Collector, deletion, privacy, storage and publishing logic: all code
+*.py
+*.sh
+services/**
+scripts/**
+requirements*.txt
+SOURCE_MANIFEST.json
+PRIVACY.md
+information-site/**
+scripts/check_public_release.py
