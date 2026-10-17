@@ -121,6 +121,11 @@ Repair reviewed source in this checkout before updating an installation.
 Do not deploy generated background fixes, publish source, or change unrelated global settings without authorization.
 On interruption, leave a concise private checkpoint outside Git.
 
+## Independent review
+- Every PR is checked by an agent other than its builder.
+- The checker reviews only the brief, the criteria (WORKFLOW.md "Done when") and the diff, not the builder's reasoning or chat.
+- See agent-workflows `docs/shared-lessons.md`.
+
 <!-- pstack:start -->
 ## Engineering principles (pstack)
 Guidance from Lauren Tan's [pstack](https://github.com/cursor/plugins/tree/main/pstack) (v0.15.25, upstream cdb3c41, synced 2026-10-16). Repo-specific rules in this file take precedence.

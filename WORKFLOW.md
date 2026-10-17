@@ -1,5 +1,20 @@
 # Minbox purpose and project boundaries
 
+## Step map
+
+| Step | Who | Feeds | Done when |
+|---|---|---|---|
+| 1. Brief | Maintainer | 2 | Goal + user-facing result stated |
+| 2. Build on a branch | Builder agent | 3 | Code/guide + tests + HANDOFF.md; manifest hashes updated |
+| 3. Checks (parallel) | CI + builder | 4 | Source checks and release check pass; no private data |
+| 4. Review PR | A different agent than the builder | 5 | Checked against brief + criteria + diff only |
+| 5. Merge | Auto if low-risk; Maintainer for code/privacy/site | 6 | Merged to main |
+| 6. Learn | Builder | 1 | Result in HANDOFF.md |
+
+Guide edits and code changes can run at the same time on separate branches.
+
+## Purpose
+
 Help a user get intelligent answers about their filtered text message archive from their preferred AI phone app.
 Their own agent CLI performs setup on their always-on computer.
 The repository supplies reference code, practical choices, and lessons that reduce setup problems.
