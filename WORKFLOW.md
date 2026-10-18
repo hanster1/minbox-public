@@ -1,5 +1,14 @@
 # Minbox purpose and project boundaries
 
+## Done criteria
+
+- Source checks and the release check pass; SOURCE_MANIFEST.json hashes are current.
+- Nothing private: no personal data, accounts or paths in the repo.
+- A guide or feature works on its stated platform; anything not tested live is labeled as untested.
+- Collection, filtering, storage and phone retrieval are each checked separately.
+- Drive keeps the exact `drive.file` scope.
+- HANDOFF.md says what changed, what was checked, and what's next.
+
 ## Step map
 
 | Step | Who | Feeds | Done when |
