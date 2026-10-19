@@ -1,7 +1,10 @@
 # PR gate: run checks, classify risk by changed paths, auto-merge low-risk PRs.
 # Rules: agent-workflows v6 RULES (branch + PR, never push to main).
 # High-risk paths live in .github/high-risk-paths.txt. Anything matching them
-# (or anything under .github/) gets the `needs-maintainer` label and waits for the maintainer.
+# (or anything under .github/) gets `needs-agent-review` and waits for an agent
+# security review; the reviewing agent merges it. Agents add `needs-maintainer` only for the
+# five cases in RULES.md (deletes data, sends messages, spends money, secrets,
+# security tripwire); that label also blocks auto-merge.
 name: PR gate
 on:
   pull_request:
@@ -53,14 +56,23 @@ jobs:
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as s:
               s.write(f"### Risk: {level}\n" + "".join(f"- `{h}`\n" for h in hits))
           PY
-      - name: Label high-risk PRs
-        if: steps.classify.outputs.level == 'high'
+      - name: Require agent review on high-risk paths
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
+          LEVEL: ${{ steps.classify.outputs.level }}
         run: |
-          gh label create needs-maintainer --color B60205 --description "High-risk change: waits for maintainer approval" -R "$GITHUB_REPOSITORY" 2>/dev/null || true
-          gh pr edit "$PR" --add-label needs-maintainer -R "$GITHUB_REPOSITORY"
+          agent_desc="High-risk paths: agent security review before merge"
+          human_desc="Deletes data, sends messages, spends money, changes secrets, or a security tripwire"
+          gh label create needs-agent-review --color FBCA04 --description "$agent_desc" -R "$GITHUB_REPOSITORY" 2>/dev/null \
+            || gh label edit needs-agent-review --color FBCA04 --description "$agent_desc" -R "$GITHUB_REPOSITORY"
+          gh label create needs-maintainer --color B60205 --description "$human_desc" -R "$GITHUB_REPOSITORY" 2>/dev/null \
+            || gh label edit needs-maintainer --color B60205 --description "$human_desc" -R "$GITHUB_REPOSITORY"
+          if [ "$LEVEL" = "high" ]; then
+            gh pr edit "$PR" --add-label needs-agent-review -R "$GITHUB_REPOSITORY"
+          else
+            gh pr edit "$PR" --remove-label needs-agent-review -R "$GITHUB_REPOSITORY" 2>/dev/null || true
+          fi
 
   automerge:
     needs: [checks, risk]
@@ -68,6 +80,7 @@ jobs:
       needs.risk.outputs.level == 'low' &&
       !github.event.pull_request.draft &&
       github.event.pull_request.head.repo.full_name == github.repository &&
+      !contains(github.event.pull_request.labels.*.name, 'needs-agent-review') &&
       !contains(github.event.pull_request.labels.*.name, 'needs-maintainer') &&
       !contains(github.event.pull_request.labels.*.name, 'hold')
     runs-on: ubuntu-latest

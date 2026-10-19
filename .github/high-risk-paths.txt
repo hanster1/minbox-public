@@ -1,5 +1,6 @@
 # High-risk paths (fnmatch globs). A PR touching any of these gets
-# the needs-maintainer label and is NOT auto-merged.
+# needs-agent-review and is NOT auto-merged. The reviewing agent merges it.
+# needs-maintainer is not a path rule. Agents add it only for the five cases in RULES.md.
 # Always high risk in every repo (also hard-coded: .github/**)
 LICENSE*
 licenses/**
