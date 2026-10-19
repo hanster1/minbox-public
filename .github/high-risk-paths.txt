@@ -1,6 +1,8 @@
 # High-risk paths (fnmatch globs). A PR touching any of these gets
 # needs-agent-review and is NOT auto-merged. The reviewing agent merges it.
-# needs-maintainer is not a path rule. Agents add it only for the five cases in RULES.md.
+# needs-maintainer is not a path rule. Agents add it only for the five cases in
+# agent-workflows RULES.md: deletes data, sends messages, spends money, secrets,
+# or a security tripwire (also listed in workflows/pr-gate.yml).
 # Always high risk in every repo (also hard-coded: .github/**)
 LICENSE*
 licenses/**
