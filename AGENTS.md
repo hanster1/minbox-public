@@ -128,7 +128,7 @@ On interruption, leave a concise private checkpoint outside Git.
 
 <!-- pstack:start -->
 ## Engineering principles (pstack)
-Guidance from Lauren Tan's [pstack](https://github.com/cursor/plugins/tree/main/pstack) (v0.15.25, upstream cdb3c41, synced 2026-10-16). Repo-specific rules in this file take precedence.
+Guidance from Lauren Tan's [pstack](https://github.com/cursor/plugins/tree/main/pstack) (v0.15.29, upstream 88d4751, synced 2026-10-20). Repo-specific rules in this file take precedence.
 - Prefer proving a change works on the real thing (run it, read the actual output) before calling it done.
 - Aim to fix the root cause rather than guarding around the symptom.
 - Prefer the smallest change that solves the problem; subtract before you add.
