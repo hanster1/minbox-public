@@ -43,7 +43,9 @@ must leave the active credential unchanged. This is an operator repair tool,
 not an automatic permission to modify credentials.
 
 If fresh pairing is required, use the isolated private Firefox procedure in
-ONBOARDING.md on the collection computer, with the owner's phone emoji approval.
+[ONBOARDING.md](ONBOARDING.md#android-on-linux) on the collection computer, with the owner's phone emoji approval.
+Do not reuse a signed-in Chrome profile for browser-cookie pairing; that setup
+has lost the collector login after pairing.
 Close setup/competing tabs afterward. Drive authorization repair is separate:
 retain account/root/Doc IDs and use limited consent or DRIVE_MIGRATION.md. Never
 make files public or revoke a newly minted grant as a second migration step.

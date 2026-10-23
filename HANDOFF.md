@@ -36,3 +36,22 @@ Finish the authorized GitHub backup and verify remote commits.
 Then resume only requested setup or maintenance; do not add routine phone tests.
 Keep credentials, content, exact bindings and runtime receipts outside Git.
 Hosted operations belong in the maintainer's private operations project. No website deployment is authorized by this checkpoint.
+
+## October 22, 2026 — browser-cookie pairing lesson
+
+Onboarding already required an isolated private Firefox window. It now explains
+that pairing from an already signed-in Chrome profile lost the collector login
+in a reported setup, while private Firefox pairing resolved that case.
+The browser-cookie fallback and recovery guide repeat the instruction.
+The terminal QR route remains separate. Collector status is checked after closing
+the setup window. No private account details or runtime files were added.
+
+Validation: public release checker (including guide links) and whitespace checks
+passed. Independent diff review found no material issue.
+No live pairing was performed for this documentation change.
+Next: leave the checked change in its task worktree until shipping is requested.
+
+Shipping review: independently inspected the final documentation diff; no private
+account details, credentials or runtime files are introduced. Public release
+checker passed (141 reviewed files, 98 manifest entries); whitespace passed.
+No live pairing or installation change was performed.

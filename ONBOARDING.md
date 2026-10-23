@@ -79,7 +79,15 @@ Install the needed collector, import, backfill, owner-archive and health templat
 from `services/`; optional scoped work and Loom jobs are not prerequisites.
 Reload the user manager. Do not enable jobs before their checks below pass.
 
-**Computer (collection host), owner:** open an isolated private Firefox window.
+**Browser-cookie pairing: use Firefox Private Browsing.** Give the owner this
+instruction before sign-in. A setup using an already signed-in Chrome profile
+lost the collector login afterward. Private Firefox pairing resolved that case.
+Use a fresh Firefox private window for this recipe; do not reuse a signed-in
+Chrome profile. The terminal QR route under [Add another person](#add-another-person-on-an-existing-host)
+is separate and does not require browser cookies.
+
+**Computer (collection host), owner:** open a new Firefox private window
+(menu → New Private Window, or Ctrl+Shift+P on Linux).
 Sign into your Google account at
 `https://accounts.google.com/AccountChooser?continue=https://messages.google.com/web/config`.
 Open Developer Tools → Network → All. Reload the configuration page. Select its
@@ -111,7 +119,9 @@ computer per account. Browser sign-in and Drive consent are separate.
 
 **Computer, agent:** start only the installed read-only collector service.
 Check its existing `gmcli.sock`. Require connected true, auth_expired false,
-offline false and send_mode off. The supplied service runs
+offline false and send_mode off after the private setup window is closed.
+This checks that collection keeps its login independently of the setup browser.
+The supplied service runs
 `--read-only=true serve --idle-exit 0`. Never use `--auto`. Keep sending off.
 Import once with `archive_cli.py import-gmkit Casey PRIVATE_GMCLI_DB`.
 Inspect counts and coverage gaps without private content. Ask the owner to compare
@@ -164,8 +174,9 @@ ssh -t COLLECTION_HOST "PATH_TO_CHECKOUT/scripts/add-owner Casey --pair"
 On the phone: Google Messages → profile picture → Device pairing → QR code
 scanner, then scan. When the terminal reports pairing, the person tells the
 agent "done". If the code is garbled, enlarge the window or shrink the font and
-rerun. The cookie-based pairing in the section above is the fallback; never ask
-for cookies in chat.
+rerun. The cookie-based pairing in the section above is the fallback.
+For that fallback, require a fresh Firefox private window; do not reuse a signed-in
+Chrome profile. Never ask for cookies in chat.
 
 **3. Start and verify (agent).**
 
