@@ -55,3 +55,15 @@ Shipping review: independently inspected the final documentation diff; no privat
 account details, credentials or runtime files are introduced. Public release
 checker passed (141 reviewed files, 98 manifest entries); whitespace passed.
 No live pairing or installation change was performed.
+
+## October 25, 2026 — session saved
+
+The Firefox pairing clarification is already present on local main at `2a09c9c`.
+The former task worktree is no longer registered or present. The working tree was
+clean before this checkpoint. Earlier documentation checks and independent review
+passed; no live pairing was performed for the change.
+
+Nothing remains for this documentation task. No push, merge, deployment, or
+deletion was performed during this save. Publication and backup status were not
+verified. Resume only newly requested work; the older pending-shipping note above
+is superseded by the observed local commit.
