@@ -208,5 +208,50 @@ class RecoveryController(unittest.TestCase):
                 action.assert_not_called()
 
 
+
+class ComponentEpisodes(unittest.TestCase):
+    def test_unrelated_failed_check_closes_recovery_and_resets_next_incident_budget(self):
+        state = {'recovery': {'publisher_1': {'first': 0, 'attempts': 3,
+                 'state': 'human_required', 'notified': True}}}
+        config = {'publishers': [{'name': 'Synthetic', 'kind': 'owner_all'}]}
+        unrelated = {'issues': ['backfill_1.check_failed'], 'check_failed': True}
+        props = lambda unit: {'ActiveState': 'inactive', 'UnitFileState': 'enabled'}
+        recovery.supervise(state, unrelated, config, 2000, properties=props)
+        self.assertEqual(state['recovery']['publisher_1']['state'], 'healthy')
+        bad = {'issues': ['publisher_1.worker_stale'], 'check_failed': False}
+        actions = []
+        recovery.supervise(state, bad, config, 2100, properties=props,
+                           action=lambda *args: actions.append(args))
+        self.assertEqual(state['recovery']['publisher_1']['attempts'], 0)
+        self.assertEqual(state['recovery']['publisher_1']['first'], 2100)
+        recovery.supervise(state, bad, config, 2160, properties=props,
+                           action=lambda *args: actions.append(args))
+        self.assertEqual(state['recovery']['publisher_1']['attempts'], 1)
+        self.assertEqual(len(actions), 1)
+
+    def test_unlocated_and_shared_failures_remain_conservative(self):
+        for issues in ([], ['archive.check_failed'], ['monitor.check_failed'], ['publisher_1.check_failed']):
+            self.assertFalse(recovery.component_checked({'issues': issues, 'check_failed': True}, 'publisher_1'))
+
+    def test_missing_monitored_service_does_not_establish_recovery(self):
+        state = {'recovery': {'publisher_1': {'first': 0, 'attempts': 1}}}
+        report = recovery.supervise(state, {'issues': ['publisher_1.check_failed'], 'check_failed': True},
+                                   {}, 10, properties=lambda _: {})
+        self.assertNotEqual(report['components']['publisher_1']['state'], 'healthy')
+
 if __name__ == '__main__':
     unittest.main()
+
+
+class ConfigurationObservation(unittest.TestCase):
+    def test_configuration_failure_preserves_unverified_component_history(self):
+        import health_monitor as health
+        observation = {'issues': {'publisher_1.configuration': 0, 'backfill_1.check_failed': 0},
+                       'check_failed': True}
+        self.assertFalse(recovery.component_checked(observation, 'publisher_1'))
+        self.assertTrue(recovery.component_checked(observation, 'publisher_2'))
+        state = {'issues': {'publisher_1.worker_failure': {'first': 10},
+                            'publisher_2.worker_failure': {'first': 10}}}
+        health.track_observation(state, observation, 100)
+        self.assertIn('publisher_1.worker_failure', state['issues'])
+        self.assertNotIn('publisher_2.worker_failure', state['issues'])

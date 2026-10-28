@@ -55,3 +55,21 @@ Shipping review: independently inspected the final documentation diff; no privat
 account details, credentials or runtime files are introduced. Public release
 checker passed (141 reviewed files, 98 manifest entries); whitespace passed.
 No live pairing or installation change was performed.
+
+
+## Publisher scheduling and component health checks
+
+Publisher admission now waits briefly for an existing owner operation to finish.
+Sustained lock contention records an operational timestamp without advancing
+completed-check, successful-publication or failure evidence. Health distinguishes
+recent contention from an absent worker while retaining publication-age alerts.
+Recovery closes independently for successfully checked components; later incidents
+receive fresh retry budgets. Shared or unlocated observation failures remain
+conservative. Missing systemd units and failed custom-job receipts remain visible.
+The recovery service-action allowlist is unchanged.
+
+Validation uses synthetic data and mocked external services: 580 tests ran with
+eight skips and no failures. Public inventory/privacy checks passed for 141 files
+and 98 manifest entries; whitespace checks passed. Independent diff review found
+no remaining blocking findings. Deployment and live installation acceptance are
+outside this source change.

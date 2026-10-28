@@ -152,8 +152,9 @@ def main(argv=None):
             print(json.dumps({'status': 'already_running'}, sort_keys=True))
             return 0
         from phone_spam import owner_operation
-        with owner_operation(config['archive_root'], config['owner'], blocking=False) as acquired:
+        with owner_operation(config['archive_root'], config['owner'], blocking=False, timeout=5) as acquired:
             if not acquired:
+                PublisherStatus.record_contention(state)
                 print(json.dumps({'status': 'owner_busy'}, sort_keys=True))
                 return 0
             with PublisherStatus(state) as status:

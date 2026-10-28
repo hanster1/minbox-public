@@ -24,6 +24,8 @@ DISCONNECT_GRACE = 300
 IMPORT_GRACE = 600
 WORKER_FAILURE_GRACE = 600
 
+from health_recovery import component_checked
+
 
 def atomic_json(path, value):
     path = Path(path)
@@ -45,9 +47,12 @@ def atomic_json(path, value):
 
 def unit_properties(unit):
     result = subprocess.run(['systemctl', '--user', 'show', unit,
-                             '--property=ActiveState,UnitFileState,Result,ExecMainStartTimestampMonotonic'],
+                             '--property=LoadState,ActiveState,UnitFileState,Result,ExecMainStartTimestampMonotonic'],
                             capture_output=True, text=True, timeout=10, check=True)
-    return dict(line.split('=', 1) for line in result.stdout.splitlines() if '=' in line)
+    properties = dict(line.split('=', 1) for line in result.stdout.splitlines() if '=' in line)
+    if properties.get('LoadState') in ('not-found', 'error', 'bad-setting'):
+        raise ValueError('monitored unit unavailable')
+    return properties
 
 
 def rpc_status(path):
@@ -148,7 +153,11 @@ def observe(config, now):
             stamp = dt.datetime.fromisoformat(status['checked_at'].replace('Z', '+00:00')).timestamp()
             started = dt.datetime.fromisoformat(status.get('started_at', status['checked_at']).replace('Z', '+00:00')).timestamp()
             bounded_running = worker.get('ActiveState') in ('activating', 'active', 'deactivating') and now - started <= (600 if kind == 'owner_all' else 360)
-            if now - stamp > 600 and not bounded_running:
+            contention = status.get('last_contention_at')
+            contended = (contention is not None and
+                         stamp < dt.datetime.fromisoformat(contention.replace('Z', '+00:00')).timestamp() <= now and
+                         now - dt.datetime.fromisoformat(contention.replace('Z', '+00:00')).timestamp() <= 600)
+            if now - stamp > 600 and not bounded_running and not contended:
                 add(prefix + '.worker_stale')
             if status.get('run_state') == 'failed':
                 add(prefix + '.worker_failure', WORKER_FAILURE_GRACE)
@@ -170,7 +179,9 @@ def observe(config, now):
             name = backfill['owner']
             if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_-]{0,63}', name):
                 raise ValueError('invalid owner')
-            unit = 'minbox-text-backfill@' + name
+            unit = backfill.get('unit', 'minbox-text-backfill@' + name)
+            if not isinstance(unit, str) or not re.fullmatch(r'[A-Za-z0-9@._-]{1,128}', unit) or unit.endswith(('.timer', '.service')):
+                raise ValueError('invalid unit')
             timer = unit_properties(unit + '.timer')
             if timer.get('ActiveState') != 'active' or timer.get('UnitFileState') != 'enabled':
                 add(prefix + '.timer')
@@ -183,6 +194,8 @@ def observe(config, now):
             stamp = dt.datetime.fromisoformat(status['checked_at'].replace('Z', '+00:00')).timestamp()
             if now - stamp > 1200:
                 add(prefix + '.worker_stale')
+            if status.get('outcome') == 'failed':
+                add(prefix + '.worker_failure', WORKER_FAILURE_GRACE)
             if status.get('thread_states', {}).get('paused_failures', 0):
                 add(prefix + '.paused')
         except Exception:
@@ -350,7 +363,7 @@ def track_observation(state, observation, now):
         for obsolete in ('notified', 'last_sent', 'recovered'):
             record.pop(obsolete, None)
         if key not in issues:
-            if observation.get('check_failed') or key in observation.get('deferred_recoveries', []):
+            if not component_checked(observation, key.partition('.')[0]) or key in observation.get('deferred_recoveries', []):
                 continue
             del tracked[key]
     return {'checked_at': dt.datetime.fromtimestamp(now, dt.timezone.utc).isoformat(),
