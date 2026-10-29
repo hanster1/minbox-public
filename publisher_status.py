@@ -157,6 +157,14 @@ class PublisherStatus:
             previous = json.loads(self.path.read_text())
             self.state = {k: v for k, v in previous.items() if k in _FIELDS}
 
+    @classmethod
+    def record_contention(cls, path):
+        """Under the publisher lock, record admission without claiming publication."""
+        status = cls(path)  # Enforce private-path and permission checks.
+        previous = json.loads(status.path.read_text()) if status.path.exists() else {}
+        previous['last_contention_at'] = cls.now()
+        write_json(status.path, previous)
+
     @staticmethod
     def now():
         return datetime.now(timezone.utc).isoformat()

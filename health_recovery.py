@@ -44,11 +44,23 @@ def targets(config):
     for i, backfill in enumerate(config.get('backfills', []), 1):
         name = backfill.get('owner') if isinstance(backfill, dict) else None
         if isinstance(name, str) and re.fullmatch(r'[A-Za-z0-9_-]+', name):
-            unit = 'minbox-text-backfill@' + name
+            unit = backfill.get('unit', 'minbox-text-backfill@' + name)
+            if not isinstance(unit, str) or not re.fullmatch(r'[A-Za-z0-9@._-]{1,128}', unit) or unit.endswith(('.timer', '.service')):
+                continue
             result[f'backfill_{i}'] = {'service': unit + '.service', 'timer': unit + '.timer', 'essential': False}
     if config.get('loom_monitor'):
         result['loom'] = {'service': 'minbox-text-loom.service', 'timer': 'minbox-text-loom.timer', 'essential': False}
     return result
+
+
+def component_checked(observation, prefix):
+    """An unrelated component failure cannot invalidate this observation."""
+    if not observation.get('check_failed'):
+        return True
+    failed = {key.partition('.')[0] for key in observation.get('issues', ())
+              if key.endswith('check_failed') or key.endswith(('.rpc_unavailable', '.configuration'))}
+    # A failure without a located component remains conservatively unknown.
+    return bool(failed) and prefix not in failed and not failed & {'monitor', 'archive', 'disk'}
 
 
 def supervise(state, observation, config, now, *, properties, action=service_action, deliver=None):
@@ -73,7 +85,7 @@ def supervise(state, observation, config, now, *, properties, action=service_act
     for prefix, record in list(records.items()):
         if prefix not in grouped:
             # Unavailable observation cannot prove health or close an episode.
-            if observation.get('check_failed'):
+            if not component_checked(observation, prefix):
                 continue
             record.setdefault('healthy_since', now)
             record['state'] = 'healthy'

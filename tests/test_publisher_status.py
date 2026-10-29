@@ -208,7 +208,8 @@ class PublisherLifecycle(unittest.TestCase):
                     with owner_operation(config['archive_root'], config['owner']), \
                             patch.object(module, network_constructor) as network, \
                             patch.object(module, 'snapshot') as snap, \
-                            patch.object(module, 'PublisherStatus') as status:
+                            patch.object(module, 'PublisherStatus') as status, \
+                            patch('phone_spam.time.monotonic', side_effect=[0, 10, 20, 30]):
                         output = io.StringIO()
                         with contextlib.redirect_stdout(output):
                             self.assertEqual(self.invoke(module), 0)
@@ -216,6 +217,10 @@ class PublisherLifecycle(unittest.TestCase):
                         network.assert_not_called()
                         snap.assert_not_called()
                         status.assert_not_called()
+                        if module is owner_publish_cli:
+                            status.record_contention.assert_called_once_with(status_path)
+                        else:
+                            status.record_contention.assert_not_called()
                     self.assertEqual(status_path.read_bytes() if status_path.exists() else None, before)
 
     def test_locks_leave_active_attempt_status_unchanged(self):
@@ -235,3 +240,39 @@ class PublisherLifecycle(unittest.TestCase):
                         self.assertEqual(self.invoke(module), 0)
                     self.assertEqual(json.loads(output.getvalue()), {'status': 'already_running'})
                 self.assertEqual(status_path.read_bytes(), before)
+
+
+class ContentionReceipt(DurableStatus):
+    def test_receipt_preserves_success_and_failure_evidence(self):
+        before = {'checked_at': 'old', 'last_success_at': 'old', 'last_publication_at': 'old',
+                  'run_state': 'failed', 'failure_kind': 'auth', 'consecutive_failures': 2}
+        write_json(self.path, before)
+        PublisherStatus.record_contention(self.path)
+        after = self.read()
+        self.assertTrue(after.pop('last_contention_at'))
+        self.assertEqual(after, before)
+
+    def test_bounded_wait_acquires_a_released_synthetic_lock(self):
+        import threading
+        import time
+        from storage import Archive
+        from phone_spam import owner_operation
+        root = self.path.parent
+        Archive(root).init(owners=('Synthetic',))
+        lock_path = root / 'Synthetic' / '.phone-publication.lock'
+        with owner_operation(root, 'Synthetic'):
+            result = []
+            def waiter():
+                with owner_operation(root, 'Synthetic', blocking=False, timeout=1) as acquired:
+                    result.append(acquired)
+            thread = threading.Thread(target=waiter)
+            thread.start()
+            time.sleep(.15)
+            self.assertFalse(result)
+        thread.join(2)
+        self.assertEqual(result, [True])
+        with owner_operation(root, 'Synthetic'):
+            start = time.monotonic()
+            with owner_operation(root, 'Synthetic', blocking=False, timeout=.1) as acquired:
+                self.assertFalse(acquired)
+            self.assertLess(time.monotonic() - start, 1)

@@ -205,5 +205,57 @@ class PublisherHealth(unittest.TestCase):
             self.assertNotIn(private, json.dumps(observed))
 
 
+
+class ContentionHealth(PublisherHealth):
+    def test_contention_receipt_does_not_hide_stale_publication(self):
+        self.config['publishers'][0]['kind'] = 'owner_all'
+        stamp = lambda t: dt.datetime.fromtimestamp(t, dt.timezone.utc).isoformat()
+        self.write_status(stamp=1000, last_contention_at=stamp(2000), last_publication_at=stamp(1000))
+        issues = health.observe(self.config, 2100)['issues']
+        self.assertNotIn('publisher_1.worker_stale', issues)
+        self.assertNotIn('publisher_1.publication_stale', issues)
+        self.write_status(stamp=1000, last_contention_at=stamp(3000), last_publication_at=stamp(1000))
+        self.assertIn('publisher_1.publication_stale', health.observe(self.config, 3100)['issues'])
+        self.assertIn('publisher_1.worker_stale', health.observe(self.config, 3700)['issues'])
+
+    def test_contention_does_not_hide_previous_auth_failure(self):
+        self.write_status(stamp=1000, run_state='failed', failure_kind='auth',
+                          last_contention_at=dt.datetime.fromtimestamp(2000, dt.timezone.utc).isoformat())
+        issues = health.observe(self.config, 2100)['issues']
+        self.assertIn('publisher_1.human_required', issues)
+        self.assertIn('publisher_1.worker_failure', issues)
+
+    def test_missing_service_and_missing_receipt_are_detected(self):
+        self.config['backfills'] = [{'owner': 'Synthetic', 'unit': 'synthetic-refresh',
+                                    'status_file': str(self.status_file)}]
+        self.status_file.unlink()
+        issues = health.observe(self.config, 1100)['issues']
+        self.assertIn('backfill_1.check_failed', issues)
+        with patch.object(health.subprocess, 'run', return_value=type('Result', (), {
+                'stdout': 'LoadState=not-found\nActiveState=inactive\nResult=success\n'})()):
+            # Bypass this fixture's unit-properties mock to exercise the real parser.
+            import importlib.util
+            spec = importlib.util.spec_from_file_location('synthetic_health', health.__file__)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            with self.assertRaises(ValueError):
+                module.unit_properties('synthetic-refresh.service')
+
+    def test_custom_job_receipt_and_failed_outcome(self):
+        self.config['backfills'] = [{'owner': 'Synthetic', 'unit': 'synthetic-refresh',
+                                    'status_file': str(self.status_file)}]
+        self.assertNotIn('backfill_1.check_failed', health.observe(self.config, 1100)['issues'])
+        self.assertIn('synthetic-refresh.service', self.units_seen)
+        self.write_status(outcome='failed')
+        self.assertIn('backfill_1.worker_failure', health.observe(self.config, 1100)['issues'])
+
+    def test_unrelated_failure_clears_only_verified_local_issue(self):
+        state = {'issues': {'publisher_1.worker_stale': {'first': 0},
+                            'backfill_1.worker_stale': {'first': 0}}}
+        health.track_observation(state, {'issues': {'backfill_1.check_failed': 0},
+                                        'check_failed': True}, 100)
+        self.assertNotIn('publisher_1.worker_stale', state['issues'])
+        self.assertIn('backfill_1.worker_stale', state['issues'])
+
 if __name__ == '__main__':
     unittest.main()
