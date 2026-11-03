@@ -136,3 +136,5 @@ Guidance from Lauren Tan's [pstack](https://github.com/cursor/plugins/tree/main/
 - Prefer tests that check behavior users can observe, not internals.
 - Aim to keep code easy to follow: fewer layers, less hidden state.
 <!-- pstack:end -->
+
+Family AI (models, gateway, `work`, tracking): read ~/Projects/agent-workflows/docs/FAMILY-AI-GUIDE.md before choosing a model or running coding tasks.
