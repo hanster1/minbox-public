@@ -138,3 +138,4 @@ Guidance from Lauren Tan's [pstack](https://github.com/cursor/plugins/tree/main/
 <!-- pstack:end -->
 
 Family AI (models, gateway, `work`, tracking): read ~/Projects/agent-workflows/docs/FAMILY-AI-GUIDE.md before choosing a model or running coding tasks.
+Herdr workflow (`codex` first, then `harness` when Codex runs out; routing, Dunkin only on explicit request): read ~/Projects/agent-workflows/docs/HERDR-GUIDE.md.
