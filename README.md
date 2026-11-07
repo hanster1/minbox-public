@@ -255,3 +255,5 @@ The reference guide distinguishes existing implementations from features that ne
 Keep messages, credentials, and private installation notes outside this public repository.
 Never make the archive public to fix a connection problem.
 See the [license](LICENSE) and [third-party notices](THIRD_PARTY_NOTICES.md) for software terms.
+
+Agent instructions and resume state: [Agent Handbook](AgentHandbook.md).
