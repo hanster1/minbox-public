@@ -55,13 +55,13 @@ def check(verify_hashes=True):
         if not path.is_file() or (verify_hashes and hashlib.sha256(path.read_bytes()).hexdigest() != record['sha256']):
             failures.append('source manifest mismatch: ' + name)
     public_files = {
-        '.gitignore', '.gitattributes', 'README.md', 'AGENTS.md', 'CLAUDE.md', 'WORKFLOW.md', 'HANDOFF.md',
+        '.gitignore', '.gitattributes', 'README.md', 'AGENTS.md', 'CLAUDE.md', 'AgentHandbook.md',
         'MAC_SETUP.md', 'MAC_RECOVERY.md', 'MAC_ONBOARDING_AGENT.md', 'ONBOARDING.md',
         'REFERENCE_GUIDE.md', 'READ_ONLY_SEARCH.md', 'PHONE_ACCESS.md', 'LOCAL_EXPORT.md', 'GOOGLE_SETUP.md', 'ANDROID_RECOVERY.md', 'DRIVE_MIGRATION.md', 'OWNER_ARCHIVE.md',
         'HEALTH_ALERTS.md', 'GMKIT_MEDIA.md', 'LOOM_CAPTURE.md', 'CONTRIBUTING.md',
         'LICENSE', 'THIRD_PARTY_NOTICES.md', 'licenses/AGPL-3.0.txt',
         'SOURCE_MANIFEST.json', 'scripts/check_public_release.py',
-        '.github/workflows/source-checks.yml', '.github/workflows/pr-gate.yml', '.github/high-risk-paths.txt', 'MAINTENANCE.md', 'PHONE_SPAM.md', 'ARCHITECTURE.md', 'PRIVACY.md',
+        '.github/workflows/source-checks.yml', 'MAINTENANCE.md', 'PHONE_SPAM.md', 'ARCHITECTURE.md', 'PRIVACY.md',
         'information-site/.gitignore', 'information-site/.vercelignore',
         'information-site/README.md', 'information-site/vercel.json',
         'information-site/dist/index.html', 'information-site/dist/privacy.html',

@@ -7,7 +7,7 @@ Keep one authoritative source for each part.
 | --- | --- |
 | Beginner entry, prerequisites, and setup journey | README.md |
 | Design choices, privacy, and efficient AI use | REFERENCE_GUIDE.md |
-| Agent responsibilities and project purpose | AGENTS.md and WORKFLOW.md |
+| Agent responsibilities and project purpose | AgentHandbook.md (loaded through AGENTS.md) |
 | Device setup and repair | ONBOARDING.md, Mac guides, and recovery guides |
 | Collection, filtering, output, and health behavior | Application code in this repository |
 | AI phone routes and acceptance evidence | PHONE_ACCESS.md |
@@ -31,5 +31,5 @@ Preserve public OAuth branding URLs and the ownership verification tag.
 Keep hosting credentials and local deployment linkage private.
 
 Use [CONTRIBUTING](CONTRIBUTING.md) for writing, source, and release checks.
-Record current development work in HANDOFF.md.
+Record current development work in AgentHandbook.md.
 Keep machine inventories, exact account details, and rollback receipts outside public Git.

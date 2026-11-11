@@ -1,7 +1,10 @@
+# Checks on every pull request and on main. The agent merges when these pass
+# (maintainer Git rule, 2026-11-10). No risk labels or automatic holds.
 name: Source checks
 on:
+  pull_request:
   push:
-  workflow_call:
+    branches: [main]
 permissions:
   contents: read
 jobs:
