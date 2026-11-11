@@ -24,7 +24,7 @@ This is the common entry point for local Mac setup/repair from the actual reposi
 checkout. Examples use Casey; preserve the agreed existing owner namespace.
 For family installations, review [multiple-owner boundaries](REFERENCE_GUIDE.md#multiple-owners-on-one-computer).
 Confirm each owner's actual Mac login and synchronized Messages source; labels alone do not separate accounts.
-Read AGENTS.md, WORKFLOW.md, HANDOFF.md, MAC_SETUP.md and MAC_RECOVERY.md.
+Read AGENTS.md, AgentHandbook.md, MAC_SETUP.md and MAC_RECOVERY.md.
 Use [publication performance](OWNER_ARCHIVE.md#publication-performance) for slow runs or tuning, not as a normal setup benchmark. Preserve defaults unless local completed
 runs justify a change; validate the scheduled repeat and configuration binding.
 Installed Linux workflows/skills are optional; report unavailable ones once and
@@ -125,7 +125,7 @@ external delivery. Do not infer email delivery from a healthy local check.
 Record stage, source commit identity, relevant tests and benign device acceptance,
 known limits, sanitized failure category, pending owner action and one next step.
 Keep machine-specific paths/configuration in private local notes outside Git;
-HANDOFF.md may contain only sanitized source/checkpoint facts. Preserve runtime
+AgentHandbook.md may contain only sanitized source/checkpoint facts. Preserve runtime
 archives, IDs, correction history and credentials through every continuation.
 
 No remote deployment, GitHub push, public-site publication, repository visibility
